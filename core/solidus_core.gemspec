@@ -30,7 +30,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'friendly_id', '~> 5.0.4'
   s.add_dependency 'highline', '~> 1.6.18' # Necessary for the install generator
   s.add_dependency 'json', '~> 1.7'
-  s.add_dependency 'kaminari', '~> 0.15', '>= 0.15.1'rai
+  s.add_dependency 'kaminari', '~> 0.15', '>= 0.15.1'
   s.add_dependency 'monetize', '~> 1.1'
   s.add_dependency 'paperclip', '~> 4.2.0'
   s.add_dependency 'paranoia', '~> 2.1.0'
