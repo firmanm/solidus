@@ -6,7 +6,11 @@ module Spree
     has_many :classifications, -> { order(:position) }, dependent: :delete_all, inverse_of: :taxon
     has_many :products, through: :classifications
 
-    has_and_belongs_to_many :prototypes, join_table: :spree_taxons_prototypes
+    has_many :prototype_taxons, dependent: :destroy
+    has_many :prototypes, through: :prototype_taxons
+
+    has_many :promotion_rule_taxons
+    has_many :promotion_rules, through: :promotion_rule_taxons
 
     before_create :set_permalink
 
@@ -95,7 +99,7 @@ module Spree
 
     def touch_ancestors_and_taxonomy
       # Touches all ancestors at once to avoid recursive taxonomy touch, and reduce queries.
-      self.class.where(id: ancestors.pluck(:id)).update_all(updated_at: Time.now)
+      self.class.where(id: ancestors.pluck(:id)).update_all(updated_at: Time.current)
       # Have taxonomy touch happen in #touch_ancestors_and_taxonomy rather than association option in order for imports to override.
       taxonomy.try!(:touch)
     end

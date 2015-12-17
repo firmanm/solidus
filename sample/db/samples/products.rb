@@ -5,8 +5,8 @@ tax_category = Spree::TaxCategory.find_by_name!("Default")
 shipping_category = Spree::ShippingCategory.find_by_name!("Default")
 
 default_attrs = {
-  :description => Faker::Lorem.paragraph,
-  :available_on => Time.zone.now
+  description: Faker::Lorem.paragraph,
+  available_on: Time.current
 }
 
 products = [
@@ -78,12 +78,11 @@ products.each do |product_attrs|
   eur_price = product_attrs.delete(:eur_price)
   Spree::Config[:currency] = "USD"
 
-  default_shipping_category = Spree::ShippingCategory.find_by_name!("Default")
   product = Spree::Product.create!(default_attrs.merge(product_attrs))
   Spree::Config[:currency] = "EUR"
   product.reload
   product.price = eur_price
-  product.shipping_category = default_shipping_category
+  product.shipping_category = shipping_category
   product.save!
 end
 

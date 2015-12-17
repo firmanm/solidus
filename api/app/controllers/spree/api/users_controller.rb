@@ -1,56 +1,24 @@
-module Spree
-  module Api
-    class UsersController < Spree::Api::BaseController
+class Spree::Api::UsersController < Spree::Api::ResourceController
 
-      def index
-        @users = Spree.user_class.accessible_by(current_ability,:read).ransack(params[:q]).result.page(params[:page]).per(params[:per_page])
-        respond_with(@users)
-      end
+  private
 
-      def show
-        respond_with(user)
-      end
+  def user
+    @user
+  end
 
-      def new
-      end
+  def model_class
+    Spree.user_class
+  end
 
-      def create
-        authorize! :create, Spree.user_class
-        @user = Spree.user_class.new(user_params)
-        if @user.save
-          respond_with(@user, :status => 201, :default_template => :show)
-        else
-          invalid_resource!(@user)
-        end
-      end
+  def user_params
+    permitted_resource_params
+  end
 
-      def update
-        authorize! :update, user
-        if user.update_attributes(user_params)
-          respond_with(user, :status => 200, :default_template => :show)
-        else
-          invalid_resource!(user)
-        end
-      end
-
-      def destroy
-        authorize! :destroy, user
-        user.destroy
-        respond_with(user, :status => 204)
-      end
-
-      private
-
-      def user
-        @user ||= Spree.user_class.accessible_by(current_ability, :read).find(params[:id])
-      end
-
-      def user_params
-        params.require(:user).permit(permitted_user_attributes |
-                                       [bill_address_attributes: permitted_address_attributes,
-                                        ship_address_attributes: permitted_address_attributes])
-      end
-
+  def permitted_resource_attributes
+    if action_name == "create" || can?(:update_email, user)
+      super | [:email]
+    else
+      super
     end
   end
 end

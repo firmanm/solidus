@@ -35,6 +35,7 @@ module Spree
     scope :with_state, ->(*s) { where(state: s) }
     # sort by most recent shipped_at, falling back to created_at. add "id desc" to make specs that involve this scope more deterministic.
     scope :reverse_chronological, -> { order('coalesce(spree_shipments.shipped_at, spree_shipments.created_at) desc', id: :desc) }
+    scope :by_store, ->(store) { joins(:order).merge(Spree::Order.by_store(store)) }
 
     # shipment state machine (see http://github.com/pluginaweek/state_machine/tree/master for details)
     state_machine initial: :pending, use_transactions: false do
@@ -130,9 +131,17 @@ module Spree
       item_cost + final_price
     end
 
+    # Decrement the stock counts for all pending inventory units in this
+    # shipment and mark.
+    # Any previous non-pending inventory units are skipped as their stock had
+    # already been allocated.
     def finalize!
-      InventoryUnit.finalize_units!(inventory_units)
-      manifest.each { |item| manifest_unstock(item) }
+      transaction do
+        pending_units = inventory_units.select(&:pending?)
+        pending_manifest = ShippingManifest.new(inventory_units: pending_units)
+        pending_manifest.items.each { |item| manifest_unstock(item) }
+        InventoryUnit.finalize_units!(pending_units)
+      end
     end
 
     def include?(variant)
@@ -149,10 +158,6 @@ module Spree
 
     def item_cost
       line_items.map(&:final_amount).sum
-    end
-
-    def line_items
-      inventory_units.includes(:line_item).map(&:line_item).uniq
     end
 
     def line_items
@@ -235,7 +240,7 @@ module Spree
 
     def shipped=(value)
       return unless value == '1' && shipped_at.nil?
-      self.shipped_at = Time.now
+      self.shipped_at = Time.current
     end
 
     def shipping_method
@@ -274,7 +279,7 @@ module Spree
         self.update_columns(
           cost: selected_shipping_rate.cost,
           adjustment_total: adjustments.additional.map(&:update!).compact.sum,
-          updated_at: Time.now,
+          updated_at: Time.current,
         )
       end
     end
@@ -296,7 +301,7 @@ module Spree
           # (via Order#paid?) affects the shipment state (YAY)
           self.update_columns(
             state: determine_state(order),
-            updated_at: Time.now
+            updated_at: Time.current
           )
 
           # And then it's time to update shipment states and finally persist
@@ -317,7 +322,7 @@ module Spree
       new_state = determine_state(order)
       update_columns(
         state: new_state,
-        updated_at: Time.now,
+        updated_at: Time.current,
       )
       after_ship if new_state == 'shipped' and old_state != 'shipped'
     end

@@ -1,6 +1,6 @@
 FactoryGirl.define do
   sequence :user_authentication_token do |n|
-    "xxxx#{Time.now.to_i}#{rand(1000)}#{n}xxxxxxxxxxxxx"
+    "xxxx#{Time.current.to_i}#{rand(1000)}#{n}xxxxxxxxxxxxx"
   end
 
   factory :user, class: Spree.user_class do
@@ -22,9 +22,7 @@ FactoryGirl.define do
 
     factory :user_with_addreses do |u|
       bill_address
-      after(:create) do |user, evaluator|
-        user.save_in_address_book(create(:ship_address).attributes, true)
-      end
+      ship_address
     end
   end
 end

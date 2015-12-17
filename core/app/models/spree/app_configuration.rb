@@ -84,6 +84,14 @@ module Spree
     #   @return [Boolean]
     preference :binary_inventory_cache, :boolean, default: false
 
+    # @!attribute [rw] completable_order_created_cutoff
+    #   @return [Integer] the number of days to look back for created orders which get returned to the user as last completed
+    preference :completable_order_created_cutoff_days, :integer, default: nil
+
+    # @!attribute [rw] completable_order_created_cutoff
+    #   @return [Integer] the number of days to look back for updated orders which get returned to the user as last completed
+    preference :completable_order_updated_cutoff_days, :integer, default: nil
+
     # @!attribute [rw] inventory_cache_threshold
     #   Only invalidate product caches when the count on hand for a stock item
     #   falls below or rises about the inventory_cache_threshold.  When undefined, the
@@ -127,6 +135,11 @@ module Spree
     #     after the expedited exchange is shipped in order to avoid being
     #     charged (default: +14+)
     preference :expedited_exchanges_days_window, :integer, default: 14
+
+    # @!attribute [rw] generate_api_key_for_all_roles
+    #   @return [Boolean] Allow generating api key automatically for user
+    #   at role_user creation for all roles. (default: +false+)
+    preference :generate_api_key_for_all_roles, :boolean, default: false
 
     # @!attribute [rw] layout
     #   @return [String] template to use for layout on the frontend (default: +"spree/layouts/spree_application"+)
@@ -185,6 +198,12 @@ module Spree
     #   @return [Integer] default: 365
     preference :return_eligibility_number_of_days, :integer, default: 365
 
+    # @!attribute [rw] roles_for_auto_api_key
+    #   @return [Array] An array of roles where generating an api key for a user
+    #   at role_user creation is desired when user has one of these roles.
+    #   (default: +['admin']+)
+    preference :roles_for_auto_api_key, :array, default: ['admin']
+
     # @!attribute [rw] shipping_instructions
     #   @return [Boolean] Request instructions/info for shipping (default: +false+)
     preference :shipping_instructions, :boolean, default: false
@@ -232,6 +251,14 @@ module Spree
     #   @return [Boolean] Creates a new allocation anytime {StoreCredit#credit} is called
     preference :credit_to_new_allocation, :boolean, default: false
 
+    # @!attribute [rw] automatic_default_address
+    #   The default value of true preserves existing backwards compatible feature of
+    #   treating the most recently used address in checkout as the user's default address.
+    #   Setting to false means that the user should manage their own default via some
+    #   custom UI that uses AddressBookController.
+    #   @return [Boolean] Whether use of an address in checkout marks it as user's default
+    preference :automatic_default_address, :boolean, default: true
+
     # searcher_class allows spree extension writers to provide their own Search class
     attr_writer :searcher_class
     def searcher_class
@@ -247,6 +274,27 @@ module Spree
     attr_writer :promotion_chooser_class
     def promotion_chooser_class
       @promotion_chooser_class ||= Spree::PromotionChooser
+    end
+
+    # Allows providing your own Mailer for shipped cartons.
+    #
+    # @!attribute [rw] carton_shipped_email_class
+    # @return [ActionMailer::Base] an object that responds to "shipped_email"
+    #   (e.g. an ActionMailer with a "shipped_email" method) with the same
+    #   signature as Spree::CartonMailer.shipped_email.
+    attr_writer :carton_shipped_email_class
+    def carton_shipped_email_class
+      @carton_shipped_email_class ||= Spree::CartonMailer
+    end
+
+    # Allows providing your own class for merging two orders.
+    #
+    # @!attribute [rw] order_merger_class
+    # @return [Class] a class with the same public interfaces
+    #   as Spree::OrderMerger.
+    attr_writer :order_merger_class
+    def order_merger_class
+      @order_merger_class ||= Spree::OrderMerger
     end
 
     def static_model_preferences

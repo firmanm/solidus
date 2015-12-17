@@ -2,7 +2,7 @@ module Spree
   class InventoryUnit < Spree::Base
     PRE_SHIPMENT_STATES = %w(backordered on_hand)
     POST_SHIPMENT_STATES = %w(returned)
-    CANCELABLE_STATES = ['on_hand', 'backordered']
+    CANCELABLE_STATES = ['on_hand', 'backordered', 'shipped']
 
     belongs_to :variant, class_name: "Spree::Variant", inverse_of: :inventory_units
     belongs_to :order, class_name: "Spree::Order", inverse_of: :inventory_units
@@ -35,6 +35,16 @@ module Spree
         .where('spree_orders.completed_at is not null')
         .backordered.order(Spree::Order.arel_table[:completed_at].asc)
     end
+
+    # @param stock_item [Spree::StockItem] the stock item of the desired
+    #   inventory units
+    # @return [ActiveRecord::Relation<Spree::InventoryUnit>] backordered
+    # inventory units for the given stock item
+    scope :backordered_for_stock_item, ->(stock_item) do
+      backordered_per_variant(stock_item)
+        .where(spree_shipments: { stock_location_id: stock_item.stock_location_id })
+    end
+
     scope :shippable, -> { on_hand }
 
     # state machine (see http://github.com/pluginaweek/state_machine/tree/master for details)
@@ -57,20 +67,6 @@ module Spree
       end
     end
 
-    # @param stock_item [Spree::StockItem] the stock item of the desired
-    #   inventory units
-    # @return [Array<Spree::InventoryUnit>] an array of backordered inventory
-    #   units for the given stock item
-    def self.backordered_for_stock_item(stock_item)
-      # This was refactored from a simpler query because the previous
-      # implementation led to issues once users tried to modify the objects
-      # returned. That's due to ActiveRecord `joins(shipment: :stock_location)`
-      # only returning readonly objects
-      backordered_per_variant(stock_item).select do |unit|
-        unit.shipment.stock_location == stock_item.stock_location
-      end
-    end
-
     # Updates the given inventory units to not be pending.
     #
     # @param inventory_units [<Spree::InventoryUnit>] the inventory to be
@@ -79,7 +75,7 @@ module Spree
       inventory_units.map do |iu|
         iu.update_columns(
           pending: false,
-          updated_at: Time.now,
+          updated_at: Time.current,
         )
       end
     end

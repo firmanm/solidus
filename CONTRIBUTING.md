@@ -46,6 +46,19 @@ At this point you're waiting on us. We like to at least comment on, if not
 accept, pull requests within three business days (and, typically, one business
 day). We may suggest some changes or improvements or alternatives.
 
+### Pull Request Guidelines
+
+* The specs must pass for each individual commit.
+* Each individual commit should make sense by itself as far as possible.
+* Breaking up a large change into smaller (coherent) commits is encouraged.
+* We do not currently have a policy about whether or not to force-push while
+people are reviewing your pull request.
+* Good commit messages are also encouraged. Here are some resources on writing
+good commit messages:
+  * [Notes from Linus](https://github.com/torvalds/subsurface/commit/b6590150d68df528efd40c889ba6eea476b39873)
+  * [Erlang's guide](https://github.com/erlang/otp/wiki/Writing-good-commit-messages)
+  * [An often-cited post](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html)
+
 Some things that will increase the chance that your pull request is accepted,
 taken straight from the Ruby on Rails guide:
 
@@ -54,17 +67,8 @@ taken straight from the Ruby on Rails guide:
 * Update the documentation, the surrounding one, examples elsewhere, guides,
   whatever is affected by your contribution
 
-Syntax:
+### Follow the Coding Conventions
 
-* Two spaces, no tabs.
-* No trailing whitespace. Blank lines should not have any space.
-* Prefer &&/|| over and/or.
-* `MyClass.my_method(my_arg)` not `my_method( my_arg )` or `my_method my_arg`.
-* `a = b` and not `a=b`.
-* `a_method { |block| ... }` and not `a_method { | block | ... }`
-* Follow the conventions you see used in the source already.
-* -> symbol over lambda
-* Ruby 1.9 hash syntax `{ key: value }` over Ruby 1.8 hash syntax `{ :key => value }`
-* Alphabetize the class methods to keep them organized
+This is a Rails-based framework.  See the [Rails coding conventions](http://guides.rubyonrails.org/contributing_to_ruby_on_rails.html#follow-the-coding-conventions).
 
 And in case we didn't emphasize it enough: we love tests!

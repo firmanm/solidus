@@ -59,6 +59,11 @@ module Spree
     has_many :products, through: :variants
     has_many :variants, through: :line_items
     has_many :refunds, through: :payments
+    has_many :all_adjustments,
+             class_name: 'Spree::Adjustment',
+             foreign_key: :order_id,
+             dependent: :destroy,
+             inverse_of: :order
 
     has_many :order_stock_locations, class_name: "Spree::OrderStockLocation"
     has_many :stock_locations, through: :order_stock_locations
@@ -104,8 +109,11 @@ module Spree
     class_attribute :line_item_comparison_hooks
     self.line_item_comparison_hooks = Set.new
 
-    def self.by_number(number)
-      where(number: number)
+    class << self
+      def by_number(number)
+        where(number: number)
+      end
+      deprecate :by_number, deprecator: Spree::Deprecation
     end
 
     scope :created_between, ->(start_date, end_date) { where(created_at: start_date..end_date) }
@@ -143,11 +151,6 @@ module Spree
     # that should be called when determining if two line items are equal.
     def self.register_line_item_comparison_hook(hook)
       self.line_item_comparison_hooks.add(hook)
-    end
-
-    def all_adjustments
-      Adjustment.where("order_id = :order_id OR (adjustable_id = :order_id AND adjustable_type = 'Spree::Order')",
-                       order_id: self.id)
     end
 
     # For compatiblity with Calculator::PriceSack
@@ -190,9 +193,9 @@ module Spree
     end
 
     def confirmation_required?
-      ActiveSupport::Deprecation.warn "Order#confirmation_required is deprecated.", caller
       true
     end
+    deprecate :confirmation_required?, deprecator: Spree::Deprecation
 
     def backordered?
       shipments.any?(&:backordered?)
@@ -268,7 +271,7 @@ module Spree
 
       self.number ||= loop do
         # Make a random number.
-        random = "#{options[:prefix]}#{(0...options[:length]).map { possible.shuffle.first }.join}"
+        random = "#{options[:prefix]}#{(0...options[:length]).map { possible.sample }.join}"
         # Use the random  number if no other order exists with it.
         if self.class.exists?(number: random)
           # If over half of all possible options are taken add another digit.
@@ -394,13 +397,13 @@ module Spree
     end
 
     def deliver_order_confirmation_email
-      OrderMailer.confirm_email(self.id).deliver_later
+      OrderMailer.confirm_email(self).deliver_later
       update_column(:confirmation_delivered, true)
     end
 
     # Helper methods for checkout steps
     def paid?
-      payment_state == 'paid' || payment_state == 'credit_owed'
+      %w(paid credit_owed).include?(payment_state)
     end
 
     def available_payment_methods
@@ -435,35 +438,8 @@ module Spree
       end
     end
 
-    def merge!(order, user = nil)
-      order.line_items.each do |other_order_line_item|
-        next unless other_order_line_item.currency == currency
-
-        # Compare the line items of the other order with mine.
-        # Make sure you allow any extensions to chime in on whether or
-        # not the extension-specific parts of the line item match
-        current_line_item = self.line_items.detect { |my_li|
-                      my_li.variant == other_order_line_item.variant &&
-                      self.line_item_comparison_hooks.all? { |hook|
-                        self.send(hook, my_li, other_order_line_item.serializable_hash)
-                      }
-                    }
-        if current_line_item
-          current_line_item.quantity += other_order_line_item.quantity
-          current_line_item.save!
-        else
-          other_order_line_item.order_id = self.id
-          other_order_line_item.save!
-        end
-      end
-
-      self.associate_user!(user) if !self.user && !user.blank?
-
-      updater.update
-
-      # So that the destroy doesn't take out line items which may have been re-assigned
-      order.line_items.reload
-      order.destroy
+    def merge!(*args)
+      Spree::Config.order_merger_class.new(self).merge!(*args)
     end
 
     def empty!
@@ -516,6 +492,8 @@ module Spree
     end
 
     def create_proposed_shipments
+      return self.shipments if unreturned_exchange?
+
       if completed?
         raise CannotRebuildShipments.new(Spree.t(:cannot_rebuild_shipments_order_completed))
       elsif shipments.any? { |s| !s.pending? }
@@ -553,7 +531,7 @@ module Spree
 
       self.update_columns(
         state: 'cart',
-        updated_at: Time.now,
+        updated_at: Time.current,
       )
       self.next! if self.line_items.size > 0
     end
@@ -581,7 +559,7 @@ module Spree
         cancel!
         self.update_columns(
           canceler_id: user.id,
-          canceled_at: Time.now,
+          canceled_at: Time.current,
         )
       end
     end
@@ -613,10 +591,12 @@ module Spree
       guest_token
     end
 
+    # @deprecated Do not use this method. Behaviour is unreliable.
     def fully_discounted?
       adjustment_total + line_items.map(&:final_amount).sum == 0.0
     end
     alias_method :fully_discounted, :fully_discounted?
+    deprecate :fully_discounted, deprecator: Spree::Deprecation
 
     def unreturned_exchange?
       # created_at - 1 is a hack to ensure that this doesn't blow up on MySQL,
@@ -766,7 +746,7 @@ module Spree
     end
 
     def send_cancel_email
-      OrderMailer.cancel_email(self.id).deliver_later
+      OrderMailer.cancel_email(self).deliver_later
     end
 
     def after_resume

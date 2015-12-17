@@ -7,8 +7,9 @@ module Spree
         { translation_key: :name, attr_name: :name }
       ]
 
-      before_filter :load_transferable_stock_locations, only: [:index, :new]
+      before_filter :load_viewable_stock_locations, only: :index
       before_filter :load_variant_display_attributes, only: [:receive, :edit, :show, :tracking_info]
+      before_filter :load_source_stock_locations, only: :new
       before_filter :load_destination_stock_locations, only: :edit
       before_filter :ensure_access_to_stock_location, only: :create
       before_filter :ensure_receivable_stock_transfer, only: :receive
@@ -42,7 +43,7 @@ module Spree
 
       def ship
         if @stock_transfer.transfer
-          @stock_transfer.ship(shipped_at: DateTime.now)
+          @stock_transfer.ship(shipped_at: DateTime.current)
           flash[:success] = Spree.t(:stock_transfer_complete)
           redirect_to admin_stock_transfers_path
         else
@@ -99,16 +100,16 @@ module Spree
         authorize! :create, duplicate
       end
 
-      def transferable_stock_locations
-        Spree::StockLocation.accessible_by(current_ability, :transfer)
+      def load_viewable_stock_locations
+        @stock_locations = Spree::StockLocation.accessible_by(current_ability, :read)
       end
 
-      def load_transferable_stock_locations
-        @stock_locations = transferable_stock_locations
+      def load_source_stock_locations
+        @source_stock_locations ||= Spree::StockLocation.accessible_by(current_ability, :transfer_from)
       end
 
       def load_destination_stock_locations
-        @destination_stock_locations = transferable_stock_locations.where.not(id: @stock_transfer.source_location_id)
+        @destination_stock_locations ||= Spree::StockLocation.accessible_by(current_ability, :transfer_to).where.not(id: @stock_transfer.source_location_id)
       end
 
       def load_variant_display_attributes

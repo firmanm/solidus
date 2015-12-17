@@ -13,19 +13,11 @@ module CapybaraExt
   end
 
   def within_row(num, &block)
-    if RSpec.current_example.metadata[:js]
-      within("table.index tbody tr:nth-child(#{num})", &block)
-    else
-      within(:xpath, all("table.index tbody tr")[num-1].path, &block)
-    end
+    within("table.index tbody tr:nth-of-type(#{num})", &block)
   end
 
   def column_text(num)
-    if RSpec.current_example.metadata[:js]
-      find("td:nth-child(#{num})").text
-    else
-      all("td")[num-1].text
-    end
+    find("td:nth-of-type(#{num})").text
   end
 
   def fill_in_quantity(table_column, selector, quantity)
@@ -43,17 +35,15 @@ module CapybaraExt
   end
 
   def select2_search_without_selection(value, options)
-    page.execute_script "$('#{options[:from]}').select2('open');"
-    page.execute_script "$('input.select2-input').val('#{value}').trigger('keyup-change');"
+    find("#{options[:from]}:not(.select2-container-disabled):not(.select2-offscreen)").click
+
+    within_entire_page do
+      find("input.select2-input.select2-focused").set(value)
+    end
   end
 
   def targetted_select2_search(value, options)
-    find("#{options[:from]}:not(.select2-container-disabled)").click
-
-    within_entire_page do
-      find("input.select2-input").set(value)
-    end
-
+    select2_search_without_selection(value, from: options[:from])
     select_select2_result(value)
   end
 
@@ -93,12 +83,17 @@ module CapybaraExt
   def select_select2_result(value)
     # results are in a div appended to the end of the document
     within_entire_page do
-      page.find("div.select2-result-label", text: %r{#{Regexp.escape(value)}}i).click
+      page.find("div.select2-result-label", text: %r{#{Regexp.escape(value)}}i, match: :prefer_exact).click
     end
   end
 
   def find_label_by_text(text)
-    find(:xpath, "//label[text()[contains(.,'#{text}')]]")
+    # This used to find the label by it's text using an xpath query, so we use
+    # a case insensitive search to avoid breakage with existing usage.
+    # We need to select labels which are not .select2-offscreen, as select2
+    # makes a duplicate label with the same text, and we want to be sure to
+    # find the original.
+    find('label:not(.select2-offscreen)', text: %r{#{Regexp.escape(text)}}i, match: :one)
   end
 
   def wait_for_ajax
@@ -121,11 +116,6 @@ module CapybaraExt
     # Restore existing default
     page.evaluate_script('window.confirm = function() { return true; }')
   end
-end
-
-Capybara.configure do |config|
-  config.match = :prefer_exact
-  config.ignore_hidden_elements = true
 end
 
 RSpec::Matchers.define :have_meta do |name, expected|

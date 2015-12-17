@@ -31,6 +31,11 @@ Spree::Core::Engine.add_routes do
           post :update_positions
         end
       end
+      resources :variant_property_rule_values, only: [:destroy] do
+        collection do
+          post :update_positions
+        end
+      end
       resources :images do
         collection do
           post :update_positions
@@ -82,8 +87,8 @@ Spree::Core::Engine.add_routes do
         get :confirm
         put :complete
         post :resend
-        get :open_adjustments
-        get :close_adjustments
+        get "/adjustments/unfinalize", to: "orders#unfinalize_adjustments"
+        get "/adjustments/finalize", to: "orders#finalize_adjustments"
         put :approve
         put :cancel
         put :resume

@@ -40,7 +40,7 @@
         </div>
 
         <div class="field">
-          <%= label_tag nil, "Shipment Number" %>
+          <%= label_tag nil, Spree.t(:shipment_number) %>
           <%= f.text_field :shipments_number_cont %>
         </div>
 
@@ -99,7 +99,7 @@
 <%= paginate @orders %>
 
 <% if @orders.any? %>
-  <table class="index responsive" id="listing_orders" data-hook>
+  <table class="index" id="listing_orders" data-hook>
     <colgroup>
        <col style="width: 13%;">
        <col style="width: 10%;">

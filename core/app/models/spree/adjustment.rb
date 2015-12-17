@@ -16,7 +16,7 @@ module Spree
   class Adjustment < Spree::Base
     belongs_to :adjustable, polymorphic: true, touch: true
     belongs_to :source, polymorphic: true
-    belongs_to :order, class_name: "Spree::Order"
+    belongs_to :order, class_name: 'Spree::Order', inverse_of: :all_adjustments
     belongs_to :promotion_code, :class_name => 'Spree::PromotionCode'
     belongs_to :adjustment_reason, class_name: 'Spree::AdjustmentReason', inverse_of: :adjustments
 
@@ -170,7 +170,7 @@ module Spree
         # Persist only if changed
         # This is only not a save! to avoid the extra queries to load the order
         # (for validations) and to touch the adjustment.
-        update_columns(eligible: eligible, amount: amount, updated_at: Time.now) if changed?
+        update_columns(eligible: eligible, amount: amount, updated_at: Time.current) if changed?
       end
       amount
     end

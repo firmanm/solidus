@@ -34,9 +34,7 @@ if ENV["CHECK_TRANSLATIONS"]
 end
 
 require 'spree/testing_support/factories'
-require 'spree/testing_support/rspec-activemodel-mocks_patch'
 require 'spree/testing_support/preferences'
-require 'spree/testing_support/mail'
 require 'cancan/matchers'
 
 RSpec.configure do |config|
@@ -67,7 +65,6 @@ RSpec.configure do |config|
 
   config.include FactoryGirl::Syntax::Methods
   config.include Spree::TestingSupport::Preferences
-  config.include Spree::TestingSupport::Mail
   config.extend WithModel
 
   config.fail_fast = ENV['FAIL_FAST'] || false

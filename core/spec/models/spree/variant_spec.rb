@@ -463,7 +463,7 @@ describe Spree::Variant, :type => :model do
     it "updates a product" do
       variant.product.update_column(:updated_at, 1.day.ago)
       variant.touch
-      expect(variant.product.reload.updated_at).to be_within(3.seconds).of(Time.now)
+      expect(variant.product.reload.updated_at).to be_within(3.seconds).of(Time.current)
     end
 
     it "clears the in_stock cache key" do
@@ -572,6 +572,29 @@ describe Spree::Variant, :type => :model do
       end
       it "returns unpersisted record" do
         expect(subject).to be_new_record
+      end
+    end
+  end
+
+  describe "#variant_properties" do
+    let(:option_value_1) { create(:option_value) }
+    let(:option_value_2) { create(:option_value) }
+    let(:variant) { create(:variant, option_values: [option_value_1, option_value_2]) }
+
+    subject { variant.variant_properties }
+
+    context "variant has properties" do
+      let!(:rule_1) { create(:variant_property_rule, product: variant.product, option_value: option_value_1) }
+      let!(:rule_2) { create(:variant_property_rule, product: variant.product, option_value: option_value_2) }
+
+      it "returns the variant property rule's values" do
+        expect(subject).to match_array rule_1.values + rule_2.values
+      end
+    end
+
+    context "variant doesn't have any properties" do
+      it "returns an empty list" do
+        expect(subject).to eq []
       end
     end
   end

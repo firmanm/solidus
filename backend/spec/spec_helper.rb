@@ -33,7 +33,6 @@ require 'ffaker'
 
 require 'spree/testing_support/authorization_helpers'
 require 'spree/testing_support/factories'
-require 'spree/testing_support/rspec-activemodel-mocks_patch'
 require 'spree/testing_support/preferences'
 require 'spree/testing_support/controller_requests'
 require 'spree/testing_support/flash'
@@ -65,7 +64,6 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = false
 
   config.before :suite do
-    Capybara.match = :prefer_exact
     DatabaseCleaner.clean_with :truncation
   end
 
@@ -73,7 +71,7 @@ RSpec.configure do |config|
     Rails.cache.clear
     reset_spree_preferences
     WebMock.disable!
-    if RSpec.current_example.metadata[:js] || RSpec.current_example.metadata[:truncation]
+    if RSpec.current_example.metadata[:js]
       DatabaseCleaner.strategy = :truncation
     else
       DatabaseCleaner.strategy = :transaction

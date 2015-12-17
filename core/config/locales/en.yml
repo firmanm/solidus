@@ -228,6 +228,7 @@ en:
       spree/state:
         one: State
         other: States
+      spree/stock: stock
       spree/stock_movement:
         one: Stock Movement
         other: Stock Movements
@@ -298,6 +299,11 @@ en:
           attributes:
             currency:
               must_match_order_currency: "Must match order currency"
+        spree/promotion:
+          attributes:
+            apply_automatically:
+              disallowed_with_code: Disallowed for promotions with a code
+              disallowed_with_path: Disallowed for promotions with a path
         spree/refund:
           attributes:
             amount:
@@ -408,6 +414,7 @@ en:
     add_option_value: Add Option Value
     add_product: Add Product
     add_product_properties: Add Product Properties
+    add_variant_properties: Add Variant Properties
     add_rule_of_type: Add rule of type
     add_state: Add State
     add_stock: Add Stock
@@ -495,8 +502,8 @@ en:
     agree_to_privacy_policy: Agree to Privacy Policy
     agree_to_terms_of_service: Agree to Terms of Service
     all: All
-    all_adjustments_closed: All adjustments successfully closed!
-    all_adjustments_opened: All adjustments successfully opened!
+    all_adjustments_finalized: All adjustments successfully finalized!
+    all_adjustments_unfinalized: All adjustments successfully unfinalized!
     all_departments: All departments
     all_items_have_been_returned: All items have been returned
     already_signed_up_for_analytics: You have already signed up for Spree Analytics
@@ -547,6 +554,7 @@ en:
     back_to_reports_list: Back To Reports List
     back_to_refund_reason_list: Back To Refund Reason List
     back_to_reimbursement_type_list: Back To Reimbursement Type List
+    back_to_return_authorizations_list: Back To Return Authorizations List
     back_to_rma_reason_list: Back To RMA Reason List
     back_to_shipping_categories: Back To Shipping Categories
     back_to_shipping_categories_list: Back To Shipping Categories List
@@ -587,6 +595,7 @@ en:
     cannot_rebuild_shipments_shipments_not_pending: Cannot rebuild shipments for an order with non-pending shipments.
     cannot_perform_operation: Cannot perform requested operation
     cannot_set_shipping_method_without_address: Cannot set shipping method until customer details are provided.
+    cannot_update_email: You do not have access to update this user's email address. <br />Please contact a superuser if you need to perform this action.
     capture: Capture
     capture_events: Capture events
     card_code: Card Code
@@ -615,7 +624,6 @@ en:
     clear_cache_warning: Clearing cache will temporarily reduce the performance of your store.
     clone: Clone
     close: Close
-    close_all_adjustments: Close All Adjustments
     close_stock_transfer:
       will_cause: Closing a stock transfer will cause the following
       no_longer_edit: You will no longer be able to edit the stock transfer in any way
@@ -762,7 +770,6 @@ en:
     enable_mail_delivery: Enable Mail Delivery
     end: End
     ending_in: Ending in
-    environment: Environment
     error: error
     errors:
       messages:
@@ -807,6 +814,7 @@ en:
     fill_in_customer_info: Please fill in customer info
     filter_results: Filter Results
     finalize: Finalize
+    finalize_all_adjustments: Finalize All Adjustments
     finalize_stock_transfer:
       will_cause: Finalizing a stock transfer will cause the following
       no_longer_change_items: You will no longer be able to add or edit any transfer items
@@ -841,6 +849,7 @@ en:
     guest_user_account: Checkout as a Guest
     has_no_shipped_units: has no shipped units
     height: Height
+    hidden: hidden
     hide_out_of_stock: Hide out of stock
     home: Home
     i18n:
@@ -876,7 +885,6 @@ en:
     intercept_email_address: Intercept Email Address
     intercept_email_instructions: Override email recipient and replace with this address.
     internal_name: Internal Name
-    invalid_credit_card: Invalid credit card.
     invalid_exchange_variant: Invalid exchange variant.
     invalid_payment_provider: Invalid payment provider.
     invalid_promotion_action: Invalid promotion action.
@@ -934,6 +942,7 @@ en:
     make_refund: Make refund
     make_sure_the_above_reimbursement_amount_is_correct: Make sure the above reimbursement amount is correct
     manage_promotion_categories: Manage Promotion Categories
+    manage_stock: Manage Stock
     manual_intervention_required: Manual intervention required
     manage_variants: Manage Variants
     master_price: Master Price
@@ -1035,7 +1044,6 @@ en:
     number_of_codes: ! '%{count} codes'
     on_hand: On Hand
     open: Open
-    open_all_adjustments: Open All Adjustments
     option_type: Option Type
     option_type_placeholder: Choose an option type
     option_types: Option Types
@@ -1207,6 +1215,9 @@ en:
       one_use_per_user:
         description: Only One Use Per User
         name: One Use Per User
+      option_value:
+        description: Order includes specified product(s) with matching option value(s)
+        name: Option Value(s)
       product:
         description: Order includes specified product(s)
         name: Product(s)
@@ -1223,6 +1234,10 @@ en:
         description: Apply a promotion to every nth order a user has completed.
         name: Nth Order
         form_text: "Apply this promotion on the users Nth order: "
+      first_repeat_purchase_since:
+        description: Available only to user who have not purchased in a while
+        name: First Repeat Purchase Since
+        form_text: "Apply this promotion to users whose last order was more than X days ago: "
     promotions: Promotions
     promotion_successfully_created: Promotion has been successfully created!
     promotion_total_changed_before_complete: "One or more of the promotions on your order have become ineligible and were removed. Please check the new order amounts and try again."
@@ -1359,6 +1374,7 @@ en:
         track_information: ! 'Tracking Information: %{tracking}'
         track_link: ! 'Tracking Link: %{url}'
     shipment_date: Shipment date
+    shipment_number: Shipment Number
     shipment_numbers: Shipment numbers
     shipment_state: Shipment State
     shipment_states:
@@ -1533,6 +1549,7 @@ en:
     unable_to_connect_to_gateway: Unable to connect to gateway.
     unable_to_create_reimbursements: Unable to create reimbursements because there are items pending manual intervention.
     unable_to_create_stock_transfer: Unable to create the stock transfer
+    unfinalize_all_adjustments: Unfinalize All Adjustments
     under_price: Under %{price}
     unlock: Unlock
     unrecognized_card_type: Unrecognized card type
@@ -1562,6 +1579,7 @@ en:
     value: Value
     variant: Variant
     variant_placeholder: Choose a variant
+    variant_properties: Variant Properties
     variant_search: Variant Search
     variant_search_placeholder: "SKU or Option Value"
     variant_to_add: Variant to add

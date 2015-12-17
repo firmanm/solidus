@@ -2,6 +2,9 @@ module Spree
   class Payment < Spree::Base
     include Spree::Payment::Processing
 
+    alias_attribute :identifier, :number
+    deprecate :identifier, :identifier=, deprecator: Spree::Deprecation
+
     IDENTIFIER_CHARS    = (('A'..'Z').to_a + ('0'..'9').to_a - %w(0 1 I O)).freeze
     NON_RISKY_AVS_CODES = ['B', 'D', 'H', 'J', 'M', 'Q', 'T', 'V', 'X', 'Y'].freeze
     RISKY_AVS_CODES     = ['A', 'C', 'E', 'F', 'G', 'I', 'K', 'L', 'N', 'O', 'P', 'R', 'S', 'U', 'W', 'Z'].freeze
@@ -29,9 +32,10 @@ module Spree
     # invalidate previously entered payments
     after_create :invalidate_old_payments
 
-    attr_accessor :source_attributes, :request_env
+    attr_accessor :source_attributes
+    after_initialize :apply_source_attributes
 
-    after_initialize :build_source
+    attr_accessor :request_env
 
     validates :amount, numericality: true
     validates :source, presence: true, if: :source_required?
@@ -145,13 +149,19 @@ module Spree
     # this payment's payment method and associates it correctly.
     #
     # @see https://github.com/spree/spree/issues/981
-    def build_source
+    #
+    # TODO: Move this into upcoming CartUpdate class
+    def apply_source_attributes
       return unless new_record?
-      if source_attributes.present? && source.blank? && payment_method.try(:payment_source_class)
-        self.source = payment_method.payment_source_class.new(source_attributes)
-        self.source.payment_method_id = payment_method.id
-        self.source.user_id = self.order.user_id if self.order
-      end
+      return if source_attributes.blank?
+
+      ActiveSupport::Deprecation.warn(<<WARN.squish)
+Building payment sources by assigning source_attributes on payments is
+deprecated. Instead use either the PaymentCreate class or the
+OrderUpdateAttributes class.
+WARN
+
+      PaymentCreate.new(order, {source_attributes: source_attributes}, payment: self, request_env: request_env).build
     end
 
     # @return [Array<String>] the actions available on this payment
@@ -243,18 +253,8 @@ module Spree
       end
 
       def update_order
-        if completed? || void?
-          order.updater.update_payment_total
-        end
-
-        if order.completed?
-          order.updater.update_payment_state
-          order.updater.update_shipments
-          order.updater.update_shipment_state
-        end
-
-        if self.completed? || order.completed?
-          order.persist_totals
+        if order.completed? || completed? || void?
+          order.update!
         end
       end
 
@@ -265,8 +265,8 @@ module Spree
       # See https://github.com/spree/spree/issues/1998#issuecomment-12869105
       def set_unique_identifier
         begin
-          self.identifier = generate_identifier
-        end while self.class.exists?(identifier: self.identifier)
+          self.number = generate_identifier
+        end while self.class.exists?(number: self.number)
       end
 
       def generate_identifier

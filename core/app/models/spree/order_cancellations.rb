@@ -14,6 +14,15 @@ class Spree::OrderCancellations
     @order = order
   end
 
+  # Marks inventory units short shipped. Adjusts the order based on the value of the inventory.
+  # Sends an email to the customer about what inventory has been short shipped.
+  #
+  # @api public
+  #
+  # @param [Array<InventoryUnit>] inventory_units the inventory units to be short shipped
+  # @param [String] whodunnit the system or person that is short shipping the inventory units
+  #
+  # @return [Array<UnitCancel>] the units that have been canceled due to short shipping
   def short_ship(inventory_units, whodunnit:nil)
     if inventory_units.map(&:order_id).uniq != [@order.id]
       raise ArgumentError, "Not all inventory units belong to this order"
@@ -42,6 +51,48 @@ class Spree::OrderCancellations
     unit_cancels
   end
 
+  # Marks inventory unit canceled. Optionally allows specifying the reason why and who is performing the action.
+  #
+  # @api public
+  #
+  # @param [InventoryUnit] inventory_unit the inventory unit to be canceled
+  # @param [String] reason the reason that you are canceling the inventory unit
+  # @param [String] whodunnit the system or person that is canceling the inventory unit
+  #
+  # @return [UnitCancel] the unit that has been canceled
+  def cancel_unit(inventory_unit, reason: Spree::UnitCancel::DEFAULT_REASON, whodunnit:nil)
+    unit_cancel = nil
+
+    Spree::OrderMutex.with_lock!(@order) do
+      unit_cancel = Spree::UnitCancel.create!(
+        inventory_unit: inventory_unit,
+        reason: reason,
+        created_by: whodunnit,
+      )
+
+      inventory_unit.cancel!
+    end
+
+    unit_cancel
+  end
+
+  # Reimburses inventory units due to cancellation.
+  #
+  # @api public
+  # @param [Array<InventoryUnit>] inventory_units the inventory units to be reimbursed
+  # @return [Reimbursement] the reimbursement for inventory being canceled
+  def reimburse_units(inventory_units)
+    reimbursement = nil
+
+    Spree::OrderMutex.with_lock!(@order) do
+      return_items = inventory_units.map(&:current_or_new_return_item)
+      reimbursement = Spree::Reimbursement.new(order: @order, return_items: return_items)
+      reimbursement.return_all
+    end
+
+    reimbursement
+  end
+
   private
 
   def short_ship_unit(inventory_unit, whodunnit:nil)
@@ -65,7 +116,7 @@ class Spree::OrderCancellations
 
     shipments.each do |shipment|
       if shipment.inventory_units.all? {|iu| iu.shipped? || iu.canceled? }
-        shipment.update_attributes!(state: 'shipped', shipped_at: Time.now)
+        shipment.update_attributes!(state: 'shipped', shipped_at: Time.current)
       end
     end
   end

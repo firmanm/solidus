@@ -28,7 +28,7 @@ describe "Stock Management", :type => :feature do
         @product = create(:product, name: 'apache baseball cap', price: 10)
         v = @product.variants.create!(sku: 'FOOBAR')
         Spree::StockLocation.destroy_all
-        click_link "Products"
+        click_link "Back To Products List"
         within_row(1) do
           click_icon :edit
         end
@@ -58,9 +58,9 @@ describe "Stock Management", :type => :feature do
     end
 
     def adjust_count_on_hand(count_on_hand)
-      find(:css, ".fa-edit[data-id='#{stock_item.id}']").click
+      find(:css, ".fa-edit[data-id='#{stock_item.id}']").trigger('click')
       find(:css, "[data-variant-id='#{variant.id}'] input[type='number']").set(count_on_hand)
-      find(:css, ".fa-check[data-id='#{stock_item.id}']").click
+      find(:css, ".fa-check[data-id='#{stock_item.id}']").trigger('click')
       expect(page).to have_content('Updated successfully')
     end
 

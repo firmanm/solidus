@@ -20,9 +20,29 @@ module Spree
         StockTransfer.create do |transfer|
           transfer.source_location_id = warehouse.id
           transfer.destination_location_id = la_store.id
-          transfer.finalized_at = DateTime.now
-          transfer.closed_at = DateTime.now
+          transfer.finalized_at = DateTime.current
+          transfer.closed_at = DateTime.current
         end }
+
+      describe "stock location filtering" do
+        let(:user) { create(:admin_user) }
+        let(:ability) { Spree::Ability.new(user) }
+        let!(:sf_store) { StockLocation.create(name: "SF Store")}
+
+        before do
+          ability.cannot :manage, Spree::StockLocation
+          ability.can :display, Spree::StockLocation, id: [warehouse.id]
+          ability.can :display, Spree::StockLocation, id: [ny_store.id, la_store.id]
+
+          allow_any_instance_of(Spree::Admin::BaseController).to receive(:spree_current_user).and_return(user)
+          allow_any_instance_of(Spree::Admin::BaseController).to receive(:current_ability).and_return(ability)
+        end
+
+        it "doesn't display stock locations the user doesn't have access to" do
+          spree_get :index
+          expect(assigns(:stock_locations)).to match_array [warehouse, ny_store, la_store]
+        end
+      end
 
       it "searches by stock location" do
         spree_get :index, :q => { :source_location_id_or_destination_location_id_eq => ny_store.id }
@@ -143,7 +163,7 @@ module Spree
 
       context 'stock transfer is not finalizable' do
         before do
-          transfer_with_items.update_attributes(finalized_at: Time.now)
+          transfer_with_items.update_attributes(finalized_at: Time.current)
         end
 
         it 'redirects back to edit' do

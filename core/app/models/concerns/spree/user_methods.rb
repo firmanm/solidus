@@ -23,18 +23,25 @@ module Spree
       has_many :store_credit_events, through: :store_credits
       money_methods :total_available_store_credit
 
-      def self.ransackable_associations(auth_object=nil)
-        %w[addresses]
-      end
+      after_create :auto_generate_spree_api_key
 
-      def self.ransackable_attributes(auth_object=nil)
-        %w[id email]
-      end
+      include Spree::RansackableAttributes unless included_modules.include?(Spree::RansackableAttributes)
+
+      self.whitelisted_ransackable_associations = %w[addresses]
+      self.whitelisted_ransackable_attributes = %w[id email]
     end
 
     # has_spree_role? simply needs to return true or false whether a user has a role or not.
     def has_spree_role?(role_in_question)
       spree_roles.any? { |role| role.name == role_in_question.to_s }
+    end
+
+    def auto_generate_spree_api_key
+      return if !respond_to?(:spree_api_key) || spree_api_key.present?
+
+      if Spree::Config.generate_api_key_for_all_roles || (spree_roles.map(&:name) & Spree::Config.roles_for_auto_api_key).any?
+        generate_spree_api_key!
+      end
     end
 
     # @return [Spree::Order] the most-recently-created incomplete order
@@ -43,6 +50,8 @@ module Spree
       self_orders = self.orders
       self_orders = self_orders.where(frontend_viewable: true) if only_frontend_viewable
       self_orders = self_orders.where(store: store) if store
+      self_orders = self_orders.where('updated_at > ?', Spree::Config.completable_order_updated_cutoff_days.days.ago) if Spree::Config.completable_order_updated_cutoff_days
+      self_orders = self_orders.where('created_at > ?', Spree::Config.completable_order_created_cutoff_days.days.ago) if Spree::Config.completable_order_created_cutoff_days
       last_order = self_orders.order(:created_at).last
       last_order unless last_order.try!(:completed?)
     end

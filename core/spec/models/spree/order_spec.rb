@@ -197,111 +197,37 @@ describe Spree::Order, :type => :model do
     end
   end
 
-  # Regression tests for #2179
-  context "#merge!" do
-    let(:variant) { create(:variant) }
-    let(:order_1) { Spree::Order.create }
-    let(:order_2) { Spree::Order.create }
+  describe '#merge!' do
+    let(:order1) { create(:order_with_line_items) }
+    let(:order2) { create(:order_with_line_items) }
 
-    it "destroys the other order" do
-      order_1.merge!(order_2)
-      expect { order_2.reload }.to raise_error(ActiveRecord::RecordNotFound)
+    it 'merges the orders' do
+      order1.merge!(order2)
+      expect(order1.line_items.count).to eq(2)
+      expect(order2.destroyed?).to be_truthy
     end
 
-    context "user is provided" do
-      it "assigns user to new order" do
-        order_1.merge!(order_2, user)
-        expect(order_1.user).to eq user
-      end
-    end
-
-    context "merging together two orders with line items for the same variant" do
+    describe 'order_merger_class customization' do
       before do
-        order_1.contents.add(variant, 1)
-        order_2.contents.add(variant, 1)
-      end
-
-      specify do
-        order_1.merge!(order_2)
-        expect(order_1.line_items.count).to eq(1)
-
-        line_item = order_1.line_items.first
-        expect(line_item.quantity).to eq(2)
-        expect(line_item.variant_id).to eq(variant.id)
-      end
-
-    end
-
-    context "merging using extension-specific line_item_comparison_hooks" do
-      before do
-        Spree::Order.register_line_item_comparison_hook(:foos_match)
-        allow(Spree::Variant).to receive(:price_modifier_amount).and_return(0.00)
+        class TestOrderMerger
+          def initialize(order)
+            @order = order
+          end
+          def merge!(other_order, user = nil)
+            [@order, other_order, user]
+          end
+        end
+        Spree::Config.order_merger_class = TestOrderMerger
       end
 
       after do
-        # reset to avoid test pollution
-        Spree::Order.line_item_comparison_hooks = Set.new
+        Spree::Config.order_merger_class = Spree::PromotionChooser
       end
 
-      context "2 equal line items" do
-        before do
-          @line_item_1 = order_1.contents.add(variant, 1, {foos: {}})
-          @line_item_2 = order_2.contents.add(variant, 1, {foos: {}})
-        end
+      let(:user) { build(:user) }
 
-        specify do
-          expect(order_1).to receive(:foos_match).with(@line_item_1, kind_of(Hash)).and_return(true)
-          order_1.merge!(order_2)
-          expect(order_1.line_items.count).to eq(1)
-
-          line_item = order_1.line_items.first
-          expect(line_item.quantity).to eq(2)
-          expect(line_item.variant_id).to eq(variant.id)
-        end
-      end
-
-      context "2 different line items" do
-        before do
-          allow(order_1).to receive(:foos_match).and_return(false)
-
-          order_1.contents.add(variant, 1, {foos: {}})
-          order_2.contents.add(variant, 1, {foos: {bar: :zoo}})
-        end
-
-        specify do
-          order_1.merge!(order_2)
-          expect(order_1.line_items.count).to eq(2)
-
-          line_item = order_1.line_items.first
-          expect(line_item.quantity).to eq(1)
-          expect(line_item.variant_id).to eq(variant.id)
-
-          line_item = order_1.line_items.last
-          expect(line_item.quantity).to eq(1)
-          expect(line_item.variant_id).to eq(variant.id)
-        end
-      end
-    end
-
-    context "merging together two orders with different line items" do
-      let(:variant_2) { create(:variant) }
-
-      before do
-        order_1.contents.add(variant, 1)
-        order_2.contents.add(variant_2, 1)
-      end
-
-      specify do
-        order_1.merge!(order_2)
-        line_items = order_1.line_items.reload
-        expect(line_items.count).to eq(2)
-
-        expect(order_1.item_count).to eq 2
-        expect(order_1.item_total).to eq line_items.map(&:amount).sum
-
-        # No guarantee on ordering of line items, so we do this:
-        expect(line_items.pluck(:quantity)).to match_array([1, 1])
-        expect(line_items.pluck(:variant_id)).to match_array([variant.id, variant_2.id])
+      it 'uses the configured order merger' do
+        expect(order1.merge!(order2, user)).to eq([order1, order2, user])
       end
     end
   end
@@ -399,7 +325,7 @@ describe Spree::Order, :type => :model do
     context 'when the order is completed' do
       before do
         order.state = 'complete'
-        order.completed_at = Time.now
+        order.completed_at = Time.current
         order.update_column(:shipment_total, 5)
         order.shipments.create!
       end
@@ -765,7 +691,7 @@ describe Spree::Order, :type => :model do
       order.completed_at = nil
       expect(order.completed?).to be false
 
-      order.completed_at = Time.now
+      order.completed_at = Time.current
       expect(order.completed?).to be true
     end
   end
@@ -804,14 +730,14 @@ describe Spree::Order, :type => :model do
     it "should be false for completed order in the canceled state" do
       order.state = 'canceled'
       order.shipment_state = 'ready'
-      order.completed_at = Time.now
+      order.completed_at = Time.current
       expect(order.can_cancel?).to be false
     end
 
     it "should be true for completed order with no shipment" do
       order.state = 'complete'
       order.shipment_state = nil
-      order.completed_at = Time.now
+      order.completed_at = Time.current
       expect(order.can_cancel?).to be true
     end
   end
@@ -829,7 +755,7 @@ describe Spree::Order, :type => :model do
     let(:order) { Spree::Order.create } # need a persisted in order to test locking
 
     it 'can lock' do
-      expect { order.with_lock {} }.to_not raise_error
+      order.with_lock {}
     end
   end
 
@@ -846,11 +772,11 @@ describe Spree::Order, :type => :model do
 
   context "#refund_total" do
     let(:order) { create(:order_with_line_items) }
-    let!(:payment) { create(:payment_with_refund, order: order) }
-    let!(:payment2) { create(:payment_with_refund, order: order) }
+    let!(:payment) { create(:payment_with_refund, order: order, amount: 5, refund_amount: 3) }
+    let!(:payment2) { create(:payment_with_refund, order: order, amount: 5, refund_amount: 2.5) }
 
     it "sums the reimbursment refunds on the order" do
-      expect(order.refund_total).to eq(10.0)
+      expect(order.refund_total).to eq(5.5)
     end
   end
 
@@ -894,7 +820,7 @@ describe Spree::Order, :type => :model do
 
     context 'a reimbursement related refund exists' do
       let(:order) { refund.payment.order }
-      let(:refund) { create(:refund, reimbursement_id: 123, amount: 5)}
+      let(:refund) { create(:refund, reimbursement_id: 123, amount: 5, payment_amount: 14)}
 
       it { is_expected.to eq false }
     end
@@ -928,6 +854,25 @@ describe Spree::Order, :type => :model do
       }.not_to change { subject.reload.shipments }
 
       expect { shipment.reload }.not_to raise_error
+    end
+
+    context "unreturned exchange" do
+      let!(:first_shipment) do
+        create(:shipment, order: subject, state: first_shipment_state, created_at: 5.days.ago)
+      end
+      let!(:second_shipment) do
+        create(:shipment, order: subject, state: second_shipment_state, created_at: 5.days.ago)
+      end
+
+      context "all shipments are shipped" do
+        let(:first_shipment_state) { "shipped" }
+        let(:second_shipment_state) { "shipped" }
+
+        it "returns the shipments" do
+          subject.create_proposed_shipments
+          expect(subject.shipments).to match_array [first_shipment, second_shipment]
+        end
+      end
     end
   end
 
@@ -1007,6 +952,12 @@ describe Spree::Order, :type => :model do
     let(:line_item) { Spree::LineItem.new(price: 10, quantity: 1) }
     let(:shipment) { Spree::Shipment.new(cost: 10) }
     let(:payment) { Spree::Payment.new(amount: 10) }
+
+    around do |example|
+      ActiveSupport::Deprecation.silence do
+        example.run
+      end
+    end
 
     before do
       allow(order).to receive(:line_items) { [line_item] }

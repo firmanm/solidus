@@ -29,7 +29,8 @@ module Spree
         authorize! :update, @order, order_token
         @order.next!
         respond_with(@order, default_template: 'spree/api/orders/show', status: 200)
-      rescue StateMachines::InvalidTransition
+      rescue StateMachines::InvalidTransition => e
+        logger.error("invalid_transition #{e.event} from #{e.from} for #{e.object.class.name}. Error: #{e.inspect}")
         respond_with(@order, default_template: 'spree/api/orders/could_not_transition', status: 422)
       end
 
@@ -47,21 +48,15 @@ module Spree
           @order.complete!
           respond_with(@order, default_template: 'spree/api/orders/show', status: 200)
         end
-      rescue StateMachines::InvalidTransition
+      rescue StateMachines::InvalidTransition => e
+        logger.error("invalid_transition #{e.event} from #{e.from} for #{e.object.class.name}. Error: #{e.inspect}")
         respond_with(@order, default_template: 'spree/api/orders/could_not_transition', status: 422)
       end
 
       def update
         authorize! :update, @order, order_token
 
-        update_params = if params[:payment_source].present?
-          ActiveSupport::Deprecation.warn("Passing payment_source is deprecated. Send source parameters inside payments_attributes[:source_attributes].", caller)
-          move_payment_source_into_payments_attributes(params)
-        else
-          params
-        end
-
-        if @order.update_from_params(update_params, permitted_checkout_attributes, request.headers.env)
+        if OrderUpdateAttributes.new(@order, update_params, request_env: request.headers.env).apply
           if can?(:admin, @order) && user_id.present?
             @order.associate_user!(Spree.user_class.find(user_id))
           end
@@ -72,6 +67,7 @@ module Spree
             state_callback(:after)
             respond_with(@order, default_template: 'spree/api/orders/show')
           else
+            logger.error("failed_to_transition_errors=#{@order.errors.full_messages}")
             respond_with(@order, default_template: 'spree/api/orders/could_not_transition', status: 422)
           end
         else
@@ -82,6 +78,33 @@ module Spree
       private
         def user_id
           params[:order][:user_id] if params[:order]
+        end
+
+        def update_params
+          if update_params = massaged_params[:order]
+            update_params.permit(permitted_checkout_attributes)
+          else
+            # We current allow update requests without any parameters in them.
+            {}
+          end
+        end
+
+        def massaged_params
+          massaged_params = params.deep_dup
+
+          if params[:payment_source].present?
+            ActiveSupport::Deprecation.warn("Passing payment_source is deprecated. Send source parameters inside payments_attributes[:source_attributes].", caller)
+            move_payment_source_into_payments_attributes(massaged_params)
+          end
+
+          if params[:order] && params[:order][:existing_card].present?
+            ActiveSupport::Deprecation.warn("Passing order[:existing_card] is deprecated. Send existing_card_id inside of payments_attributes[:source_attributes].", caller)
+            move_existing_card_into_payments_attributes(massaged_params)
+          end
+
+          set_payment_parameters_amount(massaged_params, @order)
+
+          massaged_params
         end
 
         # Should be overriden if you have areas of your checkout that don't match

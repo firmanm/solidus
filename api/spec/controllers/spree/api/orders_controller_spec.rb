@@ -185,9 +185,9 @@ module Spree
       end
 
       it "returns orders in reverse chronological order by completed_at" do
-        order.update_columns completed_at: Time.now
+        order.update_columns completed_at: Time.current
 
-        order2 = Order.create user: order.user, completed_at: Time.now - 1.day, store: store
+        order2 = Order.create user: order.user, completed_at: Time.current - 1.day, store: store
         expect(order2.created_at).to be > order.created_at
         order3 = Order.create user: order.user, completed_at: nil, store: store
         expect(order3.created_at).to be > order2.created_at
@@ -226,7 +226,7 @@ module Spree
 
     describe 'GET #show' do
       let(:order) { create :order_with_line_items }
-      let(:adjustment) { FactoryGirl.create(:adjustment, order: order) }
+      let(:adjustment) { FactoryGirl.create(:adjustment, adjustable: order, order: order) }
 
       subject { api_get :show, id: order.to_param }
 
@@ -321,7 +321,7 @@ module Spree
     end
 
     it "cannot cancel an order that doesn't belong to them" do
-      order.update_attribute(:completed_at, Time.now)
+      order.update_attribute(:completed_at, Time.current)
       order.update_attribute(:shipment_state, "ready")
       api_put :cancel, :id => order.to_param
       assert_unauthorized!
@@ -392,7 +392,7 @@ module Spree
     end
 
     it "can create an order without any parameters" do
-      expect { api_post :create }.not_to raise_error
+      api_post :create
       expect(response.status).to eq(201)
       expect(json_response["state"]).to eq("cart")
     end
@@ -715,7 +715,7 @@ module Spree
 
       context "creation" do
         it "can create an order without any parameters" do
-          expect { api_post :create }.not_to raise_error
+          api_post :create
           expect(response.status).to eq(201)
           order = Order.last
           expect(json_response["state"]).to eq("cart")
@@ -754,7 +754,7 @@ module Spree
         before do
           Spree::Config[:mails_from] = "spree@example.com"
 
-          order.completed_at = Time.now
+          order.completed_at = Time.current
           order.state = 'complete'
           order.shipment_state = 'ready'
           order.save!

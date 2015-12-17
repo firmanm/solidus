@@ -16,6 +16,11 @@ module Spree
       after_add_or_remove(line_item, options)
     end
 
+    def remove_line_item(line_item, options = {})
+      line_item.destroy!
+      after_add_or_remove(line_item, options)
+    end
+
     def update_cart(params)
       if order.update_attributes(params)
         unless order.completed?
@@ -46,7 +51,7 @@ module Spree
       order.update_attributes!(
         approver: user,
         approver_name: name,
-        approved_at: Time.now,
+        approved_at: Time.current,
       )
     end
 

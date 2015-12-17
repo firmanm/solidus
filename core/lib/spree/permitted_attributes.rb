@@ -5,6 +5,7 @@ module Spree
   module PermittedAttributes
     ATTRIBUTES = [
       :address_attributes,
+      :address_book_attributes,
       :checkout_attributes,
       :credit_card_update_attributes,
       :customer_return_attributes,
@@ -36,10 +37,12 @@ module Spree
     @@address_attributes = [
       :id, :firstname, :lastname, :first_name, :last_name,
       :address1, :address2, :city, :country_id, :state_id,
-      :zipcode, :phone, :state_name, :alternative_phone, :company,
+      :zipcode, :phone, :state_name, :country_iso, :alternative_phone, :company,
       country: [:iso, :name, :iso3, :iso_name],
       state: [:name, :abbr]
     ]
+
+    @@address_book_attributes = address_attributes + [:default]
 
     @@checkout_attributes = [
       :coupon_code, :email, :shipping_method_id, :special_instructions, :use_billing
@@ -77,14 +80,16 @@ module Spree
     @@return_authorization_attributes = [:memo, :stock_location_id, :return_reason_id, return_items_attributes: [:inventory_unit_id, :exchange_variant_id, :return_reason_id]]
 
     @@shipment_attributes = [
-      :order, :special_instructions, :stock_location_id, :id,
-      :tracking, :address, :inventory_units, :selected_shipping_rate_id]
+      :special_instructions, :stock_location_id, :id, :tracking,
+      :selected_shipping_rate_id]
 
     # month / year may be provided by some sources, or others may elect to use one field
     @@source_attributes = [
       :number, :month, :year, :expiry, :verification_value,
       :first_name, :last_name, :cc_type, :gateway_customer_profile_id,
-      :gateway_payment_profile_id, :last_digits, :name, :encrypted_data]
+      :gateway_payment_profile_id, :last_digits, :name, :encrypted_data,
+      :existing_card_id,
+    ]
 
     @@stock_item_attributes = [:variant, :stock_location, :backorderable, :variant_id]
 
@@ -107,8 +112,11 @@ module Spree
 
     @@transfer_item_attributes = [:variant_id, :expected_quantity, :received_quantity]
 
-    # TODO Should probably use something like Spree.user_class.attributes
-    @@user_attributes = [:email, :password, :password_confirmation]
+    # intentionally leaving off email here to prevent privilege escalation
+    # by changing a user with higher priveleges' email to one a lower-priveleged
+    # admin owns. creating a user with an email is handled separate at the
+    # controller level
+    @@user_attributes = [:password, :password_confirmation]
 
     @@variant_attributes = [
       :name, :presentation, :cost_price, :lock_version,

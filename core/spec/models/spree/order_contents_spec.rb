@@ -65,7 +65,7 @@ describe Spree::OrderContents, :type => :model do
     end
 
     context "running promotions" do
-      let(:promotion) { create(:promotion) }
+      let(:promotion) { create(:promotion, apply_automatically: true) }
       let(:calculator) { Spree::Calculator::FlatRate.new(:preferred_amount => 10) }
 
       shared_context "discount changes order total" do
@@ -162,6 +162,48 @@ describe Spree::OrderContents, :type => :model do
     end
   end
 
+  context "#remove_line_item" do
+    context 'given a shipment' do
+      it "ensure shipment calls update_amounts instead of order calling ensure_updated_shipments" do
+        line_item = subject.add(variant, 1)
+        shipment = create(:shipment)
+        expect(subject.order).to_not receive(:ensure_updated_shipments)
+        expect(shipment).to receive(:update_amounts)
+        subject.remove_line_item(line_item, shipment: shipment)
+      end
+    end
+
+    context 'not given a shipment' do
+      it "ensures updated shipments" do
+        line_item = subject.add(variant, 1)
+        expect(subject.order).to receive(:ensure_updated_shipments)
+        subject.remove_line_item(line_item)
+      end
+    end
+
+    it 'should remove line_item' do
+      line_item = subject.add(variant, 1)
+      subject.remove_line_item(line_item)
+
+      expect(order.reload.line_items).to_not include(line_item)
+    end
+
+    it "should update order totals" do
+      expect(order.item_total.to_f).to eq(0.00)
+      expect(order.total.to_f).to eq(0.00)
+
+      line_item = subject.add(variant,2)
+
+      expect(order.item_total.to_f).to eq(39.98)
+      expect(order.total.to_f).to eq(39.98)
+
+      subject.remove_line_item(line_item)
+      expect(order.item_total.to_f).to eq(0.00)
+      expect(order.total.to_f).to eq(0.00)
+    end
+  end
+
+
   context "update cart" do
     let!(:shirt) { subject.add variant, 1 }
 
@@ -203,7 +245,7 @@ describe Spree::OrderContents, :type => :model do
   end
 
   context "completed order" do
-    let(:order) { Spree::Order.create! state: 'complete', completed_at: Time.now }
+    let(:order) { Spree::Order.create! state: 'complete', completed_at: Time.current }
 
     before { order.shipments.create! stock_location_id: variant.stock_location_ids.first }
 

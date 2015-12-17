@@ -60,8 +60,12 @@ FactoryGirl.define do
           payment_state 'paid'
           shipment_state 'ready'
 
-          after(:create) do |order|
-            create(:payment, amount: order.total, order: order, state: 'completed')
+          transient do
+            payment_type :credit_card_payment
+          end
+
+          after(:create) do |order, evaluator|
+            create(evaluator.payment_type, amount: order.total, order: order, state: 'completed')
             order.shipments.each do |shipment|
               shipment.inventory_units.update_all state: 'on_hand'
               shipment.update_column('state', 'ready')
@@ -76,14 +80,14 @@ FactoryGirl.define do
             after(:create) do |order, evaluator|
               order.shipments.each do |shipment|
                 shipment.inventory_units.update_all state: 'shipped'
-                shipment.update_columns(state: 'shipped', shipped_at: Time.now)
+                shipment.update_columns(state: 'shipped', shipped_at: Time.current)
                 if evaluator.with_cartons
                   Spree::Carton.create!(
                     stock_location: shipment.stock_location,
                     address: shipment.address,
                     shipping_method: shipment.shipping_method,
                     inventory_units: shipment.inventory_units,
-                    shipped_at: Time.now,
+                    shipped_at: Time.current,
                   )
                 end
               end

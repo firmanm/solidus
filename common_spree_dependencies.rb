@@ -27,7 +27,7 @@ group :test do
   gem 'email_spec'
   gem 'factory_girl_rails', '~> 4.5.0'
   gem 'launchy'
-  gem 'rspec-activemodel-mocks'
+  gem 'rspec-activemodel-mocks', '~>1.0.2'
   gem 'rspec-collection_matchers'
   gem 'rspec-its'
   gem 'rspec-rails', '~> 3.3.0'
@@ -36,6 +36,7 @@ group :test do
   gem 'poltergeist'
   gem 'timecop'
   gem 'with_model'
+  gem 'rspec_junit_formatter'
 end
 
 group :test, :development do

@@ -124,8 +124,8 @@ module Spree
     #
     # @return [String] a sentence-ified string of option values.
     def options_text
-      values = self.option_values.includes(:option_type).sort do |a, b|
-        a.option_type.position <=> b.option_type.position
+      values = self.option_values.includes(:option_type).sort_by do |option_value|
+        option_value.option_type.position
       end
 
       values.to_a.map! do |ov|
@@ -324,6 +324,16 @@ module Spree
       images.first || (fallback && product.variant_images.first) || Spree::Image.new
     end
 
+    # Determines the variant's property values by verifying which of the product's
+    # variant property rules apply to itself.
+    #
+    # @return [Array<Spree::VariantPropertyRuleValue>] variant_properties
+    def variant_properties
+      self.product.variant_property_rules.map do |rule|
+        rule.values if rule.applies_to_variant?(self)
+      end.flatten.compact
+    end
+
     private
 
       def set_master_out_of_stock
@@ -346,7 +356,7 @@ module Spree
       end
 
       def set_cost_currency
-        self.cost_currency = Spree::Config[:currency] if cost_currency.nil? || cost_currency.empty?
+        self.cost_currency = Spree::Config[:currency] if cost_currency.blank?
       end
 
       def create_stock_items

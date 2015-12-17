@@ -14,12 +14,27 @@ describe Spree::Api::ShipmentsController, :type => :controller do
   context "as a non-admin" do
     it "cannot make a shipment ready" do
       api_put :ready
-      assert_not_found!
+      assert_unauthorized!
     end
 
     it "cannot make a shipment shipped" do
       api_put :ship
-      assert_not_found!
+      assert_unauthorized!
+    end
+
+    it "cannot remove order contents from shipment" do
+      api_put :remove
+      assert_unauthorized!
+    end
+
+    it "cannot add contents to the shipment" do
+      api_put :add
+      assert_unauthorized!
+    end
+
+    it "cannot update the shipment" do
+      api_put :update
+      assert_unauthorized!
     end
   end
 
@@ -162,6 +177,25 @@ describe Spree::Api::ShipmentsController, :type => :controller do
             subject
             expect(rendered_shipment_ids).to match_array current_api_user.orders.flat_map(&:shipments).map(&:id)
           end
+
+          context "credit card payment" do
+            before { subject }
+
+            it 'contains the id and cc_type of the credit card' do
+              expect(json_response['shipments'][0]['order']['payments'][0]['source'].keys).to match_array ["id", "cc_type"]
+            end
+          end
+
+          context "store credit payment" do
+            let(:current_api_user) { shipped_order.user }
+            let(:shipped_order)    { create(:shipped_order, payment_type: :store_credit_payment) }
+
+            before { subject }
+
+            it 'only contains the id of the payment source' do
+              expect(json_response['shipments'][0]['order']['payments'][0]['source'].keys).to match_array ["id"]
+            end
+          end
         end
 
         context 'with filtering' do
@@ -201,14 +235,13 @@ describe Spree::Api::ShipmentsController, :type => :controller do
           subject
           shipment.reload
           expect(shipment.state).to eq 'shipped'
-          expect(shipment.shipped_at.to_i).to eq Time.now.to_i
+          expect(shipment.shipped_at.to_i).to eq Time.current.to_i
         end
       end
 
       context "send_mailer not present" do
         it "sends the shipped shipments mailer" do
-          with_test_mail { subject }
-          expect(ActionMailer::Base.deliveries.size).to eq 1
+          expect { subject }.to change { ActionMailer::Base.deliveries.size }.by(1)
           expect(ActionMailer::Base.deliveries.last.subject).to match /Shipment Notification/
         end
       end
@@ -216,16 +249,14 @@ describe Spree::Api::ShipmentsController, :type => :controller do
       context "send_mailer set to false" do
         let(:send_mailer) { 'false' }
         it "does not send the shipped shipments mailer" do
-          with_test_mail { subject }
-          expect(ActionMailer::Base.deliveries.size).to eq 0
+          expect { subject }.to_not change { ActionMailer::Base.deliveries.size }
         end
       end
 
       context "send_mailer set to true" do
         let(:send_mailer) { 'true' }
         it "sends the shipped shipments mailer" do
-          with_test_mail { subject }
-          expect(ActionMailer::Base.deliveries.size).to eq 1
+          expect { subject }.to change { ActionMailer::Base.deliveries.size }.by(1)
           expect(ActionMailer::Base.deliveries.last.subject).to match /Shipment Notification/
         end
       end
@@ -263,9 +294,9 @@ describe Spree::Api::ShipmentsController, :type => :controller do
         }.not_to change(shipment, :shipped_at)
       end
 
-      it "responds with a 404" do
+      it "responds with a 401" do
         subject
-        expect(response).to be_not_found
+        expect(response).to be_unauthorized
       end
     end
   end

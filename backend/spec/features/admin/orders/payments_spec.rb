@@ -66,6 +66,12 @@ describe 'Payments', :type => :feature do
       # end
     end
 
+    it 'displays the address for a credit card when present' do
+      payment.source.update!(address: create(:address, address1: 'my cc address'))
+      visit spree.admin_order_payment_path(order, payment)
+      expect(page).to have_content 'my cc address'
+    end
+
     it 'lists and create payments for an order', js: true do
       within_row(1) do
         expect(column_text(3)).to eq('$150.00')
@@ -175,8 +181,8 @@ describe 'Payments', :type => :feature do
 
       it "is able to create a new credit card payment with valid information", :js => true do
         fill_in "Card Number", :with => "4111 1111 1111 1111"
-        fill_in "Name", :with => "Test User"
-        fill_in "Expiration", :with => "09 / #{Time.now.year + 1}"
+        fill_in "Name *", :with => "Test User"
+        fill_in "Expiration", :with => "09 / #{Time.current.year + 1}"
         fill_in "Card Code", :with => "007"
         # Regression test for #4277
         expect(page).to have_css('.ccType[value="visa"]', visible: false)

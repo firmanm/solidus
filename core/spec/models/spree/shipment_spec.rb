@@ -25,6 +25,14 @@ describe Spree::Shipment, :type => :model do
   let(:variant) { mock_model(Spree::Variant) }
   let(:line_item) { mock_model(Spree::LineItem, variant: variant) }
 
+  describe "precision of pre_tax_amount" do
+    let!(:line_item) { create :line_item, pre_tax_amount: 4.2051 }
+
+    it "keeps four digits of precision even when reloading" do
+      expect(line_item.reload.pre_tax_amount).to eq(4.2051)
+    end
+  end
+
   # Regression test for #4063
   context "number generation" do
     before do
@@ -314,7 +322,7 @@ describe Spree::Shipment, :type => :model do
 
         it "transitions to shipped" do
           shipment.update_column(:state, "ready")
-          expect { shipment.ship! }.not_to raise_error
+          shipment.ship!
         end
       end
     end
@@ -670,11 +678,12 @@ describe Spree::Shipment, :type => :model do
     end
 
     it 'does not send a confirmation email' do
-      expect(unshippable_shipment).to_not receive(:send_shipment_email)
-      unshippable_shipment.ready!
-      unshippable_shipment.inventory_units(true).each do |unit|
-        expect(unit.state).to eq('shipped')
-      end
+      expect {
+        unshippable_shipment.ready!
+        unshippable_shipment.inventory_units(true).each do |unit|
+          expect(unit.state).to eq('shipped')
+        end
+      }.not_to change{ ActionMailer::Base.deliveries.count }
     end
   end
 
@@ -704,6 +713,55 @@ describe Spree::Shipment, :type => :model do
       expect(shipment.destroy).to eq false
       expect(shipment.errors.full_messages.join).to match /Cannot destroy/
       expect { shipment.reload }.not_to raise_error
+    end
+  end
+
+  describe "#finalize!" do
+    let(:inventory_unit) { shipment.inventory_units.first }
+    let(:stock_item) { inventory_unit.variant.stock_items.find_by(stock_location: stock_location) }
+
+    before do
+      stock_item.set_count_on_hand(10)
+      stock_item.update_attributes!(backorderable: false)
+    end
+
+    subject { shipment.finalize! }
+
+    it "updates the associated inventory units" do
+      inventory_unit.update_columns(updated_at: 1.hour.ago)
+      expect { subject }.to change { inventory_unit.reload.updated_at }
+    end
+
+    it "unstocks the variant" do
+      expect { subject }.to change { stock_item.reload.count_on_hand }.from(10).to(9)
+    end
+
+    context "inventory unit already finalized" do
+      before do
+        inventory_unit.update_attributes!(pending: false)
+      end
+
+      it "doesn't update the associated inventory units" do
+        expect { subject }.to_not change { inventory_unit.reload.updated_at }
+      end
+
+      it "doesn't unstock the variant" do
+        expect { subject }.to_not change { stock_item.reload.count_on_hand }
+      end
+    end
+  end
+
+  describe ".by_store" do
+    it "returns shipments by store" do
+      olivanders_store = create(:store, name: 'Olivanders')
+      wizard_shipment = create(:shipment, order: create(:order, store: olivanders_store))
+      create(:shipment, order: build(:order, store: create(:store, name: 'Target')))
+
+      shipments = Spree::Shipment.by_store(olivanders_store)
+
+      expect(Spree::Shipment.count).to eq(2)
+      expect(shipments.count).to eq(1)
+      expect(shipments.first).to eq(wizard_shipment)
     end
   end
 end

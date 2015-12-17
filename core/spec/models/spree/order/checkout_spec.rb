@@ -118,7 +118,7 @@ describe Spree::Order, :type => :model do
 
         it "doesn't raise an error if the default address is invalid" do
           order.user = mock_model(Spree::LegacyUser, ship_address: Spree::Address.new, bill_address: Spree::Address.new)
-          expect { order.next! }.to_not raise_error
+          order.next!
         end
 
         context "with default addresses" do
@@ -613,6 +613,16 @@ describe Spree::Order, :type => :model do
         expect(Spree::InventoryUnit.where(shipment_id: shipment.id).count).to eq(0)
       end
     end
+
+    context 'the order is already paid' do
+      let(:order) { create(:order_with_line_items) }
+
+      it 'can complete the order' do
+        payment = create(:payment, state: 'completed', order: order, amount: order.total)
+        order.update!
+        expect(order.complete).to eq(true)
+      end
+    end
   end
 
   context "subclassed order" do
@@ -772,12 +782,18 @@ describe Spree::Order, :type => :model do
   end
 
   describe 'update_from_params' do
+    let(:order) { create(:order) }
     let(:permitted_params) { {} }
     let(:params) { {} }
 
+    around do |example|
+      ActiveSupport::Deprecation.silence { example.run }
+    end
+
     it 'calls update_atributes without order params' do
-      expect(order).to receive(:update_attributes).with({})
-      order.update_from_params( params, permitted_params)
+      expect {
+        order.update_from_params( params, permitted_params)
+      }.not_to change{order.attributes}
     end
 
     it 'runs the callbacks' do
@@ -827,10 +843,8 @@ describe Spree::Order, :type => :model do
       it "sets request_env on payment" do
         request_env = { "USER_AGENT" => "Firefox" }
 
-        expected_hash = { "payments_attributes" => [hash_including("request_env" => request_env)] }
-        expect(order).to receive(:update_attributes).with expected_hash
-
         order.update_from_params(params, permitted_params, request_env)
+        expect(order.payments[0].request_env).to eq request_env
       end
 
       it "dont let users mess with others users cards" do
@@ -847,7 +861,7 @@ describe Spree::Order, :type => :model do
       let(:params) { ActionController::Parameters.new(order: {  bad_param: 'okay' } ) }
 
       it 'does not let through unpermitted attributes' do
-        expect(order).to receive(:update_attributes).with({})
+        expect(order).to receive(:assign_attributes).with({})
         order.update_from_params(params, permitted_params)
       end
 
@@ -855,7 +869,7 @@ describe Spree::Order, :type => :model do
         let(:params) { ActionController::Parameters.new(order: {  good_param: 'okay' } ) }
 
         it 'accepts permitted attributes' do
-          expect(order).to receive(:update_attributes).with({"good_param" => 'okay'})
+          expect(order).to receive(:assign_attributes).with({"good_param" => 'okay'})
           order.update_from_params(params, permitted_params)
         end
       end
@@ -865,7 +879,8 @@ describe Spree::Order, :type => :model do
           expect(order).to receive(:update_params_payment_source).and_return false
         end
         it 'does not let through unpermitted attributes' do
-          expect(order).not_to receive(:update_attributes).with({})
+          expect(order).not_to receive(:assign_attributes)
+          expect(order).not_to receive(:save)
           order.update_from_params(params, permitted_params)
         end
       end

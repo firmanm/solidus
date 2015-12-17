@@ -19,7 +19,7 @@ class Spree::OrderShipping
       stock_location: shipment.stock_location,
       address: shipment.address,
       shipping_method: shipment.shipping_method,
-      shipped_at: Time.now,
+      shipped_at: Time.current,
       external_number: external_number,
       # TODO: Remove the `|| shipment.tracking` once Shipment#ship! is called by
       # OrderShipping#ship rather than vice versa
@@ -41,7 +41,7 @@ class Spree::OrderShipping
   # @param tracking_number An option tracking number.
   # @return The carton created.
   def ship(inventory_units:, stock_location:, address:, shipping_method:,
-           shipped_at: Time.now, external_number: nil, tracking_number: nil, suppress_mailer: false)
+           shipped_at: Time.current, external_number: nil, tracking_number: nil, suppress_mailer: false)
 
     carton = nil
 
@@ -68,13 +68,13 @@ class Spree::OrderShipping
         # TODO: make OrderShipping#ship_shipment call Shipment#ship! rather than
         # having Shipment#ship! call OrderShipping#ship_shipment. We only really
         # need this `update_columns` for the specs, until we make that change.
-        shipment.update_columns(state: 'shipped', shipped_at: Time.now)
+        shipment.update_columns(state: 'shipped', shipped_at: Time.current)
       end
     end
 
-    send_shipment_email(carton) if stock_location.fulfillable? && !suppress_mailer # e.g. digital gift cards that aren't actually shipped
+    send_shipment_emails(carton) if stock_location.fulfillable? && !suppress_mailer # e.g. digital gift cards that aren't actually shipped
     fulfill_order_stock_locations(stock_location)
-    update_order_state
+    @order.update!
 
     carton
   end
@@ -85,15 +85,9 @@ class Spree::OrderShipping
     Spree::OrderStockLocation.fulfill_for_order_with_stock_location(@order, stock_location)
   end
 
-  def update_order_state
-    new_state = Spree::OrderUpdater.new(@order).update_shipment_state
-    @order.update_columns(
-      shipment_state: new_state,
-      updated_at: Time.now,
-    )
-  end
-
-  def send_shipment_email(carton)
-    Spree::CartonMailer.shipped_email(carton.id).deliver_later
+  def send_shipment_emails(carton)
+    carton.orders.each do |order|
+      Spree::Config.carton_shipped_email_class.shipped_email(order: order, carton: carton).deliver_later
+    end
   end
 end

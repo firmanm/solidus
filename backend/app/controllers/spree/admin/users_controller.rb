@@ -109,10 +109,11 @@ module Spree
         end
 
         def user_params
-          attributes = permitted_user_attributes | [
-            ship_address_attributes: permitted_address_attributes,
-            bill_address_attributes: permitted_address_attributes
-          ]
+          attributes = permitted_user_attributes
+
+          if action_name == "create" || can?(:update_email, @user)
+            attributes |= [:email]
+          end
 
           if can? :manage, Spree::Role
             attributes += [{ spree_role_ids: [] }]
@@ -134,7 +135,7 @@ module Spree
           when 'basic'
             collection.map { |u| { 'id' => u.id, 'name' => u.email } }.to_json
           else
-            address_fields = [:firstname, :lastname, :address1, :address2, :city, :zipcode, :phone, :state_name, :state_id, :country_id]
+            address_fields = [:firstname, :lastname, :address1, :address2, :city, :zipcode, :phone, :state_name, :state_id, :country_id, :country_iso]
             includes = { :only => address_fields , :include => { :state => { :only => :name }, :country => { :only => :name } } }
 
             collection.to_json(:only => [:id, :email], :include =>

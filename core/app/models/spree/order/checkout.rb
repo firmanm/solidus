@@ -126,6 +126,15 @@ module Spree
                 order.update_totals
                 order.persist_totals
               end
+
+              after_transition do |order, transition|
+                order.logger.debug "Order #{order.number} transitioned from #{transition.from} to #{transition.to} via #{transition.event}"
+              end
+
+
+              after_failure do |order, transition|
+                order.logger.debug "Order #{order.number} halted transition on event #{transition.event} state #{transition.from}: #{order.errors.full_messages.join}"
+              end
             end
 
             alias_method :save_state, :save
@@ -238,7 +247,9 @@ module Spree
 
           set_callback :updating_from_params, :before, :update_params_payment_source
 
+          # @deprecated Use {OrderUpdateAttributes} instead
           def update_from_params(params, permitted_params, request_env = {})
+            ActiveSupport::Deprecation.warn "update_from_params is deprecated. Use the OrderUpdateAttributes class instead", caller
             success = false
             @updating_params = params
             run_callbacks :updating_from_params do
@@ -265,8 +276,8 @@ module Spree
                 attributes[:payments_attributes].first[:request_env] = request_env
               end
 
-              success = self.update_attributes(attributes)
-              set_shipments_cost if self.shipments.any?
+              update = OrderUpdateAttributes.new(self, attributes, request_env: request_env)
+              success = update.apply
             end
 
             @updating_params = nil
