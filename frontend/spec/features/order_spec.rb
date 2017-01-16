@@ -1,12 +1,12 @@
 require 'spec_helper'
 
-describe 'orders', :type => :feature do
+describe 'orders', type: :feature do
   let(:order) { OrderWalkthrough.up_to(:complete) }
   let(:user) { create(:user) }
 
   before do
     order.update_attribute(:user_id, user.id)
-    allow_any_instance_of(Spree::OrdersController).to receive_messages(:try_spree_current_user => user)
+    allow_any_instance_of(Spree::OrdersController).to receive_messages(try_spree_current_user: user)
   end
 
   it "can visit an order" do
@@ -15,7 +15,7 @@ describe 'orders', :type => :feature do
   end
 
   it "should display line item price" do
-    # Regression test for #2772
+    # Regression test for https://github.com/spree/spree/issues/2772
     line_item = order.line_items.first
     line_item.target_shipment = create(:shipment)
     line_item.price = 19.00
@@ -30,7 +30,7 @@ describe 'orders', :type => :feature do
   end
 
   it "should have credit card info if paid with credit card" do
-    create(:payment, :order => order)
+    create(:payment, order: order)
     visit spree.order_path(order)
     within '.payment-info' do
       expect(page).to have_content "Ending in 1111"
@@ -38,14 +38,14 @@ describe 'orders', :type => :feature do
   end
 
   it "should have payment method name visible if not paid with credit card" do
-    create(:check_payment, :order => order)
+    create(:check_payment, order: order)
     visit spree.order_path(order)
     within '.payment-info' do
       expect(page).to have_content "Check"
     end
   end
 
-  # Regression test for #2282
+  # Regression test for https://github.com/spree/spree/issues/2282
   context "can support a credit card with blank information" do
     before do
       credit_card = create(:credit_card)

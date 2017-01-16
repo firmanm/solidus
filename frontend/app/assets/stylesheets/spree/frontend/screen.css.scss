@@ -4,6 +4,7 @@
 //= depend_on_asset "fontawesome-webfont.svg"
 //= depend_on_asset "spree/frontend/cart.png"
 
+@import 'spree/frontend/skeleton';
 @import 'spree/frontend/variables';
 @import 'font-awesome';
 
@@ -215,6 +216,16 @@ input[type= "reset"], button, a.button {
   }
 }
 
+input[type=button],
+input[type=submit],
+button {
+  &.disabled {
+    background:#ccc;
+    border-color: #ccc;
+    text-shadow:none;
+  }
+}
+
 input[type="checkbox"], label {
   vertical-align: middle;
 }
@@ -340,12 +351,6 @@ nav #main-nav-bar {
         }
       }
     }
-  }
-}
-
-figure#logo {
-  img {
-    padding-top:25px;
   }
 }
 
@@ -925,8 +930,16 @@ p[data-hook="use_billing"] {
   &.success {
     color: $c_green;
   }
-  &.error {
+  &.error, &.alert {
     color: $c_red;
+  }
+}
+
+.terms_and_conditions {
+  .policy {
+    height: 100px;
+    width: 100%;
+    overflow: scroll;
   }
 }
 

@@ -7,12 +7,12 @@ module Spree
         { translation_key: :name, attr_name: :name }
       ]
 
-      before_filter :load_viewable_stock_locations, only: :index
-      before_filter :load_variant_display_attributes, only: [:receive, :edit, :show, :tracking_info]
-      before_filter :load_source_stock_locations, only: :new
-      before_filter :load_destination_stock_locations, only: :edit
-      before_filter :ensure_access_to_stock_location, only: :create
-      before_filter :ensure_receivable_stock_transfer, only: :receive
+      before_action :load_viewable_stock_locations, only: :index
+      before_action :load_variant_display_attributes, only: [:receive, :edit, :show, :tracking_info]
+      before_action :load_source_stock_locations, only: :new
+      before_action :load_destination_stock_locations, only: :edit
+      before_action :ensure_access_to_stock_location, only: :create
+      before_action :ensure_receivable_stock_transfer, only: :receive
 
       create.before :authorize_transfer_attributes!
 
@@ -72,7 +72,7 @@ module Spree
       def permitted_resource_params
         resource_params = super
         if action == :create
-          resource_params.merge!(created_by: try_spree_current_user)
+          resource_params[:created_by] = try_spree_current_user
         end
         resource_params
       end
@@ -82,7 +82,7 @@ module Spree
       end
 
       def render_after_create_error
-        load_stock_locations
+        load_source_stock_locations
         super
       end
 
@@ -90,7 +90,8 @@ module Spree
         if action == :create
           edit_admin_stock_transfer_path(@stock_transfer)
         else
-          :back
+          # redirect back, or to fallback if referer not provided
+          request.headers["Referer"] || admin_stock_transfers_path
         end
       end
 
@@ -119,7 +120,7 @@ module Spree
       def ensure_receivable_stock_transfer
         unless @stock_transfer.receivable?
           flash[:error] = Spree.t(:stock_transfer_must_be_receivable)
-          redirect_to admin_stock_transfers_path and return
+          redirect_to(admin_stock_transfers_path) && return
         end
       end
 
@@ -129,12 +130,15 @@ module Spree
       end
 
       def source_location
-        @source_location ||= params.has_key?(:transfer_receive_stock) ? nil :
-                               StockLocation.find(params[:transfer_source_location_id])
+        @source_location ||= if params.key?(:transfer_receive_stock)
+                               nil
+                             else
+                               Spree::StockLocation.find(params[:transfer_source_location_id])
+                             end
       end
 
       def destination_location
-        @destination_location ||= StockLocation.find(params[:transfer_destination_location_id])
+        @destination_location ||= Spree::StockLocation.find(params[:transfer_destination_location_id])
       end
 
       def adjust_inventory

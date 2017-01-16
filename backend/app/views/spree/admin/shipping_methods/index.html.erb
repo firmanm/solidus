@@ -1,13 +1,14 @@
-<%= render 'spree/admin/shared/configuration_menu' %>
+<%= render 'spree/admin/shared/shipping_tabs' %>
 
-<% content_for :page_title do %>
-  <%= Spree.t(:shipping_methods) %>
-<% end %>
+<% admin_breadcrumb(Spree.t(:settings)) %>
+<% admin_breadcrumb(Spree.t('admin.tab.shipping')) %>
+<% admin_breadcrumb(plural_resource_name(Spree::ShippingMethod)) %>
+
 
 <% content_for :page_actions do %>
   <% if can?(:create, Spree::ShippingMethod) %>
     <li>
-      <%= button_link_to Spree.t(:new_shipping_method), new_object_url,  :icon => 'plus', :id => 'admin_new_shipping_method_link' %>
+      <%= button_link_to Spree.t(:new_shipping_method), new_object_url, :id => 'admin_new_shipping_method_link' %>
     </li>
   <% end %>
 <% end %>
@@ -23,10 +24,10 @@
     </colgroup>
     <thead>
       <tr data-hook="admin_shipping_methods_index_headers">
-        <th><%= Spree.t(:name) %></th>
-        <th><%= Spree.t(:zone) %></th>
-        <th><%= Spree.t(:calculator) %></th>
-        <th><%= Spree.t(:display) %></th>
+        <th><%= Spree::ShippingMethod.human_attribute_name(:name) %></th>
+        <th><%= Spree::Zone.model_name.human %></th>
+        <th><%= Spree::Calculator.model_name.human %></th>
+        <th><%= Spree::ShippingMethod.human_attribute_name(:available_to_users) %></th>
         <th data-hook="admin_shipping_methods_index_header_actions" class="actions"></th>
       </tr>
     </thead>
@@ -36,7 +37,7 @@
           <td class="align-center"><%= shipping_method.admin_name + ' / ' if shipping_method.admin_name.present? %><%= shipping_method.name %></td>
           <td class="align-center"><%= shipping_method.zones.collect(&:name).join(", ") if shipping_method.zones %></td>
           <td class="align-center"><%= shipping_method.calculator.description %></td>
-          <td class="align-center"><%= shipping_method.display_on.blank? ? Spree.t(:both) : Spree.t(shipping_method.display_on) %></td>
+          <td class="align-center"><%= shipping_method.available_to_users? ? Spree.t(:say_yes) : Spree.t(:say_no) %></td>
           <td data-hook="admin_shipping_methods_index_row_actions" class="actions">
             <% if can?(:update, shipping_method) %>
               <%= link_to_edit shipping_method, :no_text => true %>
@@ -51,11 +52,9 @@
     </tbody>
   </table>
 <% else %>
-  <div class="alpha twelve columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/shipping_method')) %>
-    <% if can?(:create, Spree::ShippingMethod) %>
-      <%= link_to Spree.t(:add_one), spree.new_admin_shipping_method_path %>!
-    <% end %>
+  <div class="col-xs-9 no-objects-found">
+    <%= render 'spree/admin/shared/no_objects_found',
+                 resource: Spree::ShippingMethod,
+                 new_resource_url: new_object_url %>
   </div>
 <% end %>
-

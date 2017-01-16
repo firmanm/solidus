@@ -1,20 +1,21 @@
-<%= render :partial => 'spree/admin/shared/configuration_menu' %>
+<%= render 'spree/admin/shared/shipping_tabs' %>
 
-<% content_for :page_title do %>
-  <%= Spree.t(:stock_locations) %>
-<% end %>
+<% admin_breadcrumb(Spree.t(:settings)) %>
+<% admin_breadcrumb(Spree.t('admin.tab.shipping')) %>
+<% admin_breadcrumb(plural_resource_name(Spree::StockLocation)) %>
+
 
 <% content_for :page_actions do %>
   <ul class="actions inline-menu">
     <% if can?(:create, Spree::StockLocation) %>
       <li>
-        <%= button_link_to Spree.t(:new_stock_location), new_object_url, { :icon => 'plus', :id => 'admin_new_stock_location' } %>
+        <%= button_link_to Spree.t(:new_stock_location), new_object_url, { :id => 'admin_new_stock_location' } %>
       </li>
     <% end %>
 
     <% if can?(:create, Spree::StockTransfer) %>
       <li>
-        <%= button_link_to Spree.t(:new_stock_transfer), new_admin_stock_transfer_path, { :icon => 'forward' } %>
+        <%= button_link_to Spree.t(:new_stock_transfer), new_admin_stock_transfer_path %>
       </li>
     <% end %>
   </ul>
@@ -32,9 +33,9 @@
     <thead>
       <tr data-hook="stock_locations_header">
         <th class="no-border"></th>
-        <th><%= Spree.t(:name) %></th>
-        <th><%= Spree.t(:state) %></th>
-        <th><%= Spree.t(:stock_movements) %></th>
+        <th><%= Spree::StockLocation.human_attribute_name(:name) %></th>
+        <th><%= Spree::StockLocation.human_attribute_name(:state_id) %></th>
+        <th><%= plural_resource_name(Spree::StockMovement) %></th>
         <th class="actions"></th>
       </tr>
     </thead>
@@ -49,11 +50,17 @@
               <span class="handle"></span>
             <% end %>
           </td>
-          <td class="align-center"><%= display_name(stock_location) %></td>
-          <td class="align-center"><span class="state <%= state(stock_location) %>"><%= Spree.t(state(stock_location)) %></span></td>
+          <td class="align-center"><%= admin_stock_location_display_name(stock_location) %></td>
+          <td class="align-center">
+            <% if stock_location.active? %>
+              <span class="state active"><%= Spree.t('active') %></span>
+            <% else %>
+              <span class="state inactive"><%= Spree.t('inactive') %></span>
+            <% end %>
+          </td>
           <td class="align-center">
             <% if can?(:display, Spree::StockMovement) %>
-              <%= link_to Spree.t(:stock_movements), admin_stock_location_stock_movements_path(stock_location.id) %>
+              <%= link_to plural_resource_name(Spree::StockMovement), admin_stock_location_stock_movements_path(stock_location.id) %>
             <% else %>
               Stock Movements
             <% end %>
@@ -71,10 +78,9 @@
     </tbody>
   </table>
 <% else %>
-  <div class="alpha twelve columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/stock_location')) %>
-    <% if can?(:create, Spree::StockLocation) %>
-      <%= link_to Spree.t(:add_one), spree.new_admin_stock_location_path %>!
-    <% end %>
+  <div class="col-xs-9 no-objects-found">
+    <%= render 'spree/admin/shared/no_objects_found',
+                        resource: Spree::StockLocation,
+                        new_resource_url: new_object_url %>
   </div>
 <% end %>

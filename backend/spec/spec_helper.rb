@@ -26,7 +26,7 @@ require 'rspec/rails'
 
 # Requires supporting files with custom matchers and macros, etc,
 # in ./support/ and its subdirectories.
-Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
+Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
 require 'database_cleaner'
 require 'ffaker'
@@ -43,10 +43,14 @@ require 'spree/testing_support/capybara_ext'
 require 'paperclip/matchers'
 
 require 'capybara-screenshot/rspec'
-Capybara.save_and_open_page_path = ENV['CIRCLE_ARTIFACTS'] if ENV['CIRCLE_ARTIFACTS']
+Capybara.save_path = ENV['CIRCLE_ARTIFACTS'] if ENV['CIRCLE_ARTIFACTS']
 
 require 'capybara/poltergeist'
 Capybara.javascript_driver = :poltergeist
+
+ActionView::Base.raise_on_missing_translations = true
+
+Capybara.default_max_wait_time = ENV['DEFAULT_MAX_WAIT_TIME'].to_f if ENV['DEFAULT_MAX_WAIT_TIME'].present?
 
 RSpec.configure do |config|
   config.color = true
@@ -67,10 +71,7 @@ RSpec.configure do |config|
     DatabaseCleaner.clean_with :truncation
   end
 
-  config.before(:each) do
-    Rails.cache.clear
-    reset_spree_preferences
-    WebMock.disable!
+  config.prepend_before(:each) do
     if RSpec.current_example.metadata[:js]
       DatabaseCleaner.strategy = :truncation
     else
@@ -79,14 +80,21 @@ RSpec.configure do |config|
     DatabaseCleaner.start
   end
 
-  config.after(:each) do
-    # Ensure js requests finish processing before advancing to the next test
-    wait_for_ajax if RSpec.current_example.metadata[:js]
+  config.before do
+    Rails.cache.clear
+    reset_spree_preferences
+    if RSpec.current_example.metadata[:js]
+      page.driver.browser.url_blacklist = ['http://fonts.googleapis.com']
+    end
+  end
 
+  config.append_after(:each) do
     DatabaseCleaner.clean
   end
 
-  config.after(:each, :type => :feature) do |example|
+  config.include BaseFeatureHelper, type: :feature
+
+  config.after(:each, type: :feature) do |example|
     missing_translations = page.body.scan(/translation missing: #{I18n.locale}\.(.*?)[\s<\"&]/)
     if missing_translations.any?
       puts "Found missing translations: #{missing_translations.inspect}"

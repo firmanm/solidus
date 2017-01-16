@@ -16,25 +16,27 @@ module Spree
     accepts_nested_attributes_for :return_items
 
     extend DisplayMoney
-    money_methods pre_tax_total: { currency: Spree::Config[:currency] },
-                  total: { currency: Spree::Config[:currency] }
+    money_methods :pre_tax_total, :total, :amount
+
+    delegate :currency, to: :order
+    delegate :id, to: :order, prefix: true, allow_nil: true
 
     def total
       return_items.map(&:total).sum
     end
 
     def pre_tax_total
-      return_items.sum(:pre_tax_amount)
+      return_items.map(&:pre_tax_amount).sum
+    end
+
+    def amount
+      return_items.sum(:amount)
     end
 
     # Temporarily tie a customer_return to one order
     def order
       return nil if return_items.blank?
       return_items.first.inventory_unit.order
-    end
-
-    def order_id
-      order.try(:id)
     end
 
     def fully_reimbursed?
@@ -53,7 +55,7 @@ module Spree
 
     def generate_number
       self.number ||= loop do
-        random = "CR#{Array.new(9){rand(9)}.join}"
+        random = "CR#{Array.new(9){ rand(9) }.join}"
         break random unless self.class.exists?(number: random)
       end
     end
@@ -67,7 +69,5 @@ module Spree
     def inventory_units
       return_items.flat_map(&:inventory_unit)
     end
-
   end
 end
-

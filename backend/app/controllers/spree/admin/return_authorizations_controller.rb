@@ -1,7 +1,7 @@
 module Spree
   module Admin
     class ReturnAuthorizationsController < ResourceController
-      belongs_to 'spree/order', :find_by => :number
+      belongs_to 'spree/order', find_by: :number
 
       before_action :load_form_data, only: [:new, :edit]
       create.fails  :load_form_data
@@ -10,7 +10,7 @@ module Spree
       def fire
         @return_authorization.send("#{params[:e]}!")
         flash[:success] = Spree.t(:return_authorization_updated)
-        redirect_to :back
+        redirect_back(fallback_location: admin_order_return_authorization(@order))
       end
 
       private
@@ -30,7 +30,7 @@ module Spree
         unassociated_inventory_units = all_inventory_units - associated_inventory_units
 
         new_return_items = unassociated_inventory_units.map do |new_unit|
-          Spree::ReturnItem.new(inventory_unit: new_unit).tap(&:set_default_pre_tax_amount)
+          Spree::ReturnItem.new(inventory_unit: new_unit).tap(&:set_default_amount)
         end
         @form_return_items = (@return_authorization.return_items + new_return_items).sort_by(&:inventory_unit_id)
       end

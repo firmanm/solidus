@@ -11,20 +11,21 @@ module Spree
       method = "compute_#{computable_name}".to_sym
       calculator_class = self.class
       if respond_to?(method)
-        self.send(method, computable)
+        send(method, computable)
       else
         raise NotImplementedError, "Please implement '#{method}(#{computable_name})' in your calculator: #{calculator_class.name}"
       end
     end
 
-    # overwrite to provide description for your calculators
+    # A description for this calculator in few words
+    # @return [String] A description for the calculator
     def self.description
-      'Base Calculator'
+      model_name.human
     end
 
     ###################################################################
 
-    def self.register(*klasses)
+    def self.register(*_klasses)
     end
 
     # Returns all calculators applicable for kind of work
@@ -40,7 +41,7 @@ module Spree
       self.class.description
     end
 
-    def available?(object)
+    def available?(_object)
       true
     end
   end

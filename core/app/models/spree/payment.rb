@@ -1,4 +1,8 @@
 module Spree
+  # Manage and process a payment for an order, from a specific
+  # source (e.g. `Spree::CreditCard`) using a specific payment method (e.g
+  # `Solidus::Gateway::Braintree`).
+  #
   class Payment < Spree::Base
     include Spree::Payment::Processing
 
@@ -11,12 +15,12 @@ module Spree
 
     belongs_to :order, class_name: 'Spree::Order', touch: true, inverse_of: :payments
     belongs_to :source, polymorphic: true
-    belongs_to :payment_method, class_name: 'Spree::PaymentMethod', inverse_of: :payments
+    belongs_to :payment_method, -> { with_deleted }, class_name: 'Spree::PaymentMethod', inverse_of: :payments
 
     has_many :offsets, -> { offset_payment }, class_name: "Spree::Payment", foreign_key: :source_id
     has_many :log_entries, as: :source
     has_many :state_changes, as: :stateful
-    has_many :capture_events, :class_name => 'Spree::PaymentCaptureEvent'
+    has_many :capture_events, class_name: 'Spree::PaymentCaptureEvent'
     has_many :refunds, inverse_of: :payment
 
     before_validation :validate_source, unless: :invalid?
@@ -31,9 +35,6 @@ module Spree
 
     # invalidate previously entered payments
     after_create :invalidate_old_payments
-
-    attr_accessor :source_attributes
-    after_initialize :apply_source_attributes
 
     attr_accessor :request_env
 
@@ -93,7 +94,7 @@ module Spree
         payment.state_changes.create!(
           previous_state: transition.from,
           next_state:     transition.to,
-          name:           'payment',
+          name:           'payment'
         )
       end
     end
@@ -145,25 +146,6 @@ module Spree
       credit_allowed > 0
     end
 
-    # When this is a new record without a source, builds a new source based on
-    # this payment's payment method and associates it correctly.
-    #
-    # @see https://github.com/spree/spree/issues/981
-    #
-    # TODO: Move this into upcoming CartUpdate class
-    def apply_source_attributes
-      return unless new_record?
-      return if source_attributes.blank?
-
-      ActiveSupport::Deprecation.warn(<<WARN.squish)
-Building payment sources by assigning source_attributes on payments is
-deprecated. Instead use either the PaymentCreate class or the
-OrderUpdateAttributes class.
-WARN
-
-      PaymentCreate.new(order, {source_attributes: source_attributes}, payment: self, request_env: request_env).build
-    end
-
     # @return [Array<String>] the actions available on this payment
     def actions
       sa = source_actions
@@ -180,7 +162,7 @@ WARN
     # @return [Boolean] true when this payment is risky based on address
     def is_avs_risky?
       return false if avs_response.blank? || NON_RISKY_AVS_CODES.include?(avs_response)
-      return true
+      true
     end
 
     # @return [Boolean] true when this payment is risky based on cvv
@@ -188,7 +170,7 @@ WARN
       return false if cvv_response_code == "M"
       return false if cvv_response_code.nil?
       return false if cvv_response_message.present?
-      return true
+      true
     end
 
     # @return [BigDecimal] the total amount captured on this payment
@@ -208,85 +190,89 @@ WARN
 
     private
 
-      def source_actions
-        return [] unless payment_source and payment_source.respond_to? :actions
-        payment_source.actions.select { |action| !payment_source.respond_to?("can_#{action}?") or payment_source.send("can_#{action}?", self) }
-      end
+    def source_actions
+      return [] unless payment_source && payment_source.respond_to?(:actions)
+      payment_source.actions.select { |action| !payment_source.respond_to?("can_#{action}?") || payment_source.send("can_#{action}?", self) }
+    end
 
-      def validate_source
-        if source && !source.valid?
-          source.errors.each do |field, error|
-            field_name = I18n.t("activerecord.attributes.#{source.class.to_s.underscore}.#{field}")
-            self.errors.add(Spree.t(source.class.to_s.demodulize.underscore), "#{field_name} #{error}")
-          end
-        end
-        return !errors.present?
-      end
-
-      def source_required?
-        payment_method.present? && payment_method.source_required?
-      end
-
-      def profiles_supported?
-        payment_method.respond_to?(:payment_profiles_supported?) && payment_method.payment_profiles_supported?
-      end
-
-      def create_payment_profile
-        # Don't attempt to create on bad payments.
-        return if %w(invalid failed).include?(state)
-        # Payment profile cannot be created without source
-        return unless source
-        # Imported payments shouldn't create a payment profile.
-        return if source.imported
-
-        payment_method.create_profile(self)
-      rescue ActiveMerchant::ConnectionError => e
-        gateway_error e
-      end
-
-      def invalidate_old_payments
-        if !store_credit? && !['invalid', 'failed'].include?(state)
-          order.payments.checkout.where(payment_method: payment_method).where("id != ?", self.id).each do |payment|
-            payment.invalidate!
-          end
+    def validate_source
+      if source && !source.valid?
+        source.errors.each do |field, error|
+          field_name = I18n.t("activerecord.attributes.#{source.class.to_s.underscore}.#{field}")
+          errors.add(Spree.t(source.class.to_s.demodulize.underscore), "#{field_name} #{error}")
         end
       end
-
-      def update_order
-        if order.completed? || completed? || void?
-          order.update!
-        end
+      if errors.any?
+        throw :abort
       end
+    end
 
-      # Necessary because some payment gateways will refuse payments with
-      # duplicate IDs. We *were* using the Order number, but that's set once and
-      # is unchanging. What we need is a unique identifier on a per-payment basis,
-      # and this is it. Related to #1998.
-      # See https://github.com/spree/spree/issues/1998#issuecomment-12869105
-      def set_unique_identifier
-        begin
-          self.number = generate_identifier
-        end while self.class.exists?(number: self.number)
+    def source_required?
+      payment_method.present? && payment_method.source_required?
+    end
+
+    def profiles_supported?
+      payment_method.respond_to?(:payment_profiles_supported?) && payment_method.payment_profiles_supported?
+    end
+
+    def create_payment_profile
+      # Don't attempt to create on bad payments.
+      return if %w(invalid failed).include?(state)
+      # Payment profile cannot be created without source
+      return unless source
+      # Imported payments shouldn't create a payment profile.
+      return if source.imported
+
+      payment_method.create_profile(self)
+    rescue ActiveMerchant::ConnectionError => e
+      gateway_error e
+    end
+
+    def invalidate_old_payments
+      if !store_credit? && !['invalid', 'failed'].include?(state)
+        order.payments.select do |payment|
+          payment.state == 'checkout' &&
+            payment.payment_method_id == payment_method.try!(:id) &&
+            payment.id != id
+        end.each(&:invalidate!)
       end
+    end
 
-      def generate_identifier
-        Array.new(8){ IDENTIFIER_CHARS.sample }.join
+    def update_order
+      if order.completed? || completed? || void?
+        order.update!
       end
+    end
 
-      def create_eligible_credit_event
-        # When cancelling an order, a payment with the negative amount
-        # of the payment total is created to refund the customer. That
-        # payment has a source of itself (Spree::Payment) no matter the
-        # type of payment getting refunded, hence the additional check
-        # if the source is a store credit.
-        if store_credit? && source.is_a?(Spree::StoreCredit)
-          source.update_attributes!({
-            action: Spree::StoreCredit::ELIGIBLE_ACTION,
-            action_amount: amount,
-            action_authorization_code: response_code,
-          })
-        end
+    # Necessary because some payment gateways will refuse payments with
+    # duplicate IDs. We *were* using the Order number, but that's set once and
+    # is unchanging. What we need is a unique identifier on a per-payment basis,
+    # and this is it. Related to https://github.com/spree/spree/issues/1998.
+    # See https://github.com/spree/spree/issues/1998#issuecomment-12869105
+    def set_unique_identifier
+      loop do
+        self.number = generate_identifier
+        break unless self.class.exists?(number: number)
       end
+    end
 
+    def generate_identifier
+      Array.new(8){ IDENTIFIER_CHARS.sample }.join
+    end
+
+    def create_eligible_credit_event
+      # When cancelling an order, a payment with the negative amount
+      # of the payment total is created to refund the customer. That
+      # payment has a source of itself (Spree::Payment) no matter the
+      # type of payment getting refunded, hence the additional check
+      # if the source is a store credit.
+      if store_credit? && source.is_a?(Spree::StoreCredit)
+        source.update_attributes!({
+          action: Spree::StoreCredit::ELIGIBLE_ACTION,
+          action_amount: amount,
+          action_authorization_code: response_code
+        })
+      end
+    end
   end
 end

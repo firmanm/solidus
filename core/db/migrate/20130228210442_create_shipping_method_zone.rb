@@ -1,9 +1,9 @@
-class CreateShippingMethodZone < ActiveRecord::Migration
+class CreateShippingMethodZone < ActiveRecord::Migration[4.2]
   class ShippingMethodZone < Spree::Base
     self.table_name = 'shipping_methods_zones'
   end
   def up
-    create_table :shipping_methods_zones, :id => false do |t|
+    create_table :shipping_methods_zones, id: false do |t|
       t.integer :shipping_method_id
       t.integer :zone_id
     end

@@ -1,11 +1,9 @@
-Core
-====
+# solidus\_frontend
 
-Core e-commerce functionality for the Spree project
+Frontend contains controllers and views implementing a storefront and cart for Solidus.
 
 
-Testing
--------
+## Testing
 
 Create the test site
 
@@ -14,8 +12,3 @@ Create the test site
 Run the tests
 
     bundle exec rake spec
-
-Run the coverage. After the rake task open coverage/index.html
-
-    bundle exec rake rcov
-

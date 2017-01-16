@@ -1,11 +1,12 @@
 require 'spec_helper'
 
-describe "Switching currencies in backend", :type => :feature do
+describe "Switching currencies in backend", type: :feature do
   before do
-    create(:base_product, :name => "RoR Mug")
+    create(:store)
+    create(:base_product, name: "RoR Mug")
   end
 
-  # Regression test for #2340
+  # Regression test for https://github.com/spree/spree/issues/2340
   it "does not cause current_order to become nil", inaccessible: true do
     visit spree.root_path
     click_link "RoR Mug"
@@ -14,5 +15,4 @@ describe "Switching currencies in backend", :type => :feature do
     Spree::Config[:currency] = "AUD"
     visit spree.root_path
   end
-
 end

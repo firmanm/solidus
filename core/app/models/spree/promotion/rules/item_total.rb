@@ -5,6 +5,7 @@ module Spree
       # a specific amount
       class ItemTotal < PromotionRule
         preference :amount, :decimal, default: 100.00
+        preference :currency, :string, default: ->{ Spree::Config[:currency] }
         preference :operator, :string, default: '>'
 
         OPERATORS = ['gt', 'gte']
@@ -13,7 +14,8 @@ module Spree
           promotable.is_a?(Spree::Order)
         end
 
-        def eligible?(order, options = {})
+        def eligible?(order, _options = {})
+          return false unless order.currency == preferred_currency
           item_total = order.item_total
           unless item_total.send(preferred_operator == 'gte' ? :>= : :>, BigDecimal.new(preferred_amount.to_s))
             eligibility_errors.add(:base, ineligible_message)
@@ -23,8 +25,9 @@ module Spree
         end
 
         private
+
         def formatted_amount
-          Spree::Money.new(preferred_amount).to_s
+          Spree::Money.new(preferred_amount, currency: preferred_currency).to_s
         end
 
         def ineligible_message

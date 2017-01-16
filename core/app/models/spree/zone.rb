@@ -15,22 +15,54 @@ module Spree
     after_save :remove_defunct_members
     after_save :remove_previous_default
 
+    scope :with_member_ids, ->(state_ids, country_ids) do
+      if !state_ids.present? && !country_ids.present?
+        none
+      else
+        spree_zone_members_table = Spree::ZoneMember.arel_table
+        matching_state =
+          spree_zone_members_table[:zoneable_type].eq("Spree::State").
+          and(spree_zone_members_table[:zoneable_id].in(state_ids))
+        matching_country =
+          spree_zone_members_table[:zoneable_type].eq("Spree::Country").
+          and(spree_zone_members_table[:zoneable_id].in(country_ids))
+        joins(:zone_members).where(matching_state.or(matching_country)).distinct
+      end
+    end
+
+    scope :for_address, ->(address) do
+      if address
+        with_member_ids(address.state_id, address.country_id)
+      else
+        none
+      end
+    end
+
     alias :members :zone_members
     accepts_nested_attributes_for :zone_members, allow_destroy: true, reject_if: proc { |a| a['zoneable_id'].blank? }
 
     self.whitelisted_ransackable_attributes = ['description']
 
+    # Returns the zone marked as `default_tax`.
+    # @deprecated Please run the `solidus:migrations:create_vat_prices` rake task
     def self.default_tax
-      where(default_tax: true).first
+      default_tax_zone = where(default_tax: true).first
+      if default_tax_zone
+        Spree::Deprecation.warn("Please run the `solidus:migrations:create_vat_prices` rake task.", caller)
+        default_tax_zone
+      end
     end
 
-    # Returns the matching zone with the highest priority zone type (State, Country, Zone.)
-    # Returns nil in the case of no matches.
+    # Returns the most specific matching zone for an address. Specific means:
+    # A State zone wins over a country zone, and a zone with few members wins
+    # over one with many members. If there is no match, returns nil.
     def self.match(address)
-      return unless address and matches = self.includes(:zone_members).
-        order(:zone_members_count, :created_at, :id).
-        where("(spree_zone_members.zoneable_type = 'Spree::Country' AND spree_zone_members.zoneable_id = ?) OR (spree_zone_members.zoneable_type = 'Spree::State' AND spree_zone_members.zoneable_id = ?)", address.country_id, address.state_id).
-        references(:zones)
+      Spree::Deprecation.warn("Spree::Zone.match is deprecated. Please use Spree::Zone.for_address instead.", caller)
+
+      return unless address && (matches =
+                                  with_member_ids(address.state_id, address.country_id).
+                                  order(:zone_members_count, :created_at, :id).
+                                  references(:zones))
 
       ['state', 'country'].each do |zone_kind|
         if match = matches.detect { |zone| zone_kind == zone.kind }
@@ -38,6 +70,21 @@ module Spree
         end
       end
       matches.first
+    end
+
+    # Returns all zones that contain any of the zone members of the zone passed
+    # in. This also includes any country zones that contain the state of the
+    # current zone, if it's a state zone. If the passed-in zone has members, it
+    # will also be in the result set.
+    def self.with_shared_members(zone)
+      return none unless zone
+
+      states_and_state_country_ids = zone.states.pluck(:id, :country_id).to_a
+      state_ids = states_and_state_country_ids.map(&:first)
+      state_country_ids = states_and_state_country_ids.map(&:second)
+      country_ids = zone.countries.pluck(:id).to_a
+
+      with_member_ids(state_ids, country_ids + state_country_ids).distinct
     end
 
     def kind
@@ -111,37 +158,38 @@ module Spree
     # Indicates whether the specified zone falls entirely within the zone performing
     # the check.
     def contains?(target)
+      return true if self == target
       return false if kind == 'state' && target.kind == 'country'
       return false if zone_members.empty? || target.zone_members.empty?
 
       if kind == target.kind
-        return false if (target.zoneables.collect(&:id) - zoneables.collect(&:id)).present?
+        (target.zoneables.collect(&:id) - zoneables.collect(&:id)).empty?
       else
-        return false if (target.zoneables.collect(&:country).collect(&:id) - zoneables.collect(&:id)).present?
+        (target.zoneables.collect(&:country).collect(&:id) - zoneables.collect(&:id)).empty?
       end
-      true
     end
+    deprecate :contains?, deprecator: Spree::Deprecation
 
     private
 
-      def remove_defunct_members
-        if zone_members.any?
-          zone_members.where('zoneable_id IS NULL OR zoneable_type != ?', "Spree::#{kind.classify}").destroy_all
-        end
+    def remove_defunct_members
+      if zone_members.any?
+        zone_members.where('zoneable_id IS NULL OR zoneable_type != ?', "Spree::#{kind.classify}").destroy_all
       end
+    end
 
-      def remove_previous_default
-        Spree::Zone.where('id != ?', self.id).update_all(default_tax: false) if default_tax
-      end
+    def remove_previous_default
+      Spree::Zone.where('id != ?', id).update_all(default_tax: false) if default_tax
+    end
 
-      def set_zone_members(ids, type)
-        zone_members.destroy_all
-        ids.reject{ |id| id.blank? }.map do |id|
-          member = ZoneMember.new
-          member.zoneable_type = type
-          member.zoneable_id = id
-          members << member
-        end
+    def set_zone_members(ids, type)
+      zone_members.destroy_all
+      ids.reject(&:blank?).map do |id|
+        member = Spree::ZoneMember.new
+        member.zoneable_type = type
+        member.zoneable_id = id
+        members << member
       end
+    end
   end
 end

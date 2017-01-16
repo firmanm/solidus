@@ -12,12 +12,10 @@ module Spree
         if order.coupon_code.present?
           if promotion.present? && promotion.actions.exists?
             handle_present_promotion(promotion)
+          elsif promotion_code && promotion_code.promotion.inactive?
+            set_error_code :coupon_code_expired
           else
-            if promotion_code && promotion_code.promotion.expired?
-              set_error_code :coupon_code_expired
-            else
-              set_error_code :coupon_code_not_found
-            end
+            set_error_code :coupon_code_not_found
           end
         end
 
@@ -57,7 +55,7 @@ module Spree
         return promotion_applied if promotion_exists_on_order?(order, promotion)
         unless promotion.eligible?(order, promotion_code: promotion_code)
           self.error = promotion.eligibility_errors.full_messages.first unless promotion.eligibility_errors.blank?
-          return (self.error || ineligible_for_this_order)
+          return (error || ineligible_for_this_order)
         end
 
         # If any of the actions for the promotion return `true`,
@@ -88,7 +86,7 @@ module Spree
 
       def determine_promotion_application_result
         detector = lambda { |p|
-          p.source.promotion.codes.any? { |code| code.value == order.coupon_code.downcase }
+          p.source.promotion.codes.where(value: order.coupon_code.downcase).any?
         }
 
         # Check for applied adjustments.
@@ -96,22 +94,17 @@ module Spree
         discount ||= order.shipment_adjustments.promotion.detect(&detector)
         discount ||= order.adjustments.promotion.detect(&detector)
 
-        # Check for applied line items.
-        created_line_items = promotion.actions.detect { |a| a.type == 'Spree::Promotion::Actions::CreateLineItems' }
-
-        if (discount && discount.eligible) || created_line_items
+        if discount && discount.eligible
           order.update_totals
           order.persist_totals
           set_success_code :coupon_code_applied
-        else
+        elsif order.promotions.with_coupon_code(order.coupon_code)
           # if the promotion exists on an order, but wasn't found above,
           # we've already selected a better promotion
-          if order.promotions.with_coupon_code(order.coupon_code)
-            set_error_code :coupon_code_better_exists
-          else
-            # if the promotion was created after the order
-            set_error_code :coupon_code_not_found
-          end
+          set_error_code :coupon_code_better_exists
+        else
+          # if the promotion was created after the order
+          set_error_code :coupon_code_not_found
         end
       end
     end

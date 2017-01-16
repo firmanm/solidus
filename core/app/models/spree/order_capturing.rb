@@ -21,22 +21,15 @@ class Spree::OrderCapturing
     Spree::OrderMutex.with_lock!(@order) do
       uncaptured_amount = @order.display_total.cents
 
-      begin
-        sorted_payments(@order).each do |payment|
-          amount = [uncaptured_amount, payment.money.cents].min
+      sorted_payments(@order).each do |payment|
+        amount = [uncaptured_amount, payment.money.cents].min
 
-          if amount > 0
-            payment.capture!(amount)
-            uncaptured_amount -= amount
-          elsif Spree::OrderCapturing.void_unused_payments
-            payment.void_transaction!
-          end
+        if amount > 0
+          payment.capture!(amount)
+          uncaptured_amount -= amount
+        elsif Spree::OrderCapturing.void_unused_payments
+          payment.void_transaction!
         end
-      ensure
-        # FIXME: Adding the inverse_of on the payments relation for orders -should- fix this,
-        # however it only appears to make it worse (calling with changes three times instead of once.
-        # Warrants an investigation. Reloading for now.
-        @order.reload.update!
       end
     end
   end
@@ -44,8 +37,9 @@ class Spree::OrderCapturing
   private
 
   def sorted_payments(order)
-    payments = order.payments.pending
-    payments = payments.sort_by { |p| [@sorted_payment_method_classes.index(p.payment_method.class), p.id] }
+    order.payments.pending.sort_by do |p|
+      [@sorted_payment_method_classes.index(p.payment_method.class), p.id]
+    end
   end
 end
 

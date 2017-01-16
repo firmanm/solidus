@@ -1,14 +1,11 @@
 require 'spec_helper'
 
 describe "exchanges:charge_unreturned_items" do
-  let(:task) do
-    Rake::Task['exchanges:charge_unreturned_items']
-  end
-
-  before do
-    Rails.application.load_tasks
-    task.reenable
-  end
+  include_context(
+    'rake',
+    task_name: 'exchanges:charge_unreturned_items',
+    task_path: Spree::Core::Engine.root.join('lib/tasks/exchanges.rake'),
+  )
 
   subject { task }
 
@@ -17,12 +14,9 @@ describe "exchanges:charge_unreturned_items" do
   end
 
   before do
-    @original_expedited_exchanges_pref = Spree::Config[:expedited_exchanges]
     Spree::Config[:expedited_exchanges] = true
     Spree::StockItem.update_all(count_on_hand: 10)
   end
-
-  after { Spree::Config[:expedited_exchanges] = @original_expedited_exchanges_pref }
 
   context "there are no unreturned items" do
     it { expect { subject.invoke }.not_to change { Spree::Order.count } }
@@ -33,13 +27,14 @@ describe "exchanges:charge_unreturned_items" do
     let(:return_item_1) { build(:exchange_return_item, inventory_unit: order.inventory_units.first) }
     let(:return_item_2) { build(:exchange_return_item, inventory_unit: order.inventory_units.last) }
     let!(:rma) { create(:return_authorization, order: order, return_items: [return_item_1, return_item_2]) }
-    let!(:tax_rate) { create(:tax_rate, zone: order.tax_zone, tax_category: return_item_2.exchange_variant.tax_category) }
+    let(:zone) { create(:zone, countries: [order.tax_address.country])}
+    let!(:tax_rate) { create(:tax_rate, zone: zone, tax_category: return_item_2.exchange_variant.tax_category) }
     before do
       rma.save!
       Spree::Shipment.last.ship!
       return_item_1.lost!
       return_item_2.give!
-      Timecop.travel (Spree::Config[:expedited_exchanges_days_window] + 1).days
+      Timecop.travel((Spree::Config[:expedited_exchanges_days_window] + 1).days)
     end
     after { Timecop.return }
     it { expect { subject.invoke }.not_to change { Spree::Order.count } }
@@ -50,7 +45,8 @@ describe "exchanges:charge_unreturned_items" do
     let(:return_item_1) { build(:exchange_return_item, inventory_unit: order.inventory_units.first) }
     let(:return_item_2) { build(:exchange_return_item, inventory_unit: order.inventory_units.last) }
     let!(:rma) { create(:return_authorization, order: order, return_items: [return_item_1, return_item_2]) }
-    let!(:tax_rate) { create(:tax_rate, zone: order.tax_zone, tax_category: return_item_2.exchange_variant.tax_category) }
+    let(:zone) { create(:zone, countries: [order.tax_address.country])}
+    let!(:tax_rate) { create(:tax_rate, zone: zone, tax_category: return_item_2.exchange_variant.tax_category) }
 
     before do
       rma.save!
@@ -70,7 +66,6 @@ describe "exchanges:charge_unreturned_items" do
     end
 
     context "more than the config allowed days have passed" do
-
       let(:travel_time) { (Spree::Config[:expedited_exchanges_days_window] + 1).days }
 
       it "creates a new completed order" do
@@ -120,11 +115,8 @@ describe "exchanges:charge_unreturned_items" do
 
         context "auto_capture_exchanges is true" do
           before do
-            @original_auto_capture_exchanges = Spree::Config[:auto_capture_exchanges]
             Spree::Config[:auto_capture_exchanges] = true
           end
-
-          after { Spree::Config[:auto_capture_exchanges] = @original_auto_capture_exchanges }
 
           it 'creates a pending payment' do
             expect { subject.invoke }.to change { Spree::Payment.count }.by(1)
@@ -135,11 +127,8 @@ describe "exchanges:charge_unreturned_items" do
 
         context "auto_capture_exchanges is false" do
           before do
-            @original_auto_capture_exchanges = Spree::Config[:auto_capture_exchanges]
             Spree::Config[:auto_capture_exchanges] = false
           end
-
-          after { Spree::Config[:auto_capture_exchanges] = @original_auto_capture_exchanges }
 
           it 'captures payment' do
             expect { subject.invoke }.to change { Spree::Payment.count }.by(1)
@@ -157,7 +146,7 @@ describe "exchanges:charge_unreturned_items" do
 
       it "associates the store of the original order with the exchange order" do
         store = order.store
-        expect(Spree::Order).to receive(:create!).once.with(hash_including({store_id: store.id})).and_call_original
+        expect(Spree::Order).to receive(:create!).once.with(hash_including({ store_id: store.id })).and_call_original
         subject.invoke
       end
 

@@ -3,8 +3,7 @@ module Spree
     class ProductsController < ResourceController
       helper 'spree/products'
 
-      before_filter :load_data, :except => [:index]
-      create.before :create_before
+      before_action :load_data, except: [:index]
       update.before :update_before
       helper_method :clone_object_url
 
@@ -25,7 +24,7 @@ module Spree
           params[:product][:option_type_ids] = params[:product][:option_type_ids].split(',')
         end
         if updating_variant_property_rules?
-          params[:product][:variant_property_rules_attributes].each do |index, param_attrs|
+          params[:product][:variant_property_rules_attributes].each do |_index, param_attrs|
             param_attrs[:option_value_ids] = param_attrs[:option_value_ids].split(',')
           end
         end
@@ -47,14 +46,14 @@ module Spree
       end
 
       def destroy
-        @product = Product.friendly.find(params[:id])
+        @product = Spree::Product.friendly.find(params[:id])
         @product.destroy
 
         flash[:success] = Spree.t('notice_messages.product_deleted')
 
         respond_with(@product) do |format|
           format.html { redirect_to collection_url }
-          format.js  { render_js_for_destroy }
+          format.js { render_js_for_destroy }
         end
       end
 
@@ -73,14 +72,14 @@ module Spree
       private
 
       def find_resource
-        Product.with_deleted.friendly.find(params[:id])
+        Spree::Product.with_deleted.friendly.find(params[:id])
       end
 
       def location_after_save
         if updating_variant_property_rules?
           url_params = {}
           url_params[:ovi] = []
-          params[:product][:variant_property_rules_attributes].each do |index, param_attrs|
+          params[:product][:variant_property_rules_attributes].each do |_index, param_attrs|
             url_params[:ovi] += param_attrs[:option_value_ids]
           end
           spree.admin_product_product_properties_url(@product, url_params)
@@ -90,10 +89,10 @@ module Spree
       end
 
       def load_data
-        @taxons = Taxon.order(:name)
-        @option_types = OptionType.order(:name)
-        @tax_categories = TaxCategory.order(:name)
-        @shipping_categories = ShippingCategory.order(:name)
+        @taxons = Spree::Taxon.order(:name)
+        @option_types = Spree::OptionType.order(:name)
+        @tax_categories = Spree::TaxCategory.order(:name)
+        @shipping_categories = Spree::ShippingCategory.order(:name)
       end
 
       def collection
@@ -113,11 +112,6 @@ module Spree
               per(Spree::Config[:admin_products_per_page])
 
         @collection
-      end
-
-      def create_before
-        return if params[:product][:prototype_id].blank?
-        @prototype = Spree::Prototype.find(params[:product][:prototype_id])
       end
 
       def update_before

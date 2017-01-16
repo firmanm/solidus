@@ -1,10 +1,10 @@
 require 'spec_helper'
 
-describe 'Users', :type => :feature do
+describe 'Users', type: :feature do
   stub_authorization!
   let!(:country) { create(:country) }
-  let!(:user_a) { create(:user_with_addreses, email: 'a@example.com') }
-  let!(:user_b) { create(:user_with_addreses, email: 'b@example.com') }
+  let!(:user_a) { create(:user_with_addresses, email: 'a@example.com') }
+  let!(:user_b) { create(:user_with_addresses, email: 'b@example.com') }
 
   let(:order) { create(:completed_order_with_totals, user: user_a, number: "R123") }
 
@@ -25,15 +25,15 @@ describe 'Users', :type => :feature do
         [:total_sales, :num_orders, :average_order_value, :member_since].each do |stat_name|
           expect(page).to have_content Spree.t(stat_name)
         end
-        expect(page).to have_content (order.total + order_2.total)
+        expect(page).to have_content(order.total + order_2.total)
         expect(page).to have_content orders.count
-        expect(page).to have_content (orders.sum(&:total) / orders.count)
+        expect(page).to have_content(orders.sum(&:total) / orders.count)
         expect(page).to have_content I18n.l(user_a.created_at.to_date)
       end
     end
 
     it 'can go back to the users list' do
-      expect(page).to have_link Spree.t(:back_to_users_list), href: spree.admin_users_path
+      expect(page).to have_link Spree::LegacyUser.model_name.human(count: :other), href: spree.admin_users_path
     end
 
     it 'can navigate to the account page' do
@@ -41,7 +41,7 @@ describe 'Users', :type => :feature do
     end
 
     it 'can navigate to the order history' do
-      expect(page).to have_link Spree.t(:"admin.user.orders"), href: spree.orders_admin_user_path(user_a)
+      expect(page).to have_link Spree.t(:"admin.user.order_history"), href: spree.orders_admin_user_path(user_a)
     end
 
     it 'can navigate to the items purchased' do
@@ -77,7 +77,6 @@ describe 'Users', :type => :feature do
   end
 
   context 'users index' do
-
     context "email" do
       it_behaves_like "a sortable attribute" do
         let(:text_match_1) { user_a.email }
@@ -108,7 +107,7 @@ describe 'Users', :type => :feature do
 
       expect(user_a.reload.email).to eq 'a@example.com99'
       expect(page).to have_text 'Account updated'
-      expect(find_field('user_email').value).to eq 'a@example.com99'
+      expect(page).to have_field('user_email', with: 'a@example.com99')
     end
 
     it 'can edit the user password' do
@@ -121,12 +120,12 @@ describe 'Users', :type => :feature do
 
     it 'can edit user roles' do
       Spree::Role.create name: "admin"
-      click_link user_a.email
+      click_link 'Account'
 
       check 'user_spree_role_admin'
       click_button 'Update'
       expect(page).to have_text 'Account updated'
-      expect(find_field('user_spree_role_admin')['checked']).to be true
+      expect(find_field('user_spree_role_admin')).to be_checked
     end
 
     it 'can edit user shipping address' do
@@ -135,7 +134,7 @@ describe 'Users', :type => :feature do
       within("#admin_user_edit_addresses") do
         fill_in "user_ship_address_attributes_address1", with: "1313 Mockingbird Ln"
         click_button 'Update'
-        expect(find_field('user_ship_address_attributes_address1').value).to eq "1313 Mockingbird Ln"
+        expect(page).to have_field('user_ship_address_attributes_address1', with: "1313 Mockingbird Ln")
       end
 
       expect(user_a.reload.ship_address.address1).to eq "1313 Mockingbird Ln"
@@ -147,17 +146,48 @@ describe 'Users', :type => :feature do
       within("#admin_user_edit_addresses") do
         fill_in "user_bill_address_attributes_address1", with: "1313 Mockingbird Ln"
         click_button 'Update'
-        expect(find_field('user_bill_address_attributes_address1').value).to eq "1313 Mockingbird Ln"
+        expect(page).to have_field('user_bill_address_attributes_address1', with: "1313 Mockingbird Ln")
       end
 
       expect(user_a.reload.bill_address.address1).to eq "1313 Mockingbird Ln"
+    end
+
+    context 'invalid entry' do
+      around do |example|
+        ::AlwaysInvalidUser = Class.new(Spree.user_class) do
+          validate :always_invalid_email
+          def always_invalid_email
+            errors.add(:email, "is invalid")
+          end
+        end
+        orig_class = Spree.user_class
+        Spree.user_class = "AlwaysInvalidUser"
+
+        example.run
+
+        Spree.user_class = orig_class.name
+        Object.send(:remove_const, "AlwaysInvalidUser")
+      end
+
+      it 'should show validation errors' do
+        fill_in 'user_email', with: 'something'
+        click_button 'Update'
+
+        within('#errorExplanation') do
+          expect(page).to have_content("Email is invalid")
+        end
+
+        within('.flash.error') do
+          expect(page).to have_content("Email is invalid")
+        end
+      end
     end
 
     context 'no api key exists' do
       it 'can generate a new api key' do
         within("#admin_user_edit_api_key") do
           expect(user_a.spree_api_key).to be_blank
-          click_button Spree.t('generate_key', :scope => 'api')
+          click_button Spree.t('generate_key', scope: 'api')
         end
 
         expect(user_a.reload.spree_api_key).to be_present
@@ -176,7 +206,7 @@ describe 'Users', :type => :feature do
       it 'can clear an api key' do
         expect(page).to have_css('#current-api-key')
 
-        click_button Spree.t('clear_key', :scope => 'api')
+        click_button Spree.t('clear_key', scope: 'api')
 
         expect(page).to have_no_css('#current-api-key')
 
@@ -187,7 +217,7 @@ describe 'Users', :type => :feature do
         old_key = user_a.spree_api_key
 
         within("#admin_user_edit_api_key") do
-          click_button Spree.t('regenerate_key', :scope => 'api')
+          click_button Spree.t('regenerate_key', scope: 'api')
         end
 
         expect(user_a.reload.spree_api_key).to be_present
@@ -199,11 +229,10 @@ describe 'Users', :type => :feature do
   end
 
   context 'order history with sorting' do
-
     before do
       orders
       click_link user_a.email
-      within("#sidebar") { click_link Spree.t(:"admin.user.orders") }
+      within(".tabs") { click_link Spree.t(:"admin.user.order_history") }
     end
 
     it_behaves_like 'a user page'
@@ -230,11 +259,10 @@ describe 'Users', :type => :feature do
   end
 
   context 'items purchased with sorting' do
-
     before do
       orders
       click_link user_a.email
-      within("#sidebar") { click_link Spree.t(:"admin.user.items") }
+      within(".tabs") { click_link Spree.t(:"admin.user.items") }
     end
 
     it_behaves_like 'a user page'

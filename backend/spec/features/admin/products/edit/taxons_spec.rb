@@ -1,43 +1,45 @@
 require 'spec_helper'
 
-describe "Product Taxons", :type => :feature do
+describe "Product Display Order", type: :feature do
   stub_authorization!
 
-  after do
-    Capybara.ignore_hidden_elements = true
-  end
-
-  before do
-    Capybara.ignore_hidden_elements = false
-  end
-
-  context "managing taxons" do
-    def selected_taxons
-      find("#product_taxon_ids").value.split(',').map(&:to_i).uniq
-    end
-
-    it "should allow an admin to manage taxons", :js => true do
-      taxon_1 = create(:taxon)
-      taxon_2 = create(:taxon, :name => 'Clothing')
-      product = create(:product)
-      product.taxons << taxon_1
-
-      visit spree.admin_path
-      click_link "Products"
-      within("table.index") do
-        click_icon :edit
+  context "managing display order", js: true do
+    def assert_selected_taxons(taxons)
+      # Regression test for https://github.com/spree/spree/issues/2139
+      taxons.each do |taxon|
+        expect(page).to have_css(".select2-search-choice", text: taxon.name)
       end
 
-      expect(find(".select2-search-choice").text).to eq(taxon_1.name)
-      expect(selected_taxons).to match_array([taxon_1.id])
+      expected_value = taxons.map(&:id).join(",")
+      expect(page).to have_xpath("//*[@id = 'product_taxon_ids' and @value = '#{expected_value}']", visible: :all)
+    end
 
-      select2_search "Clothing", :from => "Taxons"
+    let(:product) { create(:product) }
+
+    it "should allow an admin to manage display order (taxons)" do
+      taxon_1 = create(:taxon)
+      taxon_2 = create(:taxon, name: 'Clothing')
+      product.taxons << taxon_1
+
+      visit spree.edit_admin_product_path(product)
+
+      assert_selected_taxons([taxon_1])
+
+      select2_search "Clothing", from: "Taxon"
       click_button "Update"
-      expect(selected_taxons).to match_array([taxon_1.id, taxon_2.id])
+      assert_selected_taxons([taxon_1, taxon_2])
+    end
 
-      # Regression test for #2139
-      expect(page).to have_css(".select2-search-choice", text: taxon_1.name)
-      expect(page).to have_css(".select2-search-choice", text: taxon_2.name)
+    context "with an XSS attempt" do
+      let(:taxon_name) { %(<script>throw("XSS")</script>) }
+      let!(:taxon) { create(:taxon, name: taxon_name) }
+      it "displays the escaped HTML without executing it" do
+        visit spree.edit_admin_product_path(product)
+
+        select2_search "<script>", from: "Taxon"
+
+        expect(page).to have_content(taxon_name)
+      end
     end
   end
 end

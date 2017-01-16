@@ -1,3 +1,6 @@
+require 'spree/testing_support/factories/promotion_code_factory'
+require 'spree/testing_support/factories/variant_factory'
+
 FactoryGirl.define do
   factory :promotion, class: Spree::Promotion do
     name 'Promo'
@@ -55,6 +58,5 @@ FactoryGirl.define do
       end
     end
     factory :promotion_with_item_total_rule, traits: [:with_item_total_rule]
-
   end
 end

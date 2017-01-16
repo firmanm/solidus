@@ -1,12 +1,13 @@
 require 'spec_helper'
 
-describe Spree::Payment, :type => :model do
-  let(:order) { Spree::Order.create }
+describe Spree::Payment, type: :model do
+  let(:store) { create :store }
+  let(:order) { Spree::Order.create(store: store) }
   let(:refund_reason) { create(:refund_reason) }
 
   let(:gateway) do
-    gateway = Spree::Gateway::Bogus.new(:active => true, :name => 'Bogus gateway')
-    allow(gateway).to receive_messages :source_required => true
+    gateway = Spree::Gateway::Bogus.new(active: true, name: 'Bogus gateway')
+    allow(gateway).to receive_messages source_required: true
     gateway
   end
 
@@ -44,7 +45,6 @@ describe Spree::Payment, :type => :model do
   end
 
   context '.risky' do
-
     let!(:payment_1) { create(:payment, avs_response: 'Y', cvv_response_code: 'M', cvv_response_message: 'Match') }
     let!(:payment_2) { create(:payment, avs_response: 'Y', cvv_response_code: 'M', cvv_response_message: '') }
     let!(:payment_3) { create(:payment, avs_response: 'A', cvv_response_code: 'M', cvv_response_message: 'Match') }
@@ -53,7 +53,6 @@ describe Spree::Payment, :type => :model do
     it 'should not return successful responses' do
       expect(subject.class.risky.to_a).to match_array([payment_3, payment_4])
     end
-
   end
 
   context "#captured_amount" do
@@ -91,7 +90,7 @@ describe Spree::Payment, :type => :model do
       payment.source = Spree::CreditCard.new
       expect(payment).not_to be_valid
       cc_errors = payment.errors['Credit Card']
-      expect(cc_errors).to include("Number can't be blank")
+      expect(cc_errors).to include("Card Number can't be blank")
       expect(cc_errors).to include("Month is not a number")
       expect(cc_errors).to include("Year is not a number")
       expect(cc_errors).to include("Verification Value can't be blank")
@@ -111,7 +110,6 @@ describe Spree::Payment, :type => :model do
       payment.failure
       expect(payment.state).to eql('failed')
     end
-
   end
 
   context 'invalidate' do
@@ -122,7 +120,6 @@ describe Spree::Payment, :type => :model do
     end
 
     context "the payment's source is invalid" do
-
       before(:each) do
         card.year = 2014
         payment.source = card
@@ -131,7 +128,7 @@ describe Spree::Payment, :type => :model do
       it "transitions to invalid" do
         payment.state = 'checkout'
         payment.invalidate
-        expect(payment.state).to eq ('invalid')
+        expect(payment.state).to eq 'invalid'
       end
     end
   end
@@ -210,22 +207,22 @@ describe Spree::Payment, :type => :model do
 
       it "should invalidate if payment method doesnt support source" do
         expect(payment.payment_method).to receive(:supports?).with(payment.source).and_return(false)
-        expect { payment.process!}.to raise_error(Spree::Core::GatewayError)
+        expect { payment.process! }.to raise_error(Spree::Core::GatewayError)
         expect(payment.state).to eq('invalid')
       end
 
-      # Regression test for #4598
+      # Regression test for https://github.com/spree/spree/issues/4598
       it "should allow payments with a gateway_customer_profile_id" do
-        allow(payment.source).to receive_messages :gateway_customer_profile_id => "customer_1"
-        expect(payment.payment_method).to receive(:supports?).with(payment.source).and_return(false)
+        payment.source.update!(gateway_customer_profile_id: "customer_1", brand: 'visa')
+        expect(payment.payment_method.provider_class).to receive(:supports?).with('visa').and_return(false)
         expect(payment).to receive(:started_processing!)
         payment.process!
       end
 
-      # Another regression test for #4598
+      # Another regression test for https://github.com/spree/spree/issues/4598
       it "should allow payments with a gateway_payment_profile_id" do
-        allow(payment.source).to receive_messages :gateway_payment_profile_id => "customer_1"
-        expect(payment.payment_method).to receive(:supports?).with(payment.source).and_return(false)
+        payment.source.update!(gateway_payment_profile_id: "customer_1", brand: 'visa')
+        expect(payment.payment_method.provider_class).to receive(:supports?).with('visa').and_return(false)
         expect(payment).to receive(:started_processing!)
         payment.process!
       end
@@ -240,10 +237,10 @@ describe Spree::Payment, :type => :model do
       end
 
       it "should call authorize on the gateway with the currency code" do
-        allow(payment).to receive_messages :currency => 'GBP'
+        allow(payment).to receive_messages currency: 'GBP'
         expect(payment.payment_method).to receive(:authorize).with(amount_in_cents,
                                                                card,
-                                                               hash_including({:currency => "GBP"})).and_return(success_response)
+                                                               hash_including({ currency: "GBP" })).and_return(success_response)
         payment.authorize!
       end
 
@@ -463,7 +460,7 @@ describe Spree::Payment, :type => :model do
 
         context "if unsuccessful" do
           it "should not make payment complete" do
-            allow(gateway).to receive_messages :capture => failed_response
+            allow(gateway).to receive_messages capture: failed_response
             expect(payment).to receive(:failure)
             expect(payment).not_to receive(:complete)
             expect { payment.capture! }.to raise_error(Spree::Core::GatewayError)
@@ -471,7 +468,7 @@ describe Spree::Payment, :type => :model do
         end
       end
 
-      # Regression test for #2119
+      # Regression test for https://github.com/spree/spree/issues/2119
       context "when payment is completed" do
         before do
           payment.state = 'completed'
@@ -495,7 +492,7 @@ describe Spree::Payment, :type => :model do
       context "if successful" do
         it "should update the response_code with the authorization from the gateway" do
           # Change it to something different
-          allow(gateway).to receive_messages :cancel => success_response
+          allow(gateway).to receive_messages cancel: success_response
           payment.cancel!
           expect(payment.state).to eq('void')
           expect(payment.response_code).to eq('123')
@@ -504,15 +501,13 @@ describe Spree::Payment, :type => :model do
 
       context "if unsuccessful" do
         it "should not void the payment" do
-          allow(gateway).to receive_messages :cancel => failed_response
+          allow(gateway).to receive_messages cancel: failed_response
           expect { payment.cancel! }.to raise_error(Spree::Core::GatewayError)
           expect(payment.state).to eq('pending')
           expect(payment.response_code).to eq('abc')
         end
       end
-
     end
-
 
     describe "#void_transaction!" do
       before do
@@ -522,7 +517,7 @@ describe Spree::Payment, :type => :model do
 
       context "when profiles are supported" do
         it "should call payment_gateway.void with the payment's response_code" do
-          allow(gateway).to receive_messages :payment_profiles_supported? => true
+          allow(gateway).to receive_messages payment_profiles_supported?: true
           expect(gateway).to receive(:void).with('123', card, anything).and_return(success_response)
           payment.void_transaction!
         end
@@ -530,14 +525,14 @@ describe Spree::Payment, :type => :model do
 
       context "when profiles are not supported" do
         it "should call payment_gateway.void with the payment's response_code" do
-          allow(gateway).to receive_messages :payment_profiles_supported? => false
+          allow(gateway).to receive_messages payment_profiles_supported?: false
           expect(gateway).to receive(:void).with('123', anything).and_return(success_response)
           payment.void_transaction!
         end
       end
 
       it "should log the response" do
-        expect(payment.log_entries).to receive(:create!).with(:details => anything)
+        expect(payment.log_entries).to receive(:create!).with(details: anything)
         payment.void_transaction!
       end
 
@@ -552,13 +547,13 @@ describe Spree::Payment, :type => :model do
 
       context "if unsuccessful" do
         it "should not void the payment" do
-          allow(gateway).to receive_messages :void => failed_response
+          allow(gateway).to receive_messages void: failed_response
           expect(payment).not_to receive(:void)
           expect { payment.void_transaction! }.to raise_error(Spree::Core::GatewayError)
         end
       end
 
-      # Regression test for #2119
+      # Regression test for https://github.com/spree/spree/issues/2119
       context "if payment is already voided" do
         before do
           payment.state = 'void'
@@ -570,7 +565,6 @@ describe Spree::Payment, :type => :model do
         end
       end
     end
-
   end
 
   context "when already processing" do
@@ -597,7 +591,7 @@ describe Spree::Payment, :type => :model do
     context "raises no error if source is not specified" do
       before do
         payment.source = nil
-        allow(payment.payment_method).to receive_messages(:source_required? => false)
+        allow(payment.payment_method).to receive_messages(source_required?: false)
       end
 
       specify do
@@ -607,7 +601,7 @@ describe Spree::Payment, :type => :model do
   end
 
   describe "#credit_allowed" do
-    # Regression test for #4403 & #4407
+    # Regression test for https://github.com/spree/spree/issues/4403 and https://github.com/spree/spree/issues/4407
     it "is the difference between offsets total and payment amount" do
       payment.amount = 100
       allow(payment).to receive(:offsets_total).and_return(0)
@@ -640,7 +634,7 @@ describe Spree::Payment, :type => :model do
     context "not completed payments" do
       it "doesn't update order payment total" do
         expect {
-          Spree::Payment.create(:amount => 100, :order => order)
+          Spree::Payment.create(amount: 100, order: order)
         }.not_to change { order.payment_total }
       end
     end
@@ -666,14 +660,14 @@ describe Spree::Payment, :type => :model do
       it "updates payment_state and shipments" do
         expect(order.updater).to receive(:update_payment_state)
         expect(order.updater).to receive(:update_shipment_state)
-        Spree::Payment.create(:amount => 100, :order => order)
+        Spree::Payment.create(amount: 100, order: order)
       end
     end
 
     context "when profiles are supported" do
       before do
-        allow(gateway).to receive_messages :payment_profiles_supported? => true
-        allow(payment.source).to receive_messages :has_payment_profile? => false
+        allow(gateway).to receive_messages payment_profiles_supported?: true
+        allow(payment.source).to receive_messages has_payment_profile?: false
       end
 
       context "when there is an error connecting to the gateway" do
@@ -681,10 +675,10 @@ describe Spree::Payment, :type => :model do
           expect(gateway).to receive(:create_profile).and_raise(ActiveMerchant::ConnectionError.new("foo", nil))
           expect do
             Spree::Payment.create(
-              :amount => 100,
-              :order => order,
-              :source => card,
-              :payment_method => gateway
+              amount: 100,
+              order: order,
+              source: card,
+              payment_method: gateway
             )
           end.to raise_error(Spree::Core::GatewayError)
         end
@@ -692,52 +686,48 @@ describe Spree::Payment, :type => :model do
 
       context "with multiple payment attempts" do
         let(:attributes) { attributes_for(:credit_card) }
-        around do |example|
-          ActiveSupport::Deprecation.silence{ example.run }
-        end
 
         it "should not try to create profiles on old failed payment attempts" do
           allow_any_instance_of(Spree::Payment).to receive(:payment_method) { gateway }
 
-          order.payments.create!(
+          Spree::PaymentCreate.new(order, {
             source_attributes: attributes,
             payment_method: gateway,
             amount: 100
-          )
+          }).build.save!
           expect(gateway).to receive(:create_profile).exactly :once
           expect(order.payments.count).to eq(1)
-          order.payments.create!(
+          Spree::PaymentCreate.new(order, {
             source_attributes: attributes,
             payment_method: gateway,
             amount: 100
-          )
+          }).build.save!
         end
-
       end
 
       context "when successfully connecting to the gateway" do
         it "should create a payment profile" do
           expect(payment.payment_method).to receive :create_profile
-          payment = Spree::Payment.create(
-            :amount => 100,
-            :order => order,
-            :source => card,
-            :payment_method => gateway
+          Spree::Payment.create(
+            amount: 100,
+            order: order,
+            source: card,
+            payment_method: gateway
           )
         end
       end
     end
 
     context "when profiles are not supported" do
-      before { allow(gateway).to receive_messages :payment_profiles_supported? => false }
+      before { allow(gateway).to receive_messages payment_profiles_supported?: false }
 
       it "should not create a payment profile" do
         expect(gateway).not_to receive :create_profile
-        payment = Spree::Payment.create(
-          :amount => 100,
-          :order => order,
-          :source => card,
-          :payment_method => gateway
+        Spree::Payment.create(
+          amount: 100,
+          order: order,
+          source: card,
+          payment_method: gateway
         )
       end
     end
@@ -746,63 +736,69 @@ describe Spree::Payment, :type => :model do
   describe '#invalidate_old_payments' do
     it 'should not invalidate other payments if not valid' do
       payment.save
-      invalid_payment = Spree::Payment.new(:amount => 100, :order => order, :state => 'invalid', :payment_method => gateway)
+      invalid_payment = Spree::Payment.new(amount: 100, order: order, state: 'invalid', payment_method: gateway)
       invalid_payment.save
       expect(payment.reload.state).to eq('checkout')
     end
-  end
 
-  describe "#apply_source_attributes" do
-    # This method is deprecated
-    around do |example|
-      ActiveSupport::Deprecation.silence do
-        example.run
+    describe "invalidating payments updates in memory objects" do
+      before do
+        Spree::PaymentCreate.new(order, amount: 1).build.save!
+        expect(order.payments.map(&:state)).to contain_exactly(
+          'checkout'
+        )
+        Spree::PaymentCreate.new(order, amount: 2).build.save!
+      end
+
+      it 'should not have stale payments' do
+        expect(order.payments.map(&:state)).to contain_exactly(
+          'invalid',
+          'checkout'
+        )
       end
     end
+  end
 
+  # This used to describe #apply_source_attributes, whose behaviour is now part of PaymentCreate
+  describe "#apply_source_attributes" do
     context 'with a new source' do
       let(:params) do
         {
-          :amount => 100,
-          :payment_method => gateway,
-          :source_attributes => {
-            :expiry =>"01 / 99",
-            :number => '1234567890123',
-            :verification_value => '123',
-            :name => 'Spree Commerce'
+          amount: 100,
+          payment_method: gateway,
+          source_attributes: {
+            expiry: "01 / 99",
+            number: '1234567890123',
+            verification_value: '123',
+            name: 'Spree Commerce'
           }
         }
       end
 
       it "should build the payment's source" do
-        payment = Spree::Payment.new(params)
+        payment = Spree::PaymentCreate.new(order, params).build
         expect(payment).to be_valid
         expect(payment.source).not_to be_nil
       end
 
       it "assigns user and gateway to payment source" do
         order = create(:order)
-        source = order.payments.new(params).source
+        payment = Spree::PaymentCreate.new(order, params).build
+        source = payment.source
 
         expect(source.user_id).to eq order.user_id
         expect(source.payment_method_id).to eq gateway.id
       end
 
       it "errors when payment source not valid" do
-        params = { :amount => 100, :payment_method => gateway,
-          :source_attributes => {:expiry => "1 / 12" }}
+        params = { amount: 100, payment_method: gateway,
+          source_attributes: { expiry: "1 / 12" } }
 
-        payment = Spree::Payment.new(params)
+        payment = Spree::PaymentCreate.new(order, params).build
         expect(payment).not_to be_valid
         expect(payment.source).not_to be_nil
         expect(payment.source.error_on(:number).size).to eq(1)
         expect(payment.source.error_on(:verification_value).size).to eq(1)
-      end
-
-      it "does not build a new source when duplicating the model with source_attributes set" do
-        payment = create(:payment)
-        payment.source_attributes = params[:source_attributes]
-        expect { payment.dup }.to_not change { payment.source }
       end
     end
 
@@ -815,63 +811,70 @@ describe Spree::Payment, :type => :model do
         {
           source_attributes: {
             existing_card_id: credit_card.id,
-            verification_value: '321',
-          },
+            verification_value: '321'
+          }
         }
       end
 
-      it 'sets the existing card as the source for the new payment' do
-        expect {
-          order.payments.create!(params)
-        }.to change { Spree::Payment.count }.by(1)
-
-        expect(order.payments.last.source).to eq(credit_card)
-      end
-
-      it 'sets the payment payment_method to that of the credit card' do
-        order.payments.create!(params)
-        expect(order.payments.last.payment_method_id).to eq(credit_card.payment_method_id)
-      end
-
-      it 'sets the verification_value on the credit card' do
-        payment = order.payments.create!(params)
-        expect(payment.source.verification_value).to eq('321')
-      end
-
-      it 'sets the request_env on the payment' do
-        payment = order.payments.create!(params.merge(request_env: {'USER_AGENT' => 'Firefox'}))
-        expect(payment.request_env).to eq({'USER_AGENT' => 'Firefox'})
-      end
-
-      context 'the credit card belongs to a different user' do
-        let(:other_user) { create(:user) }
-        before { credit_card.update!(user_id: other_user.id) }
-        it 'errors' do
-          expect { order.payments.create!(params) }.to raise_error(ActiveRecord::RecordNotFound)
+      describe "building a payment" do
+        subject do
+          Spree::PaymentCreate.new(order, params).build.save!
         end
-      end
 
-      context 'the credit card has no user' do
-        before { credit_card.update!(user_id: nil) }
-        it 'errors' do
-          expect { order.payments.create!(params) }.to raise_error(ActiveRecord::RecordNotFound)
-        end
-      end
+        it 'sets the existing card as the source for the new payment' do
+          expect {
+            subject
+          }.to change { Spree::Payment.count }.by(1)
 
-      context 'the order has no user' do
-        before { order.update_attributes!(user_id: nil) }
-        it 'errors' do
-          expect { order.payments.create!(params) }.to raise_error(ActiveRecord::RecordNotFound)
+          expect(order.payments.last.source).to eq(credit_card)
         end
-      end
 
-      context 'the order and the credit card have no user' do
-        before do
-          order.update_attributes!(user_id: nil)
-          credit_card.update!(user_id: nil)
+        it 'sets the payment payment_method to that of the credit card' do
+          subject
+          expect(order.payments.last.payment_method_id).to eq(credit_card.payment_method_id)
         end
-        it 'errors' do
-          expect { order.payments.create!(params) }.to raise_error(ActiveRecord::RecordNotFound)
+
+        it 'sets the verification_value on the credit card' do
+          subject
+          expect(order.payments.last.source.verification_value).to eq('321')
+        end
+
+        it 'sets the request_env on the payment' do
+          payment = Spree::PaymentCreate.new(order, params.merge(request_env: { 'USER_AGENT' => 'Firefox' })).build
+          payment.save!
+          expect(payment.request_env).to eq({ 'USER_AGENT' => 'Firefox' })
+        end
+
+        context 'the credit card belongs to a different user' do
+          let(:other_user) { create(:user) }
+          before { credit_card.update!(user_id: other_user.id) }
+          it 'errors' do
+            expect { subject }.to raise_error(ActiveRecord::RecordNotFound)
+          end
+        end
+
+        context 'the credit card has no user' do
+          before { credit_card.update!(user_id: nil) }
+          it 'errors' do
+            expect { subject }.to raise_error(ActiveRecord::RecordNotFound)
+          end
+        end
+
+        context 'the order has no user' do
+          before { order.update_attributes!(user_id: nil) }
+          it 'errors' do
+            expect { subject }.to raise_error(ActiveRecord::RecordNotFound)
+          end
+        end
+
+        context 'the order and the credit card have no user' do
+          before do
+            order.update_attributes!(user_id: nil)
+            credit_card.update!(user_id: nil)
+          end
+          it 'errors' do
+            expect { subject }.to raise_error(ActiveRecord::RecordNotFound)
+          end
         end
       end
     end
@@ -890,9 +893,9 @@ describe Spree::Payment, :type => :model do
     end
   end
 
-  # Regression test for #2216
+  # Regression test for https://github.com/spree/spree/issues/2216
   describe "#gateway_options" do
-    before { allow(order).to receive_messages(:last_ip_address => "192.168.1.1") }
+    before { allow(order).to receive_messages(last_ip_address: "192.168.1.1") }
 
     it "contains an IP" do
       expect(payment.gateway_options[:ip]).to eq(order.last_ip_address)
@@ -902,13 +905,13 @@ describe Spree::Payment, :type => :model do
       # Sets the payment's order to a different Ruby object entirely
       payment.order = Spree::Order.find(payment.order_id)
       email = 'foo@example.com'
-      order.update_attributes(:email => email)
+      order.update_attributes(email: email)
       expect(payment.gateway_options[:email]).to eq(email)
     end
   end
 
   describe "#set_unique_identifier" do
-    # Regression test for #1998
+    # Regression test for https://github.com/spree/spree/issues/1998
     it "sets a unique identifier on create" do
       payment.run_callbacks(:create)
       expect(payment.number).not_to be_blank
@@ -916,7 +919,7 @@ describe Spree::Payment, :type => :model do
       expect(payment.number).to be_a(String)
     end
 
-    # Regression test for #3733
+    # Regression test for https://github.com/spree/spree/issues/3733
     it "does not regenerate the identifier on re-save" do
       payment.save!
       old_number = payment.number
@@ -1022,7 +1025,7 @@ describe Spree::Payment, :type => :model do
 
     context "when the locale uses a coma as a decimal separator" do
       before(:each) do
-        I18n.backend.store_translations(:fr, { :number => { :currency => { :format => { :delimiter => ' ', :separator => ',' } } } })
+        I18n.backend.store_translations(:fr, { number: { currency: { format: { delimiter: ' ', separator: ',' } } } })
         I18n.locale = :fr
         subject.amount = amount
       end
@@ -1122,17 +1125,17 @@ describe Spree::Payment, :type => :model do
     end
   end
 
-  # Regression test for #4072 (kinda)
-  # The need for this was discovered in the research for #4072
+  # Regression test for https://github.com/spree/spree/issues/4072 (kinda)
+  # The need for this was discovered in the research for https://github.com/spree/spree/issues/4072
   context "state changes" do
     it "are logged to the database" do
       expect(payment.state_changes).to be_empty
       expect(payment.process!).to be true
       expect(payment.state_changes.count).to eq(2)
-      changes = payment.state_changes.map { |change| { change.previous_state => change.next_state} }
+      changes = payment.state_changes.map { |change| { change.previous_state => change.next_state } }
       expect(changes).to match_array([
-        {"checkout" => "processing"},
-        { "processing" => "pending"}
+        { "checkout" => "processing" },
+        { "processing" => "pending" }
       ])
     end
   end
@@ -1164,6 +1167,20 @@ describe Spree::Payment, :type => :model do
         # to mark the payment as having failed
         subject.state = 'processing'
         expect(subject.actions).to include "failure"
+      end
+    end
+  end
+
+  describe "#payment_method" do
+    context 'with a soft-deleted payment method' do
+      before do
+        gateway.save!
+        payment.save!
+        gateway.destroy
+      end
+
+      it "works with a soft deleted payment method" do
+        expect(payment.reload.payment_method).to eq(gateway)
       end
     end
   end

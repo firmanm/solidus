@@ -8,7 +8,9 @@ module Spree
     before_validation do
       # Convert tier values to decimals. Strings don't do us much good.
       if preferred_tiers.is_a?(Hash)
-        self.preferred_tiers = Hash[*preferred_tiers.flatten.map(&:to_f)]
+        self.preferred_tiers = preferred_tiers.map do |k, v|
+          [BigDecimal.new(k.to_s), BigDecimal.new(v.to_s)]
+        end.to_h
       end
     end
 
@@ -18,16 +20,14 @@ module Spree
     }
     validate :preferred_tiers_content
 
-    def self.description
-      Spree.t(:tiered_percent)
-    end
-
     def compute(object)
-      base, percent = preferred_tiers.sort.reverse.detect{ |b,_| object.amount >= b }
+      order = object.is_a?(Order) ? object : object.order
+      _base, percent = preferred_tiers.sort.reverse.detect{ |b, _| order.item_total >= b }
       (object.amount * (percent || preferred_base_percent) / 100).round(2)
     end
 
     private
+
     def preferred_tiers_content
       if preferred_tiers.is_a? Hash
         unless preferred_tiers.keys.all?{ |k| k.is_a?(Numeric) && k > 0 }

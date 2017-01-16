@@ -1,16 +1,13 @@
 require 'spec_helper'
 
 describe 'spree:migrations:copy_shipped_shipments_to_cartons' do
-  before do
-    Rails.application.load_tasks
-    task.reenable
-  end
+  include_context(
+    'rake',
+    task_name: 'spree:migrations:copy_shipped_shipments_to_cartons:up',
+    task_path: Spree::Core::Engine.root.join('lib/tasks/migrations/copy_shipped_shipments_to_cartons.rake'),
+  )
 
   describe 'up' do
-    let(:task) do
-      Rake::Task['spree:migrations:copy_shipped_shipments_to_cartons:up']
-    end
-
     # should generate a carton
     let!(:shipped_shipment) { shipped_order.shipments.first }
     # should not generate a carton because it's not shipped
@@ -52,7 +49,7 @@ describe 'spree:migrations:copy_shipped_shipments_to_cartons' do
 
       expect(carton.number).to eq "C#{shipped_shipment.number}"
       expect(carton.stock_location).to eq shipped_shipment.stock_location
-      expect(carton.address).to eq shipped_shipment.address
+      expect(carton.address).to eq shipped_shipment.order.ship_address
       expect(carton.shipping_method).to eq shipped_shipment.shipping_method
       expect(carton.tracking).to eq shipped_shipment.tracking
       expect(carton.shipped_at).to eq shipped_shipment.shipped_at
@@ -111,5 +108,4 @@ describe 'spree:migrations:copy_shipped_shipments_to_cartons' do
       expect(preexisting_carton_inventory_units.map(&:reload).map(&:carton_id)).to all(eq preexisting_carton.id)
     end
   end
-
 end

@@ -6,12 +6,8 @@ module Spree
       preference :amount, :decimal, default: 0
       preference :currency, :string, default: ->{ Spree::Config[:currency] }
 
-      def self.description
-        Spree.t(:shipping_flat_rate_per_order)
-      end
-
-      def compute_package(package)
-        self.preferred_amount
+      def compute_package(_package)
+        preferred_amount
       end
     end
   end

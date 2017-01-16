@@ -117,9 +117,20 @@ module Spree
     preference :currency, :string, default: "USD"
 
     # @!attribute [rw] default_country_id
-    #   @deprecated
+    #   @deprecated Use the default country ISO preference instead
     #   @return [Integer,nil] id of {Country} to be selected by default in dropdowns (default: nil)
     preference :default_country_id, :integer
+
+    # @!attribute [rw] default_country_iso
+    #   Default customer country ISO code
+    #   @return [String] Two-letter ISO code of a {Spree::Country} to assumed as the country of an unidentified customer (default: "US")
+    preference :default_country_iso, :string, default: 'US'
+
+    # @!attribute [rw] admin_vat_country_iso
+    #   Set this if you want to enter prices in the backend including value added tax.
+    #   @return [String, nil] Two-letter ISO code of that {Spree::Country} for which
+    #      prices are entered in the backend (default: nil)
+    preference :admin_vat_country_iso, :string, default: nil
 
     # @!attribute [rw] expedited_exchanges
     #   Kicks off an exchange shipment upon return authorization save.
@@ -222,7 +233,7 @@ module Spree
 
     # @!attribute [rw] show_raw_product_description
     #   @return [Boolean] Don't escape HTML of product descriptions. (default: +false+)
-    preference :show_raw_product_description, :boolean, :default => false
+    preference :show_raw_product_description, :boolean, default: false
 
     # @!attribute [rw] tax_using_ship_address
     #   @return [Boolean] Use the shipping address rather than the billing address to determine tax (default: +true+)
@@ -243,7 +254,7 @@ module Spree
 
     # @!attribute [rw] mails_from
     #   @return [String] Email address used as +From:+ field in transactional emails.
-    preference :mails_from, :string, :default => 'spree@example.com'
+    preference :mails_from, :string, default: 'spree@example.com'
 
     # Store credits configurations
 
@@ -259,10 +270,36 @@ module Spree
     #   @return [Boolean] Whether use of an address in checkout marks it as user's default
     preference :automatic_default_address, :boolean, default: true
 
+    # @!attribute [rw] can_restrict_stock_management
+    #   @return [Boolean] Indicates if stock management can be restricted by location
+    preference :can_restrict_stock_management, :boolean, default: false
+
     # searcher_class allows spree extension writers to provide their own Search class
     attr_writer :searcher_class
     def searcher_class
       @searcher_class ||= Spree::Core::Search::Base
+    end
+
+    # Allows implementing custom pricing for variants
+    # @!attribute [rw] variant_price_selector_class
+    # @see Spree::Variant::PriceSelector
+    # @return [Class] an object that conforms to the API of
+    #   the standard variant price selector class Spree::Variant::PriceSelector.
+    attr_writer :variant_price_selector_class
+    def variant_price_selector_class
+      @variant_price_selector_class ||= Spree::Variant::PriceSelector
+    end
+
+    # Shortcut for getting the variant price selector's pricing options class
+    #
+    # @return [Class] The pricing options class to be used
+    delegate :pricing_options_class, to: :variant_price_selector_class
+
+    # Shortcut for the default pricing options
+    # @return [variant_price_selector_class] An instance of the pricing options class with default desired
+    #   attributes
+    def default_pricing_options
+      pricing_options_class.new
     end
 
     attr_writer :variant_search_class
@@ -274,6 +311,21 @@ module Spree
     attr_writer :promotion_chooser_class
     def promotion_chooser_class
       @promotion_chooser_class ||= Spree::PromotionChooser
+    end
+
+    attr_writer :shipping_rate_sorter_class
+    def shipping_rate_sorter_class
+      @shipping_rate_sorter_class ||= Spree::Stock::ShippingRateSorter
+    end
+
+    attr_writer :shipping_rate_selector_class
+    def shipping_rate_selector_class
+      @shipping_rate_selector_class ||= Spree::Stock::ShippingRateSelector
+    end
+
+    attr_writer :shipping_rate_taxer_class
+    def shipping_rate_taxer_class
+      @shipping_rate_taxer_class ||= Spree::Tax::ShippingRateTaxer
     end
 
     # Allows providing your own Mailer for shipped cartons.
@@ -297,30 +349,60 @@ module Spree
       @order_merger_class ||= Spree::OrderMerger
     end
 
+    # Allows providing your own class for adding default payments to a user's
+    # order from their "wallet".
+    #
+    # @!attribute [rw] default_payment_builder_class
+    # @return [Class] a class with the same public interfaces as
+    #   Spree::Wallet::DefaultPaymentBuilder.
+    attr_writer :default_payment_builder_class
+    def default_payment_builder_class
+      @default_payment_builder_class ||= Spree::Wallet::DefaultPaymentBuilder
+    end
+
+    # Allows providing your own class for adding payment sources to a user's
+    # "wallet" after an order moves to the complete state.
+    #
+    # @!attribute [rw] add_payment_sources_to_wallet_class
+    # @return [Class] a class with the same public interfaces
+    #   as Spree::Wallet::AddPaymentSourcesToWallet.
+    attr_writer :add_payment_sources_to_wallet_class
+    def add_payment_sources_to_wallet_class
+      @add_payment_sources_to_wallet_class ||= Spree::Wallet::AddPaymentSourcesToWallet
+    end
+
+    # Allows providing your own class for calculating taxes on an order.
+    #
+    # This extension point is under development and may change in a future minor release.
+    #
+    # @!attribute [rw] tax_adjuster_class
+    # @return [Class] a class with the same public interfaces as
+    #   Spree::Tax::OrderAdjuster
+    # @api experimental
+    attr_writer :tax_adjuster_class
+    def tax_adjuster_class
+      @tax_adjuster_class ||= Spree::Tax::OrderAdjuster
+    end
+
     def static_model_preferences
       @static_model_preferences ||= Spree::Preferences::StaticModelPreferences.new
     end
 
-    # all the following can be deprecated when store prefs are no longer supported
-    # @private
-    DEPRECATED_STORE_PREFERENCES = {
-      site_name: :name,
-      site_url: :url,
-      default_meta_description: :meta_description,
-      default_meta_keywords: :meta_keywords,
-      default_seo_title: :seo_title,
-    }
+    def stock
+      @stock_configuration ||= Spree::Core::StockConfiguration.new
+    end
 
-    DEPRECATED_STORE_PREFERENCES.each do |old_preference_name, store_method|
-      # Avoid warning about implementation details
-      bc = ActiveSupport::BacktraceCleaner.new
-      bc.add_silencer { |line| line =~ %r{spree/preferences} }
-
-      # support all the old preference methods with a warning
-      define_method "preferred_#{old_preference_name}" do
-        ActiveSupport::Deprecation.warn("#{old_preference_name} is no longer supported on Spree::Config, please access it through #{store_method} on Spree::Store", bc.clean(caller))
-        Store.default.send(store_method)
-      end
+    # Default admin VAT location
+    #
+    # An object that responds to :state_id and :country_id so it can double as a Spree::Address in
+    # Spree::Zone.for_address. Takes the `admin_vat_country_iso` as input.
+    #
+    # @see admin_vat_country_iso The admin VAT country
+    # @return [Spree::Tax::TaxLocation] default tax location
+    def admin_vat_location
+      @default_tax_location ||= Spree::Tax::TaxLocation.new(
+        country: Spree::Country.find_by(iso: admin_vat_country_iso)
+      )
     end
   end
 end

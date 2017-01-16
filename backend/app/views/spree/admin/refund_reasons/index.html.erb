@@ -1,14 +1,15 @@
-<%= render partial: 'spree/admin/shared/configuration_menu' %>
+<%= render 'spree/admin/shared/settings_checkout_tabs' %>
 
-<% content_for :page_title do %>
-  <%= Spree.t(:refund_reasons) %>
-<% end %>
+<% admin_breadcrumb(Spree.t(:settings)) %>
+<% admin_breadcrumb(Spree.t('admin.tab.checkout')) %>
+<% admin_breadcrumb(plural_resource_name(Spree::RefundReason)) %>
+
 
 <% content_for :page_actions do %>
   <ul class="actions inline-menu">
     <% if can?(:create, Spree::RefundReason) %>
       <li>
-        <%= button_link_to Spree.t(:new_refund_reason), new_object_url, { icon: 'plus', id: 'admin_new_named_type' } %>
+        <%= button_link_to Spree.t(:new_refund_reason), new_object_url, { id: 'admin_new_named_type' } %>
       </li>
     <% end %>
   </ul>
@@ -23,8 +24,8 @@
     </colgroup>
     <thead>
       <tr data-hook="named_types_header">
-        <th><%= Spree.t(:name) %></th>
-        <th><%= Spree.t(:active) %></th>
+        <th><%= Spree::RefundReason.human_attribute_name(:name) %></th>
+        <th><%= Spree::RefundReason.human_attribute_name(:active) %></th>
         <th class="actions"></th>
       </tr>
     </thead>
@@ -47,10 +48,9 @@
     </tbody>
   </table>
 <% else %>
-  <div class="alpha twelve columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/refund_reason')) %>
-    <% if can?(:create, Spree::RefundReason) %>
-      <%= link_to Spree.t(:add_one), new_object_url %>!
-    <% end %>
+  <div class="col-xs-9 no-objects-found">
+    <%= render 'spree/admin/shared/no_objects_found',
+                 resource: Spree::RefundReason,
+                 new_resource_url: new_object_url %>
   </div>
 <% end %>

@@ -1,11 +1,10 @@
 <%= render :partial => 'spree/admin/shared/order_tabs', :locals => { :current => 'Customer Returns' } %>
 
-<% content_for :page_title do %>
-  <i class="fa fa-arrow-right"></i> <%= Spree.t(:editing_reimbursement) %> #<%= @reimbursement.number %>
-<% end %>
+<% admin_breadcrumb("#{Spree.t(:editing_reimbursement)} #{@reimbursement.number}") %>
+
 
 <% content_for :page_actions do %>
-  <li><%= button_link_to Spree.t(:back_to_customer_return), url_for([:edit, :admin, @order, @reimbursement.customer_return]), :icon => 'arrow-left' %></li>
+  <li><%= button_link_to Spree.t(:back_to_customer_return), url_for([:edit, :admin, @order, @reimbursement.customer_return]) %></li>
 <% end %>
 
 <%= render :partial => 'spree/shared/error_messages', :locals => { :target => @reimbursement } %>
@@ -13,15 +12,15 @@
 <%= form_for [:admin, @order, @reimbursement] do |f| %>
   <fieldset class='no-border-bottom'>
     <legend align='center'><%= Spree.t(:items_to_be_reimbursed) %></legend>
-    <table class="index reimbursement-return-items-table">
+    <table class="index reimbursement-return-items">
       <thead>
         <tr>
-          <th><%= Spree.t(:product) %></th>
-          <th><%= Spree.t(:preferred_reimbursement_type) %></th>
-          <th><%= Spree.t(:reimbursement_type_override) %></th>
-          <th><%= Spree.t(:pre_tax_refund_amount) %></th>
-          <th><%= Spree.t(:total) %></th>
-          <th><%= Spree.t(:exchange_for) %></th>
+          <th><%= Spree::Product.model_name.human %></th>
+          <th><%= Spree::ReturnItem.human_attribute_name(:preferred_reimbursement_type_id) %></th>
+          <th><%= Spree::ReturnItem.human_attribute_name(:override_reimbursement_type_id) %></th>
+          <th><%= Spree::ReturnItem.human_attribute_name(:amount) %></th>
+          <th><%= Spree::ReturnItem.human_attribute_name(:total) %></th>
+          <th><%= Spree::ReturnItem.human_attribute_name(:exchange_variant) %></th>
         </tr>
       </thead>
       <tbody>
@@ -44,7 +43,7 @@
               ) %>
             </td>
             <td class="align-center">
-              <%= item_fields.text_field :pre_tax_amount, { class: 'refund-amount-input' } %>
+              <%= item_fields.text_field :amount, { class: 'refund-amount-input' } %>
             </td>
             <td class="align-center">
               <%= return_item.display_total %>
@@ -73,12 +72,12 @@
 
 <fieldset>
   <legend align='center'><%= Spree.t(:calculated_reimbursements) %></legend>
-  <table class="index">
+  <table class="index calculated-reimbursements">
     <thead data-hook="customer_return_header">
       <tr>
-        <th><%= Spree.t(:reimbursement_type) %></th>
+        <th><%= Spree::ReimbursementType.model_name.human %></th>
         <th><%= Spree.t(:description) %></th>
-        <th><%= Spree.t(:amount) %></th>
+        <th><%= Spree::Reimbursement.human_attribute_name(:total) %></th>
       </tr>
     </thead>
     <tbody>
@@ -93,16 +92,15 @@
   </table>
   <% if @order.has_non_reimbursement_related_refunds? %>
     <span class="red">
-      <%= "#{Spree.t('note')}: #{Spree.t('this_order_has_already_received_a_refund')}. #{Spree.t('make_sure_the_above_reimbursement_amount_is_correct')}." %>
+      <%= Spree.t(:note_already_received_a_refund) %>
     </span>
   <% end %>
   <div class="form-buttons filter-actions actions" data-hook="reimburse-buttons">
     <% if !@reimbursement.reimbursed? %>
-      <%= button_to [:perform, :admin, @order, @reimbursement], {class: 'button fa fa-reply', method: 'post'} do %>
+      <%= button_to [:perform, :admin, @order, @reimbursement], { class: 'button', method: 'post' } do %>
         <%= Spree.t(:reimburse) %>
       <% end %>
-      <span class="or"><%= Spree.t(:or) %></span>
-      <%= button_link_to Spree.t('actions.cancel'), url_for([:admin, @order, @reimbursement.customer_return]), :icon => 'remove' %>
+      <%= button_link_to Spree.t('actions.cancel'), url_for([:admin, @order, @reimbursement.customer_return]) %>
     <% end %>
   </div>
 </fieldset>

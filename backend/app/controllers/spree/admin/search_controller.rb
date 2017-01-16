@@ -1,9 +1,8 @@
 module Spree
   module Admin
     class SearchController < Spree::Admin::BaseController
-      # http://spreecommerce.com/blog/2010/11/02/json-hijacking-vulnerability/
-      before_action :check_json_authenticity, only: :index
       respond_to :json
+      layout false
 
       # TODO: Clean this up by moving searching out to user_class_extensions
       # And then JSON building with something like Active Model Serializers
@@ -24,9 +23,9 @@ module Spree
       def products
         if params[:ids]
           # split here may be String#split or Array#split, so we must flatten the results
-          @products = Product.where(id: params[:ids].split(",").flatten)
+          @products = Spree::Product.where(id: params[:ids].split(",").flatten)
         else
-          @products = Product.ransack(params[:q]).result
+          @products = Spree::Product.ransack(params[:q]).result
         end
 
         @products = @products.distinct.page(params[:page]).per(params[:per_page])
@@ -36,4 +35,3 @@ module Spree
     end
   end
 end
-

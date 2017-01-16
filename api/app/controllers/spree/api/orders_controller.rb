@@ -2,7 +2,7 @@ module Spree
   module Api
     class OrdersController < Spree::Api::BaseController
       class_attribute :admin_shipment_attributes
-      self.admin_shipment_attributes = [:shipping_method, :stock_location, :inventory_units => [:variant_id, :sku]]
+      self.admin_shipment_attributes = [:shipping_method, :stock_location, inventory_units: [:variant_id, :sku]]
 
       class_attribute :admin_order_attributes
       self.admin_order_attributes = [:import, :number, :completed_at, :locked_at, :channel, :user_id, :created_at]
@@ -10,10 +10,10 @@ module Spree
       skip_before_action :authenticate_user, only: :apply_coupon_code
 
       before_action :find_order, except: [:create, :mine, :current, :index]
-      around_filter :lock_order, except: [:create, :mine, :current, :index]
+      around_action :lock_order, except: [:create, :mine, :current, :index]
 
       # Dynamically defines our stores checkout steps to ensure we check authorization on each step.
-      Order.checkout_steps.keys.each do |step|
+      Spree::Order.checkout_steps.keys.each do |step|
         define_method step do
           authorize! :update, @order, params[:token]
         end
@@ -21,32 +21,25 @@ module Spree
 
       def cancel
         authorize! :update, @order, params[:token]
-        @order.cancel!
-        respond_with(@order, :default_template => :show)
+        @order.canceled_by(current_api_user)
+        respond_with(@order, default_template: :show)
       end
 
       def create
         authorize! :create, Order
-
-        order_user = if order_params[:user_id]
-          Spree.user_class.find(order_params[:user_id])
-        else
-          current_api_user
-        end
-
-        @order = Spree::Core::Importer::Order.import(order_user, order_params)
+        @order = Spree::Core::Importer::Order.import(determine_order_user, order_params)
         respond_with(@order, default_template: :show, status: 201)
       end
 
       def empty
         authorize! :update, @order, order_token
         @order.empty!
-        render text: nil, status: 204
+        render plain: nil, status: 204
       end
 
       def index
         authorize! :index, Order
-        @orders = Order.ransack(params[:q]).result.page(params[:page]).per(params[:per_page])
+        @orders = paginate(Spree::Order.ransack(params[:q]).result)
         respond_with(@orders)
       end
 
@@ -79,7 +72,8 @@ module Spree
 
       def mine
         if current_api_user
-          @orders = current_api_user.orders.by_store(current_store).reverse_chronological.ransack(params[:q]).result.page(params[:page]).per(params[:per_page])
+          @orders = current_api_user.orders.by_store(current_store).reverse_chronological.ransack(params[:q]).result
+          @orders = paginate(@orders)
         else
           render "spree/api/errors/unauthorized", status: :unauthorized
         end
@@ -116,6 +110,15 @@ module Spree
         params[:order][:bill_address_attributes] = params[:order].delete(:bill_address) if params[:order][:bill_address].present?
       end
 
+      # @api public
+      def determine_order_user
+        if order_params[:user_id].present?
+          Spree.user_class.find(order_params[:user_id])
+        else
+          current_api_user
+        end
+      end
+
       def permitted_order_attributes
         can?(:admin, Spree::Order) ? (super + admin_order_attributes) : super
       end
@@ -128,7 +131,7 @@ module Spree
         end
       end
 
-      def find_order(lock = false)
+      def find_order(_lock = false)
         @order = Spree::Order.find_by!(number: params[:id])
       end
 

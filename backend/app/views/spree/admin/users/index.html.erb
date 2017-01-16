@@ -1,11 +1,10 @@
-<% content_for :page_title do %>
-  <%= Spree.t(:listing_users) %>
-<% end %>
+<% admin_breadcrumb(plural_resource_name(Spree::LegacyUser)) %>
+
 
 <% content_for :page_actions do %>
   <% if can?(:admin, Spree.user_class) && can?(:create, Spree.user_class) %>
     <li>
-      <%= button_link_to Spree.t(:new_user), new_admin_user_url, :icon => 'plus', :id => 'admin_new_user_link' %>
+      <%= button_link_to Spree.t(:new_user), new_admin_user_url, :id => 'admin_new_user_link' %>
     </li>
   <% end %>
 <% end %>
@@ -17,7 +16,7 @@
   </colgroup>
   <thead>
     <tr data-hook="admin_users_index_headers">
-      <th><%= sort_link @search,:email, Spree.t(:user), {}, {:title => 'users_email_title'} %></th>
+      <th><%= sort_link @search,:email, Spree::LegacyUser.model_name.human, {}, {:title => 'users_email_title'} %></th>
       <th data-hook="admin_users_index_header_actions" class="actions"></th>
     </tr>
   </thead>
@@ -38,7 +37,7 @@
   </tbody>
 </table>
 
-<%= paginate @users %>
+<%= paginate @users, theme: "solidus_admin" %>
 
 <% content_for :sidebar_title do %>
   <%= Spree.t(:search) %>
@@ -52,7 +51,7 @@
         <%= f.text_field :email_cont, :class => 'fullwidth' %>
       </div>
       <div data-hook="admin_users_index_search_buttons">
-        <%= button Spree.t(:search), 'search' %>
+        <%= button Spree.t(:search) %>
       </div>
     <% end %>
   </div>

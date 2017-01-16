@@ -1,4 +1,4 @@
-class FixAdjustmentOrderId < ActiveRecord::Migration
+class FixAdjustmentOrderId < ActiveRecord::Migration[4.2]
   def change
     say 'Populate order_id from adjustable_id where appropriate'
 
@@ -48,7 +48,6 @@ class FixAdjustmentOrderId < ActiveRecord::Migration
                       on_delete: :restrict, # handled by models
                       on_update: :restrict  # handled by models
     end
-
 
     if connection.adapter_name.eql?('PostgreSQL')
       # Negated Logical implication.

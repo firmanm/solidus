@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Spree::Admin::ReportsController, :type => :controller do
+describe Spree::Admin::ReportsController, type: :controller do
   stub_authorization!
 
   describe 'ReportsController.available_reports' do
@@ -11,20 +11,26 @@ describe Spree::Admin::ReportsController, :type => :controller do
     it 'should have the proper sales total report description' do
       expect(Spree::Admin::ReportsController.available_reports[:sales_total][:description]).to eql('Sales Total For All Orders')
     end
-
   end
 
   describe 'ReportsController.add_available_report!' do
     context 'when adding the report name' do
       it 'should contain the report' do
+        I18n.backend.store_translations(:en, spree: {
+          some_report: 'Awesome Report',
+          some_report_description: 'This report is great!'
+        })
         Spree::Admin::ReportsController.add_available_report!(:some_report)
         expect(Spree::Admin::ReportsController.available_reports.keys.include?(:some_report)).to be true
+        expect(Spree::Admin::ReportsController.available_reports[:some_report]).to eq(
+          name: 'Awesome Report',
+          description: 'This report is great!'
+        )
       end
     end
   end
 
   describe 'GET sales_total' do
-
     let!(:order_complete_start_of_month) { create(:completed_order_with_totals) }
     let!(:order_complete_mid_month) { create(:completed_order_with_totals) }
     let!(:order_non_complete) { create(:order, completed_at: nil) }
@@ -38,7 +44,7 @@ describe Spree::Admin::ReportsController, :type => :controller do
       order_complete_mid_month.save!
     end
 
-    subject { spree_get :sales_total, params }
+    subject { get :sales_total, params: params }
 
     shared_examples 'sales total report' do
       it 'should respond with success' do
@@ -67,7 +73,7 @@ describe Spree::Admin::ReportsController, :type => :controller do
     end
 
     context 'when no dates are specified' do
-      let(:params) { { } }
+      let(:params) { {} }
 
       it_behaves_like 'sales total report' do
         let(:expected_returned_orders) { [order_complete_mid_month, order_complete_start_of_month] }
@@ -76,7 +82,7 @@ describe Spree::Admin::ReportsController, :type => :controller do
             'USD' => {
               item_total: Money.new(2000, 'USD'),
               adjustment_total: Money.new(0, 'USD'),
-              sales_total: Money.new(22000, 'USD')
+              sales_total: Money.new(22_000, 'USD')
             }
           }
         }
@@ -93,7 +99,7 @@ describe Spree::Admin::ReportsController, :type => :controller do
             'USD' => {
               item_total: Money.new(1000, 'USD'),
               adjustment_total: Money.new(0, 'USD'),
-              sales_total: Money.new(11000, 'USD')
+              sales_total: Money.new(11_000, 'USD')
             }
           }
         }
@@ -110,7 +116,7 @@ describe Spree::Admin::ReportsController, :type => :controller do
             'USD' => {
               item_total: Money.new(1000, 'USD'),
               adjustment_total: Money.new(0, 'USD'),
-              sales_total: Money.new(11000, 'USD')
+              sales_total: Money.new(11_000, 'USD')
             }
           }
         }
@@ -120,15 +126,14 @@ describe Spree::Admin::ReportsController, :type => :controller do
 
   describe 'GET index' do
     it 'should be ok' do
-      spree_get :index
+      get :index
       expect(response).to be_ok
     end
   end
 
   after(:each) do
-    Spree::Admin::ReportsController.available_reports.delete_if do |key, value|
+    Spree::Admin::ReportsController.available_reports.delete_if do |key, _value|
       key != :sales_total
     end
   end
-
 end

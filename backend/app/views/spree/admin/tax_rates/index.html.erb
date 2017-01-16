@@ -1,13 +1,14 @@
-<%= render 'spree/admin/shared/configuration_menu' %>
+<%= render 'spree/admin/shared/taxes_tabs' %>
 
-<% content_for :page_title do %>
-  <%= Spree.t(:tax_rates) %>
-<% end %>
+<% admin_breadcrumb(Spree.t(:settings)) %>
+<% admin_breadcrumb(Spree.t('admin.tab.taxes')) %>
+<% admin_breadcrumb(plural_resource_name(Spree::TaxRate)) %>
+
 
 <% content_for :page_actions do %>
   <% if can?(:create, Spree::TaxRate) %>
     <li>
-      <%= button_link_to Spree.t(:new_tax_rate), new_object_url, :icon => 'plus' %>
+      <%= button_link_to Spree.t(:new_tax_rate), new_object_url %>
     </li>
   <% end %>
 <% end %>
@@ -26,13 +27,13 @@
     </colgroup>
     <thead>
       <tr data-hook="rate_header">
-        <th><%= Spree.t(:zone) %></th>
-        <th><%= Spree.t(:name) %></th>
-        <th><%= Spree.t(:category) %></th>
-        <th><%= Spree.t(:amount) %></th>
-        <th><%= Spree.t(:included_in_price) %></th>
-        <th><%= Spree.t(:show_rate_in_label) %></th>
-        <th><%= Spree.t(:calculator) %></th>
+        <th><%= Spree::TaxRate.human_attribute_name(:zone) %></th>
+        <th><%= Spree::TaxRate.human_attribute_name(:name) %></th>
+        <th><%= Spree::TaxRate.human_attribute_name(:tax_category_id) %></th>
+        <th><%= Spree::TaxRate.human_attribute_name(:amount) %></th>
+        <th><%= Spree::TaxRate.human_attribute_name(:included_in_price) %></th>
+        <th><%= Spree::TaxRate.human_attribute_name(:show_rate_in_label) %></th>
+        <th><%= Spree::Calculator.model_name.human %></th>
         <th class="actions"></th>
       </tr>
     </thead>
@@ -59,10 +60,9 @@
     </tbody>
   </table>
 <% else %>
-  <div class="alpha twelve columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/tax_rate')) %>
-    <% if can?(:create, Spree::TaxRate) %>
-      <%= link_to Spree.t(:add_one), spree.new_admin_tax_rate_path %>!
-    <% end %>
+  <div class="col-xs-9 no-objects-found">
+    <%= render 'spree/admin/shared/no_objects_found',
+                 resource: Spree::TaxRate,
+                 new_resource_url: new_object_url %>
   </div>
 <% end %>

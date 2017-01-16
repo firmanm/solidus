@@ -1,6 +1,5 @@
 module Spree
   class ReturnItem < Spree::Base
-
     INTERMEDIATE_RECEPTION_STATUSES = %i(given_to_customer lost_in_transit shipped_wrong_item short_shipped in_transit)
     COMPLETED_RECEPTION_STATUSES = INTERMEDIATE_RECEPTION_STATUSES + [:received]
 
@@ -49,8 +48,8 @@ module Spree
     scope :awaiting_return, -> { where(reception_status: 'awaiting') }
     scope :expecting_return, -> { where.not(reception_status: COMPLETED_RECEPTION_STATUSES) }
     scope :not_cancelled, -> { where.not(reception_status: 'cancelled') }
-    scope :valid, -> { where.not(reception_status: %w(cancelled expired unexchanged))}
-    scope :not_expired, -> { where.not(reception_status: 'expired')}
+    scope :valid, -> { where.not(reception_status: %w(cancelled expired unexchanged)) }
+    scope :not_expired, -> { where.not(reception_status: 'expired') }
     scope :received, -> { where(reception_status: 'received') }
     INTERMEDIATE_RECEPTION_STATUSES.each do |reception_status|
       scope reception_status, -> { where(reception_status: reception_status) }
@@ -73,8 +72,8 @@ module Spree
     delegate :variant, to: :inventory_unit
     delegate :shipment, to: :inventory_unit
 
-    before_create :set_default_pre_tax_amount, unless: :pre_tax_amount_changed?
-    before_save :set_exchange_pre_tax_amount
+    before_create :set_default_amount, unless: :amount_changed?
+    before_save :set_exchange_amount
 
     state_machine :reception_status, initial: :awaiting do
       after_transition to: COMPLETED_RECEPTION_STATUSES,  do: :attempt_accept
@@ -94,7 +93,7 @@ module Spree
     end
 
     extend DisplayMoney
-    money_methods :pre_tax_amount, :total
+    money_methods :pre_tax_amount, :amount, :total
 
     # @return [Boolean] true when this retur item is in a complete reception
     #   state
@@ -134,7 +133,7 @@ module Spree
     #   unit if one exists, or a new one if one does not
     def self.from_inventory_unit(inventory_unit)
       valid.find_by(inventory_unit: inventory_unit) ||
-        new(inventory_unit: inventory_unit).tap(&:set_default_pre_tax_amount)
+        new(inventory_unit: inventory_unit).tap(&:set_default_amount)
     end
 
     # @return [Boolean] true when an exchange has been requested on this return
@@ -155,10 +154,14 @@ module Spree
       exchange_requested? && !exchange_processed?
     end
 
-    # @return [BigDecimal] the cost of the item before tax, plus the included
-    #   and additional taxes
+    # @return [BigDecimal] the cost of the item after tax
     def total
-      pre_tax_amount + included_tax_total + additional_tax_total
+      amount + additional_tax_total
+    end
+
+    # @return [BigDecimal] the cost of the item before tax
+    def pre_tax_amount
+      amount - included_tax_total
     end
 
     # @note This uses the exchange_variant_engine configured on the class.
@@ -186,12 +189,12 @@ module Spree
       exchange_inventory_unit.try(:shipment)
     end
 
-    # Calculates and sets the default pre-tax amount to be refunded.
+    # Calculates and sets the default amount to be refunded.
     #
     # @note This uses the configured refund_amount_calculator configured on the
     #   class.
-    def set_default_pre_tax_amount
-      self.pre_tax_amount = refund_amount_calculator.new.compute(self)
+    def set_default_amount
+      self.amount = refund_amount_calculator.new.compute(self)
     end
 
     def potential_reception_transitions
@@ -216,7 +219,7 @@ module Spree
     private
 
     def persist_acceptance_status_errors
-      self.update_attributes(acceptance_status_errors: validator.errors)
+      update_attributes(acceptance_status_errors: validator.errors)
     end
 
     def currency
@@ -241,7 +244,7 @@ module Spree
       original_ri = sibling_intended_for_exchange('awaiting')
       if original_ri
         original_ri.unexchange!
-        set_default_pre_tax_amount
+        set_default_amount
         save!
       end
     end
@@ -277,20 +280,20 @@ module Spree
       end
     end
 
-    def set_exchange_pre_tax_amount
-      self.pre_tax_amount = 0.0.to_d if exchange_requested?
+    def set_exchange_amount
+      self.amount = 0.0.to_d if exchange_requested?
     end
 
     def validate_no_other_completed_return_items
       other_return_item = Spree::ReturnItem.where({
         inventory_unit_id: inventory_unit_id,
-        reception_status: COMPLETED_RECEPTION_STATUSES,
-      }).where.not(id: self.id).first
+        reception_status: COMPLETED_RECEPTION_STATUSES
+      }).where.not(id: id).first
 
       if other_return_item && (new_record? || COMPLETED_RECEPTION_STATUSES.include?(reception_status.to_sym))
         errors.add(:inventory_unit, :other_completed_return_item_exists, {
           inventory_unit_id: inventory_unit_id,
-          return_item_id: other_return_item.id,
+          return_item_id: other_return_item.id
         })
       end
     end
@@ -299,9 +302,7 @@ module Spree
       Spree::ReturnItem.where(inventory_unit_id: inventory_unit_id)
                        .where.not(id: id)
                        .valid
-                       .each do |return_item|
-        return_item.cancel!
-      end
+                       .each(&:cancel!)
     end
 
     def should_restock?

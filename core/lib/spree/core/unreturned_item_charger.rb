@@ -10,7 +10,7 @@ module Spree
 
     class_attribute :failure_handler
 
-    attr_reader :original_order
+    attr_reader :original_order, :new_order
 
     def initialize(shipment, return_items)
       @shipment = shipment
@@ -19,6 +19,8 @@ module Spree
     end
 
     def charge_for_items
+      self.new_order = Spree::Order.create!(exchange_order_attributes)
+
       new_order.associate_user!(@original_order.user) if @original_order.user
 
       add_exchange_variants_to_order
@@ -40,7 +42,7 @@ module Spree
 
       new_order.contents.approve(name: self.class.name)
       new_order.complete!
-      Spree::OrderCapturing.new(new_order).capture_payments if (Spree::Config[:auto_capture_exchanges] && !Spree::Config[:auto_capture])
+      Spree::OrderCapturing.new(new_order).capture_payments if Spree::Config[:auto_capture_exchanges] && !Spree::Config[:auto_capture]
 
       @return_items.each(&:expired!)
       create_new_rma if Spree::Config[:create_rma_for_unreturned_exchange]
@@ -50,14 +52,11 @@ module Spree
       elsif !new_order.valid?
         raise ChargeFailure.new('order not valid', new_order)
       end
-
     end
 
     private
 
-    def new_order
-      @new_order ||= Spree::Order.create!(exchange_order_attributes)
-    end
+    attr_writer :new_order
 
     def add_exchange_variants_to_order
       @return_items.group_by(&:exchange_variant).map do |variant, variant_return_items|

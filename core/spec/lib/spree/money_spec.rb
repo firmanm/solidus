@@ -8,6 +8,81 @@ describe Spree::Money do
     end
   end
 
+  describe '#initialize' do
+    subject do
+      Spree::Deprecation.silence do
+        described_class.new(amount, currency: currency, with_currency: true).to_s
+      end
+    end
+
+    context 'with no currency' do
+      let(:currency) { nil }
+      let(:amount){ 10 }
+      it { should == "$10.00 USD" }
+    end
+
+    context 'with currency' do
+      let(:currency){ 'USD' }
+
+      context "CAD" do
+        let(:amount){ '10.00' }
+        let(:currency){ 'CAD' }
+        it { should == "$10.00 CAD" }
+      end
+
+      context "with string amount" do
+        let(:amount){ '10.00' }
+        it { should == "$10.00 USD" }
+      end
+
+      context "with no decimal point" do
+        let(:amount){ '10' }
+        it { should == "$10.00 USD" }
+      end
+
+      context "with symbol" do
+        let(:amount){ '$10.00' }
+        it { should == "$10.00 USD" }
+      end
+
+      context "with extra currency" do
+        let(:amount){ '$10.00 USD' }
+        it { should == "$10.00 USD" }
+      end
+
+      context "with different currency" do
+        let(:currency){ 'USD' }
+        let(:amount){ '$10.00 CAD' }
+        it { should == "$10.00 CAD" }
+      end
+
+      context "with commas" do
+        let(:amount){ '1,000.00' }
+        it { should == "$1,000.00 USD" }
+      end
+
+      context "with comma for decimal point" do
+        let(:amount){ '10,00' }
+        it { should == "$10.00 USD" }
+      end
+
+      context 'with fixnum' do
+        let(:amount){ 10 }
+        it { should == "$10.00 USD" }
+      end
+
+      context 'with float' do
+        let(:amount){ 10.00 }
+        it { should == "$10.00 USD" }
+      end
+
+      context 'with BigDecimal' do
+        let(:amount){ BigDecimal.new('10.00') }
+        it { should == "$10.00 USD" }
+      end
+    end
+  end
+
   it "formats correctly" do
     money = Spree::Money.new(10)
     expect(money.to_s).to eq("$10.00")
@@ -20,7 +95,7 @@ describe Spree::Money do
 
   context "with currency" do
     it "passed in option" do
-      money = Spree::Money.new(10, :with_currency => true, :html => false)
+      money = Spree::Money.new(10, with_currency: true, html: false)
       expect(money.to_s).to eq("$10.00 USD")
     end
   end
@@ -40,14 +115,14 @@ describe Spree::Money do
   context "currency parameter" do
     context "when currency is specified in Canadian Dollars" do
       it "uses the currency param over the global configuration" do
-        money = Spree::Money.new(10, :currency => 'CAD', :with_currency => true, :html => false)
+        money = Spree::Money.new(10, currency: 'CAD', with_currency: true, html: false)
         expect(money.to_s).to eq("$10.00 CAD")
       end
     end
 
     context "when currency is specified in Japanese Yen" do
       it "uses the currency param over the global configuration" do
-        money = Spree::Money.new(100, :currency => 'JPY', :html => false)
+        money = Spree::Money.new(100, currency: 'JPY', html: false)
         expect(money.to_s).to eq("¥100")
       end
     end
@@ -55,7 +130,7 @@ describe Spree::Money do
 
   context "symbol positioning" do
     it "passed in option" do
-      money = Spree::Money.new(10, :symbol_position => :after, :html => false)
+      money = Spree::Money.new(10, symbol_position: :after, html: false)
       expect(money.to_s).to eq("10.00 $")
     end
 
@@ -72,7 +147,7 @@ describe Spree::Money do
     end
 
     it "passed in option" do
-      money = Spree::Money.new(-10, :sign_before_symbol => false)
+      money = Spree::Money.new(-10, sign_before_symbol: false)
       expect(money.to_s).to eq("$-10.00")
     end
   end
@@ -85,7 +160,7 @@ describe Spree::Money do
     end
 
     it "formats correctly" do
-      money = Spree::Money.new(1000, :html => false)
+      money = Spree::Money.new(1000, html: false)
       expect(money.to_s).to eq("¥1,000")
     end
   end
@@ -97,7 +172,7 @@ describe Spree::Money do
       end
     end
 
-    # Regression test for #2634
+    # Regression test for https://github.com/spree/spree/issues/2634
     it "formats as plain by default" do
       money = Spree::Money.new(10, symbol_position: :after)
       expect(money.to_s).to eq("10.00 €")
@@ -122,6 +197,75 @@ describe Spree::Money do
     it "returns the expected string" do
       money = Spree::Money.new(10)
       expect(money.as_json(options)).to eq("$10.00")
+    end
+  end
+
+  describe 'subtraction' do
+    context "for money objects with same currency" do
+      let(:money_1) { Spree::Money.new(32.00, currency: "USD") }
+      let(:money_2) { Spree::Money.new(15.00, currency: "USD") }
+
+      it "subtracts correctly" do
+        expect(money_1 - money_2).to eq(Spree::Money.new(17.00, currency: "USD"))
+      end
+    end
+
+    context "when trying to subtract money objects in different currencies" do
+      let(:money_1) { Spree::Money.new(32.00, currency: "EUR") }
+      let(:money_2) { Spree::Money.new(15.00, currency: "USD") }
+
+      it "will not work" do
+        expect { money_1 - money_2 }.to raise_error(Money::Bank::UnknownRate)
+      end
+    end
+
+    context "if other does not respond to .money" do
+      let(:money_1) { Spree::Money.new(32.00, currency: "EUR") }
+      let(:money_2) { ::Money.new(1500) }
+
+      it 'raises a TypeError' do
+        expect { money_1 - money_2 }.to raise_error(TypeError)
+      end
+    end
+  end
+
+  describe 'addition' do
+    context "for money objects with same currency" do
+      let(:money_1) { Spree::Money.new(37.00, currency: "USD") }
+      let(:money_2) { Spree::Money.new(15.00, currency: "USD") }
+
+      it "subtracts correctly" do
+        expect(money_1 + money_2).to eq(Spree::Money.new(52.00, currency: "USD"))
+      end
+    end
+
+    context "when trying to subtract money objects in different currencies" do
+      let(:money_1) { Spree::Money.new(32.00, currency: "EUR") }
+      let(:money_2) { Spree::Money.new(15.00, currency: "USD") }
+
+      it "will not work" do
+        expect { money_1 + money_2 }.to raise_error(Money::Bank::UnknownRate)
+      end
+    end
+
+    context "if other does not respond to .money" do
+      let(:money_1) { Spree::Money.new(32.00, currency: "EUR") }
+      let(:money_2) { ::Money.new(1500) }
+
+      it 'raises a TypeError' do
+        expect { money_1 + money_2 }.to raise_error(TypeError)
+      end
+    end
+  end
+
+  describe 'equality checks' do
+    context "if other does not respond to .money" do
+      let(:money_1) { Spree::Money.new(32.00, currency: "EUR") }
+      let(:money_2) { ::Money.new(1500) }
+
+      it 'raises a TypeError' do
+        expect { money_1 == money_2 }.to raise_error(TypeError)
+      end
     end
   end
 end

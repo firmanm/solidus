@@ -1,28 +1,28 @@
 # encoding: utf-8
 require 'spec_helper'
 
-describe "Variants", :type => :feature do
+describe "Variants", type: :feature do
   stub_authorization!
 
-  let(:product) { create(:product_with_option_types, :price => "1.99", :cost_price => "1.00", :weight => "2.5", :height => "3.0", :width => "1.0", :depth => "1.5") }
+  let(:product) { create(:product_with_option_types, price: "1.99", cost_price: "1.00", weight: "2.5", height: "3.0", width: "1.0", depth: "1.5") }
 
   context "creating a new variant" do
     it "should allow an admin to create a new variant" do
       product.options.each do |option|
-        create(:option_value, :option_type => option.option_type)
+        create(:option_value, option_type: option.option_type)
       end
 
       visit spree.admin_path
-      click_link "Products"
+      click_nav "Products"
       within_row(1) { click_icon :edit }
       click_link "Variants"
       click_on "New Variant"
-      expect(find('input#variant_price').value).to eq("1.99")
-      expect(find('input#variant_cost_price').value).to eq("1.00")
-      expect(find('input#variant_weight').value).to eq("2.50")
-      expect(find('input#variant_height').value).to eq("3.00")
-      expect(find('input#variant_width').value).to eq("1.00")
-      expect(find('input#variant_depth').value).to eq("1.50")
+      expect(page).to have_field('variant_price', with: "1.99")
+      expect(page).to have_field('variant_cost_price', with: "1.00")
+      expect(page).to have_field('variant_weight', with: "2.50")
+      expect(page).to have_field('variant_height', with: "3.00")
+      expect(page).to have_field('variant_width', with: "1.00")
+      expect(page).to have_field('variant_depth', with: "1.50")
       expect(page).to have_select('variant[tax_category_id]')
     end
   end
@@ -35,10 +35,10 @@ describe "Variants", :type => :feature do
         end
 
         let!(:variant) do
-          create(:variant, :product => product, :price => 19.99)
+          create(:variant, product: product, price: 19.99)
         end
 
-        # Regression test for #2737
+        # Regression test for https://github.com/spree/spree/issues/2737
         context "uses руб as the currency symbol" do
           it "on the products listing page" do
             visit spree.admin_product_variants_path(product)

@@ -8,8 +8,7 @@ shared_examples "an invalid state transition" do |status, expected_status|
   end
 end
 
-describe Spree::ReturnItem, :type => :model do
-
+describe Spree::ReturnItem, type: :model do
   all_reception_statuses = Spree::ReturnItem.state_machines[:reception_status].states.map(&:name).map(&:to_s)
   all_acceptance_statuses = Spree::ReturnItem.state_machines[:acceptance_status].states.map(&:name).map(&:to_s)
 
@@ -19,10 +18,10 @@ describe Spree::ReturnItem, :type => :model do
 
   describe '#receive!' do
     let(:now)            { Time.current }
-    let(:order)          { create(:shipped_order)}
-    let(:inventory_unit) { create(:inventory_unit, order: order,state: 'shipped') }
+    let(:order)          { create(:shipped_order) }
+    let(:inventory_unit) { create(:inventory_unit, order: order, state: 'shipped') }
     let!(:customer_return) { create(:customer_return_without_return_items, return_items: [return_item], stock_location_id: inventory_unit.shipment.stock_location_id) }
-    let(:return_item)    { create(:return_item, inventory_unit: inventory_unit) }
+    let(:return_item) { create(:return_item, inventory_unit: inventory_unit) }
 
     before do
       inventory_unit.update_attributes!(state: 'shipped')
@@ -59,9 +58,9 @@ describe Spree::ReturnItem, :type => :model do
     end
 
     context 'when the received item is actually the exchange (aka customer changed mind about exchange)' do
-      let(:exchange_inventory_unit) { create(:inventory_unit, order: order,state: 'shipped') }
+      let(:exchange_inventory_unit) { create(:inventory_unit, order: order, state: 'shipped') }
       let!(:return_item_with_exchange) { create(:return_item, inventory_unit: inventory_unit, exchange_inventory_unit: exchange_inventory_unit) }
-      let!(:return_item_in_lieu) { create(:return_item, inventory_unit: exchange_inventory_unit)}
+      let!(:return_item_in_lieu) { create(:return_item, inventory_unit: exchange_inventory_unit) }
 
       it 'unexchanges original return item' do
         return_item_in_lieu.receive!
@@ -70,7 +69,7 @@ describe Spree::ReturnItem, :type => :model do
         return_item_in_lieu.reload
         expect(return_item_with_exchange.reception_status).to eq 'unexchanged'
         expect(return_item_in_lieu.reception_status).to eq 'received'
-        expect(return_item_in_lieu.pre_tax_amount).to eq 0
+        expect(return_item_in_lieu.amount).to eq 0
         expect(inventory_unit.reload.state).to eq 'shipped'
         expect(exchange_inventory_unit.reload.state).to eq 'returned'
       end
@@ -78,7 +77,7 @@ describe Spree::ReturnItem, :type => :model do
 
     context 'with a stock location' do
       let(:stock_location) { customer_return.stock_location }
-      let(:stock_item)      { stock_location.stock_item(inventory_unit.variant) }
+      let(:stock_item) { stock_location.stock_item(inventory_unit.variant) }
 
       before do
         inventory_unit.update_attributes!(state: 'shipped')
@@ -121,7 +120,6 @@ describe Spree::ReturnItem, :type => :model do
           expect(stock_item.variant).to eq inventory_unit.variant
           expect(stock_item.count_on_hand).to eq 1
         end
-
       end
 
       Spree::ReturnItem::INTERMEDIATE_RECEPTION_STATUSES.each do |status|
@@ -142,13 +140,13 @@ describe Spree::ReturnItem, :type => :model do
     end
   end
 
-
   describe "#display_pre_tax_amount" do
-    let(:pre_tax_amount) { 21.22 }
-    let(:return_item) { build(:return_item, pre_tax_amount: pre_tax_amount) }
+    let(:amount) { 21.22 }
+    let(:included_tax_total) { 1.22 }
+    let(:return_item) { build(:return_item, amount: amount, included_tax_total: included_tax_total) }
 
     it "returns a Spree::Money" do
-      expect(return_item.display_pre_tax_amount).to eq Spree::Money.new(pre_tax_amount)
+      expect(return_item.display_pre_tax_amount).to eq Spree::Money.new(amount - included_tax_total)
     end
   end
 
@@ -158,28 +156,28 @@ describe Spree::ReturnItem, :type => :model do
     end
   end
 
-  describe "pre_tax_amount calculations on create" do
+  describe "amount calculations on create" do
     let(:inventory_unit) { build(:inventory_unit) }
     before { subject.save! }
 
-    context "pre tax amount is not specified" do
+    context "amount is not specified" do
       subject { build(:return_item, inventory_unit: inventory_unit) }
 
       context "not an exchange" do
-        it { expect(subject.pre_tax_amount).to eq Spree::Calculator::Returns::DefaultRefundAmount.new.compute(subject) }
+        it { expect(subject.amount).to eq Spree::Calculator::Returns::DefaultRefundAmount.new.compute(subject) }
       end
 
       context "an exchange" do
         subject { build(:exchange_return_item) }
 
-        it { expect(subject.pre_tax_amount).to eq 0.0 }
+        it { expect(subject.amount).to eq 0.0 }
       end
     end
 
-    context "pre tax amount is specified" do
-      subject { build(:return_item, inventory_unit: inventory_unit, pre_tax_amount: 100) }
+    context "amount is specified" do
+      subject { build(:return_item, inventory_unit: inventory_unit, amount: 100) }
 
-      it { expect(subject.pre_tax_amount).to eq 100 }
+      it { expect(subject.amount).to eq 100 }
     end
   end
 
@@ -480,7 +478,7 @@ describe Spree::ReturnItem, :type => :model do
 
       it 'is valid' do
         expect(subject).to_not be_valid
-        expect(subject.errors.messages).to eq({reimbursement: [I18n.t(:cannot_be_associated_unless_accepted, scope: 'activerecord.errors.models.spree/return_item.attributes.reimbursement')]})
+        expect(subject.errors.messages).to eq({ reimbursement: [I18n.t(:cannot_be_associated_unless_accepted, scope: 'activerecord.errors.models.spree/return_item.attributes.reimbursement')] })
       end
     end
   end
@@ -570,17 +568,17 @@ describe Spree::ReturnItem, :type => :model do
       end
 
       it do
-        return_item.pre_tax_amount = 5.0
+        return_item.amount = 5.0
         return_item.save!
-        expect(return_item.reload.pre_tax_amount).to eq 0.0
+        expect(return_item.reload.amount).to eq 0.0
       end
     end
 
     context "the return item is not intended to be exchanged" do
       it do
-        return_item.pre_tax_amount = 5.0
+        return_item.amount = 5.0
         return_item.save!
-        expect(return_item.reload.pre_tax_amount).to eq 5.0
+        expect(return_item.reload.amount).to eq 5.0
       end
     end
   end
@@ -637,7 +635,7 @@ describe Spree::ReturnItem, :type => :model do
     subject do
       build(:return_item, {
         return_authorization: old_return_item.return_authorization,
-        inventory_unit: old_return_item.inventory_unit,
+        inventory_unit: old_return_item.inventory_unit
       })
     end
 
@@ -689,14 +687,14 @@ describe Spree::ReturnItem, :type => :model do
       create(
         :return_item,
         inventory_unit: inventory_unit,
-        included_tax_total: 10
+        included_tax_total: 5
       )
     end
 
     it 'includes included tax total' do
-      expect(return_item.pre_tax_amount).to eq 10
-      expect(return_item.included_tax_total).to eq 10
-      expect(return_item.total).to eq 20
+      expect(return_item.amount).to eq 10
+      expect(return_item.included_tax_total).to eq 5
+      expect(return_item.total).to eq 10
     end
   end
 

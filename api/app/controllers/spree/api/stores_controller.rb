@@ -1,18 +1,17 @@
 module Spree
   module Api
     class StoresController < Spree::Api::BaseController
-
-      before_filter :get_store, except: [:index, :create]
+      before_action :get_store, except: [:index, :create]
 
       def index
         authorize! :read, Store
-        @stores = Store.accessible_by(current_ability, :read).all
+        @stores = Spree::Store.accessible_by(current_ability, :read).all
         respond_with(@stores)
       end
 
       def create
         authorize! :create, Store
-        @store = Store.new(store_params)
+        @store = Spree::Store.new(store_params)
         @store.code = params[:store][:code]
         if @store.save
           respond_with(@store, status: 201, default_template: :show)
@@ -44,7 +43,7 @@ module Spree
       private
 
       def get_store
-        @store = Store.find(params[:id])
+        @store = Spree::Store.find(params[:id])
       end
 
       def store_params

@@ -12,6 +12,7 @@ RSpec.feature "Quantity Promotions" do
   given(:calculator) { FactoryGirl.create(:calculator, preferred_amount: 5) }
 
   background do
+    create(:store)
     FactoryGirl.create(:product, name: "DL-44")
     FactoryGirl.create(:product, name: "E-11")
     promotion.actions << action
@@ -125,4 +126,3 @@ RSpec.feature "Quantity Promotions" do
     end
   end
 end
-

@@ -1,10 +1,12 @@
-[data-hook="admin_products_sidebar"] {
-  // .field.checkbox:first-child {
-  //   margin-top: 36px;
-  // }
-  .actions {
-    padding: 0 !important;
-  }
+.product-search-field-show-deleted.field.checkbox {
+  // extra specificity to override styles
+  @include make-col-span(2);
+  min-height: initial; // override .field.checkbox
+  margin-bottom: 0; // override .checkbox
+}
+
+div[data-hook="admin_products_index_search_buttons"] {
+  margin-top: 2rem;
 }
 
 [data-hook="admin_product_form_fields"] {
@@ -28,9 +30,37 @@
 
 .outstanding-balance {
   margin-bottom: 15px;
-  text-transform: uppercase;
 
   strong {
     color: $color-2;
   }
+}
+
+#upload-zone {
+  border: 2px dashed $color-border;
+  padding: 2rem 5rem;
+  text-align: center;
+  margin: 1rem auto;
+  width: 70%;
+
+  label.upload {
+    display: block;
+  }
+
+  &.with-images {
+    border-color: $color-success;
+  }
+}
+
+progress {
+  width: 100%;
+}
+
+.margin-bottom-one {
+  margin-bottom: 1rem;
+}
+
+.progress-card {
+  height: 100%;
+  padding: 1rem;
 }

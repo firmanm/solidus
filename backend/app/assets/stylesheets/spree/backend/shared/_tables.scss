@@ -53,6 +53,7 @@ table {
 
         &:before {
           text-align: center !important;
+          padding: 0;
           width: 27px;
           display: inline-block;
         }
@@ -133,8 +134,8 @@ table {
       border-top: 1px solid $color-border;
       border-bottom: none;
       background-color: $color-tbl-thead;
-      text-transform: uppercase;
-      font-size: 85%;
+      text-align: center;
+      font-size: 90%;
       font-weight: $font-weight-bold;
     }
   }
@@ -200,7 +201,6 @@ table {
     &.grand-total {
       td {
         border-color: $color-2 !important;
-        text-transform: uppercase;
         font-size: 110%;
         font-weight: $font-weight-bold;
         background-color: lighten($color-2, 50);

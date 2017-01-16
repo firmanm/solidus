@@ -1,4 +1,4 @@
-class MoveOrderTokenFromTokenizedPermission < ActiveRecord::Migration
+class MoveOrderTokenFromTokenizedPermission < ActiveRecord::Migration[4.2]
   class Spree::TokenizedPermission < Spree::Base
     belongs_to :permissable, polymorphic: true
   end
@@ -6,7 +6,7 @@ class MoveOrderTokenFromTokenizedPermission < ActiveRecord::Migration
   def up
     case Spree::Order.connection.adapter_name
     when 'SQLite'
-      Spree::Order.has_one :tokenized_permission, :as => :permissable
+      Spree::Order.has_one :tokenized_permission, as: :permissable
       Spree::Order.includes(:tokenized_permission).each do |o|
         o.update_column :guest_token, o.tokenized_permission.token
       end

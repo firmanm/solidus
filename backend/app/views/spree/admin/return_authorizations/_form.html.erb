@@ -9,13 +9,13 @@
             <%= check_box_tag 'select-all' %>
           <% end %>
         </th>
-        <th class="return-item-product"><%= Spree.t(:product) %></th>
-        <th class="return-item-state"><%= Spree.t(:state) %></th>
-        <th class="return-item-charged"><%= Spree.t(:charged) %></th>
-        <th class="return-item-pre-tax-refund-amount"><%= Spree.t(:pre_tax_refund_amount) %></th>
-        <th class="return-item-reimbursement-type"><%= Spree.t(:reimbursement_type) %></th>
-        <th class="return-item-exchange-for"><%= Spree.t(:exchange_for) %></th>
-        <th class="return-item-reason"><%= Spree.t(:reason) %></th>
+        <th class="return-item-product"><%= Spree::Product.model_name.human %></th>
+        <th class="return-item-state"><%= Spree::ReturnAuthorization.human_attribute_name(:state) %></th>
+        <th class="return-item-charged"><%= Spree::ReturnItem.human_attribute_name(:charged) %></th>
+        <th class="return-item-pre-tax-refund-amount"><%= Spree::ReturnItem.human_attribute_name(:amount) %></th>
+        <th class="return-item-reimbursement-type"><%= Spree::ReimbursementType.model_name.human %></th>
+        <th class="return-item-exchange-for"><%= Spree::ReturnItem.human_attribute_name(:exchange_variant) %></th>
+        <th class="return-item-reason"><%= Spree::ReturnItem.human_attribute_name(:return_reason) %></th>
       </tr>
     </thead>
     <tbody>
@@ -27,7 +27,7 @@
           <td class="return-item-checkbox align-center inventory-unit-checkbox">
             <% if editable %>
               <%= item_fields.hidden_field :inventory_unit_id %>
-              <%= item_fields.check_box :_destroy, {checked: return_item.persisted?, class: 'add-item', "data-price" => return_item.pre_tax_amount}, '0', '1' %>
+              <%= item_fields.check_box :_destroy, {checked: return_item.persisted?, class: 'add-item', "data-price" => return_item.amount}, '0', '1' %>
             <% end %>
           </td>
           <td class="return-item-product">
@@ -36,13 +36,13 @@
           </td>
           <td class="return-item-state align-center"><%= inventory_unit.state.humanize %></td>
           <td class="return-item-charged align-center">
-            <%= return_item.display_pre_tax_amount %>
+            <%= return_item.display_amount %>
           </td>
           <td class="return-item-pre-tax-refund-amount align-center">
             <% if editable %>
-              <%= item_fields.text_field :pre_tax_amount, { class: 'refund-amount-input' } %>
+              <%= item_fields.text_field :amount, { class: 'refund-amount-input' } %>
             <% else %>
-              <%= return_item.display_pre_tax_amount %>
+              <%= return_item.display_amount %>
             <% end %>
           </td>
           <td class="return-item-reimbursement-type">
@@ -54,9 +54,9 @@
           </td>
           <td class="return-item-exchange-for align-center">
             <% if editable %>
-              <%= item_fields.collection_select :exchange_variant_id, return_item.eligible_exchange_variants(@stock_locations), :id, :options_text, { include_blank: true }, { class: "select2 fullwidth return-item-exchange-selection" } %>
+              <%= item_fields.collection_select :exchange_variant_id, return_item.eligible_exchange_variants(@stock_locations), :id, :exchange_name, { include_blank: true }, { class: "select2 fullwidth return-item-exchange-selection" } %>
             <% elsif return_item.exchange_processed? %>
-              <%= return_item.exchange_variant.options_text %>
+              <%= return_item.exchange_variant.exchange_name %>
             <% end %>
           </td>
           <td class="return-item-reason">
@@ -76,13 +76,13 @@
   <% end %>
 
   <%= f.field_container :stock_location do %>
-    <%= f.label :stock_location, Spree.t(:stock_location) %>
+    <%= f.label :stock_location_id, Spree::StockLocation.model_name.human %>
     <%= f.select :stock_location_id, @stock_locations.to_a.collect{|l|[l.name, l.id]}, {include_blank: true}, {class: 'select2 fullwidth', "data-placeholder" => Spree.t(:select_a_stock_location)} %>
     <%= f.error_message_on :stock_location_id %>
   <% end %>
 
   <%= f.field_container :memo do %>
-    <%= f.label :memo, Spree.t(:memo) %>
+    <%= f.label :memo %>
     <%= f.text_area :memo, {:style => 'height:100px;', :class => 'fullwidth'} %>
     <%= f.error_message_on :memo %>
   <% end %>

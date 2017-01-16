@@ -1,14 +1,16 @@
-<% content_for :page_title do %>
-  <%= link_to "#{Spree.t(:"admin.user.order_history")} #{@user.email}", edit_admin_user_url(@user) %>
-<% end %>
+<% admin_breadcrumb(link_to plural_resource_name(Spree::LegacyUser), spree.admin_users_path) %>
+<% admin_breadcrumb(link_to @user.email, edit_admin_user_url(@user)) %>
+<% admin_breadcrumb(Spree.t('admin.user.order_history')) %>
 
-<%= render :partial => 'spree/admin/users/sidebar', :locals => { :current => :orders } %>
+
+<%= render 'spree/admin/users/sidebar' %>
+<%= render 'spree/admin/users/tabs', current: :orders %>
 <%= render :partial => 'spree/admin/users/user_page_actions' %>
 
-<fieldset data-hook="admin_user_order_history" class="alpha twelve columns">
+<fieldset data-hook="admin_user_order_history" class="col-xs-9">
   <legend><%= Spree.t(:"admin.user.order_history") %></legend>
 
-  <%= paginate @orders %>
+  <%= paginate @orders, theme: "solidus_admin" %>
 
   <% if @orders.any? %>
     <%# TODO add search interface %>
@@ -21,10 +23,10 @@
       </colgroup>
       <thead>
         <tr data-hook="admin_orders_index_headers">
-          <th><%= sort_link @search, :completed_at,   I18n.t(:completed_at, :scope => 'activerecord.attributes.spree/order'), {}, {:title => 'orders_completed_at_title'} %></th>
-          <th><%= sort_link @search, :number,         I18n.t(:number, :scope => 'activerecord.attributes.spree/order'), {}, {:title => 'orders_number_title'} %></th>
-          <th><%= sort_link @search, :state,          I18n.t(:state, :scope => 'activerecord.attributes.spree/order'), {}, {:title => 'orders_state_title'} %></th>
-          <th><%= sort_link @search, :total,          I18n.t(:total, :scope => 'activerecord.attributes.spree/order'), {}, {:title => 'orders_total_title'} %></th>
+          <th><%= sort_link @search, :completed_at,   Spree::Order.human_attribute_name(:completed_at), {}, {:title => 'orders_completed_at_title'} %></th>
+          <th><%= sort_link @search, :number,         Spree::Order.human_attribute_name(:number), {}, {:title => 'orders_number_title'} %></th>
+          <th><%= sort_link @search, :state,          Spree::Order.human_attribute_name(:state), {}, {:title => 'orders_state_title'} %></th>
+          <th><%= sort_link @search, :total,          Spree::Order.human_attribute_name(:total), {}, {:title => 'orders_total_title'} %></th>
         </tr>
       </thead>
       <tbody>
@@ -53,13 +55,12 @@
       </tbody>
     </table>
   <% else %>
-    <div class="alpha twelve columns no-objects-found">
-      <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/order')) %>
-      <% if can?([:admin, :create], Spree::Order) %>
-        <%= link_to Spree.t(:add_one), spree.new_admin_order_path %>!
-      <% end %>
+    <div class="col-xs-9 no-objects-found">
+      <%= render 'spree/admin/shared/no_objects_found',
+                   resource: Spree::Order,
+                   new_resource_url: spree.new_admin_order_path %>
     </div>
   <% end %>
 
-  <%= paginate @orders %>
+  <%= paginate @orders, theme: "solidus_admin" %>
 </fieldset>

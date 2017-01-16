@@ -1,5 +1,6 @@
 # This class represents all of the actions one can take to modify an Order after it is complete
 class Spree::OrderCancellations
+  extend ActiveModel::Translation
 
   # If you need to message a third party service when an item is canceled then
   # set short_ship_tax_notifier to an object that responds to:
@@ -31,7 +32,6 @@ class Spree::OrderCancellations
     unit_cancels = []
 
     Spree::OrderMutex.with_lock!(@order) do
-
       Spree::InventoryUnit.transaction do
         inventory_units.each do |iu|
           unit_cancels << short_ship_unit(iu, whodunnit: whodunnit)
@@ -67,7 +67,7 @@ class Spree::OrderCancellations
       unit_cancel = Spree::UnitCancel.create!(
         inventory_unit: inventory_unit,
         reason: reason,
-        created_by: whodunnit,
+        created_by: whodunnit
       )
 
       inventory_unit.cancel!
@@ -99,7 +99,7 @@ class Spree::OrderCancellations
     unit_cancel = Spree::UnitCancel.create!(
       inventory_unit: inventory_unit,
       reason: Spree::UnitCancel::SHORT_SHIP,
-      created_by: whodunnit,
+      created_by: whodunnit
     )
     unit_cancel.adjust!
     inventory_unit.cancel!
@@ -115,7 +115,7 @@ class Spree::OrderCancellations
       to_a
 
     shipments.each do |shipment|
-      if shipment.inventory_units.all? {|iu| iu.shipped? || iu.canceled? }
+      if shipment.inventory_units.all? { |iu| iu.shipped? || iu.canceled? }
         shipment.update_attributes!(state: 'shipped', shipped_at: Time.current)
       end
     end

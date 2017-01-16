@@ -7,10 +7,6 @@ module Spree
     preference :discount_amount, :decimal, default: 0
     preference :currency, :string, default: ->{ Spree::Config[:currency] }
 
-    def self.description
-      Spree.t(:price_sack)
-    end
-
     # as object we always get line items, as calculable we have Coupon, ShippingMethod
     def compute(object)
       if object.is_a?(Array)
@@ -19,10 +15,10 @@ module Spree
         base = object.respond_to?(:amount) ? object.amount : BigDecimal(object.to_s)
       end
 
-      if base < self.preferred_minimal_amount
-        self.preferred_normal_amount
+      if base < preferred_minimal_amount
+        preferred_normal_amount
       else
-        self.preferred_discount_amount
+        preferred_discount_amount
       end
     end
   end

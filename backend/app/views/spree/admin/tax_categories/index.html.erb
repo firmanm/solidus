@@ -1,14 +1,15 @@
-<%= render 'spree/admin/shared/configuration_menu' %>
+<%= render 'spree/admin/shared/taxes_tabs' %>
 
-<% content_for :page_title do %>
-  <%= Spree.t(:listing_tax_categories) %>
-<% end %>
+<% admin_breadcrumb(Spree.t(:settings) ) %>
+<% admin_breadcrumb(Spree.t('admin.tab.taxes')) %>
+<% admin_breadcrumb(plural_resource_name(Spree::TaxCategory)) %>
+
 
 <% content_for :page_actions do %>
   <ul class="actions inline-menu">
     <% if can?(:create, Spree::TaxCategory) %>
       <li>
-        <%= button_link_to Spree.t(:new_tax_category), new_object_url, :icon => 'plus', :id => 'admin_new_tax_categories_link' %>
+        <%= button_link_to Spree.t(:new_tax_category), new_object_url, :id => 'admin_new_tax_categories_link' %>
       </li>
     <% end %>
   </ul>
@@ -25,10 +26,10 @@
   </colgroup>
   <thead>
     <tr data-hook="tax_header">
-      <th><%= Spree.t(:name) %></th>
-      <th><%= Spree.t(:tax_code) %></th>
-      <th><%= Spree.t(:description) %></th>
-      <th><%= Spree.t(:default) %></th>
+      <th><%= Spree::TaxCategory.human_attribute_name(:name) %></th>
+      <th><%= Spree::TaxCategory.human_attribute_name(:tax_code) %></th>
+      <th><%= Spree::TaxCategory.human_attribute_name(:description) %></th>
+      <th><%= Spree::TaxCategory.human_attribute_name(:is_default) %></th>
       <th class="actions"></th>
     </tr>
   </thead>
@@ -54,10 +55,9 @@
   </tbody>
 </table>
 <% else %>
-  <div class="alpha twelve columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/tax_category')) %>
-    <% if can?(:create, Spree::TaxCategory) %>
-      <%= link_to Spree.t(:add_one), spree.new_admin_tax_category_path %>!
-    <% end %>
+  <div class="col-xs-9 no-objects-found">
+    <%= render 'spree/admin/shared/no_objects_found',
+                 resource: Spree::TaxCategory,
+                 new_resource_url: new_object_url %>
   </div>
 <% end %>

@@ -12,7 +12,7 @@ module Spree
         #   @return [Proc] action to take when access denied error is raised.
 
         included do
-          before_filter :set_guest_token
+          before_action :set_guest_token
           helper_method :try_spree_current_user
 
           class_attribute :unauthorized_redirect
@@ -22,7 +22,7 @@ module Spree
           end
 
           rescue_from CanCan::AccessDenied do
-            instance_exec &unauthorized_redirect
+            instance_exec(&unauthorized_redirect)
           end
         end
 
@@ -68,9 +68,7 @@ module Spree
           # This one will be defined by Devise
           elsif respond_to?(:current_spree_user)
             current_spree_user
-          else
-            nil
-          end
+                    end
         end
       end
     end

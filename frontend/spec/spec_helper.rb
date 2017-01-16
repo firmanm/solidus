@@ -27,7 +27,7 @@ require 'ffaker'
 
 # Requires supporting files with custom matchers and macros, etc,
 # in ./support/ and its subdirectories.
-Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
+Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 
 require 'database_cleaner'
 
@@ -48,7 +48,7 @@ require 'spree/testing_support/caching'
 require 'paperclip/matchers'
 
 require 'capybara-screenshot/rspec'
-Capybara.save_and_open_page_path = ENV['CIRCLE_ARTIFACTS'] if ENV['CIRCLE_ARTIFACTS']
+Capybara.save_path = ENV['CIRCLE_ARTIFACTS'] if ENV['CIRCLE_ARTIFACTS']
 
 if ENV['WEBDRIVER'] == 'accessible'
   require 'capybara/accessible'
@@ -57,6 +57,8 @@ else
   require 'capybara/poltergeist'
   Capybara.javascript_driver = :poltergeist
 end
+
+Capybara.default_max_wait_time = ENV['DEFAULT_MAX_WAIT_TIME'].to_f if ENV['DEFAULT_MAX_WAIT_TIME'].present?
 
 RSpec.configure do |config|
   config.color = true
@@ -76,7 +78,7 @@ RSpec.configure do |config|
   config.use_transactional_fixtures = false
 
   if ENV['WEBDRIVER'] == 'accessible'
-    config.around(:each, :inaccessible => true) do |example|
+    config.around(:each, inaccessible: true) do |example|
       Capybara::Accessible.skip_audit { example.run }
     end
   end
@@ -88,8 +90,8 @@ RSpec.configure do |config|
   config.before(:each) do
     Rails.cache.clear
     reset_spree_preferences
-    WebMock.disable!
     if RSpec.current_example.metadata[:js]
+      page.driver.browser.url_blacklist = ['http://fonts.googleapis.com']
       DatabaseCleaner.strategy = :truncation
     else
       DatabaseCleaner.strategy = :transaction
@@ -101,14 +103,13 @@ RSpec.configure do |config|
     DatabaseCleaner.clean
   end
 
-  config.after(:each, :type => :feature) do |example|
+  config.after(:each, type: :feature) do |example|
     missing_translations = page.body.scan(/translation missing: #{I18n.locale}\.(.*?)[\s<\"&]/)
     if missing_translations.any?
       puts "Found missing translations: #{missing_translations.inspect}"
       puts "In spec: #{example.location}"
     end
   end
-
 
   config.include FactoryGirl::Syntax::Methods
 

@@ -4,7 +4,7 @@ jQuery ->
     el.select2
       placeholder: "Find a stock item" # translate
       ajax:
-        url: Spree.url(Spree.routes.stock_items_api(el.data('stock-location-id')))
+        url: Spree.routes.stock_items_api(el.data('stock-location-id'))
         params: { "headers": { "X-Spree-Token": Spree.api_key } }
         data: (term, page) ->
           q:
@@ -17,5 +17,5 @@ jQuery ->
           return { results: data.stock_items, more: more }
       formatResult: (stock_item) ->
         variantTemplate({ variant: stock_item.variant })
-      formatSelection: (stock_item) ->
-        "#{stock_item.variant.name} (#{stock_item.variant.options_text})"
+      formatSelection: (stock_item, container, excapeMarkup) ->
+        Select2.util.escapeMarkup("#{stock_item.variant.name} (#{stock_item.variant.options_text})")

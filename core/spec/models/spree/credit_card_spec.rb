@@ -17,9 +17,8 @@ describe Spree::CreditCard, type: :model do
   let(:credit_card) { Spree::CreditCard.new }
 
   before(:each) do
-
     @order = create(:order)
-    @payment = Spree::Payment.create(:amount => 100, :order => @order)
+    @payment = Spree::Payment.create(amount: 100, order: @order)
 
     @success_response = double('gateway_response', success?: true, authorization: '123', avs_result: { 'code' => 'avs-code' })
     @fail_response = double('gateway_response', success?: false)
@@ -30,13 +29,13 @@ describe Spree::CreditCard, type: :model do
       purchase: @success_response,
       capture: @success_response,
       void: @success_response,
-      credit: @success_response,
+      credit: @success_response
     )
 
     allow(@payment).to receive_messages payment_method: @payment_gateway
   end
 
-  context "#can_capture?" do
+  describe "#can_capture?" do
     it "should be true if payment is pending" do
       payment = mock_model(Spree::Payment, pending?: true, created_at: Time.current)
       expect(credit_card.can_capture?(payment)).to be true
@@ -48,14 +47,14 @@ describe Spree::CreditCard, type: :model do
     end
   end
 
-  context "#can_void?" do
+  describe "#can_void?" do
     it "should be true if payment is not void" do
       payment = mock_model(Spree::Payment, failed?: false, void?: false)
       expect(credit_card.can_void?(payment)).to be true
     end
   end
 
-  context "#can_credit?" do
+  describe "#can_credit?" do
     it "should be false if payment is not completed" do
       payment = mock_model(Spree::Payment, completed?: false)
       expect(credit_card.can_credit?(payment)).to be false
@@ -67,7 +66,7 @@ describe Spree::CreditCard, type: :model do
     end
   end
 
-  context "#valid?" do
+  describe "#valid?" do
     it "should validate presence of number" do
       credit_card.attributes = valid_credit_card_attributes.except(:number)
       expect(credit_card).not_to be_valid
@@ -110,17 +109,24 @@ describe Spree::CreditCard, type: :model do
     end
   end
 
-  context "#save" do
+  describe "#save" do
     before do
       credit_card.attributes = valid_credit_card_attributes
       credit_card.save!
     end
 
     let!(:persisted_card) { Spree::CreditCard.find(credit_card.id) }
-    let (:valid_address_attributes) { {firstname: "Hugo", lastname: "Furst",
-                                       address1: "123 Main", city: "Somewhere",
-                                       country_id: 1, zipcode: 55555,
-                                       phone: "1234567890"} }
+    let(:valid_address_attributes) do
+      {
+        firstname: "Hugo",
+        lastname: "Furst",
+        address1: "123 Main",
+        city: "Somewhere",
+        country_id: 1,
+        zipcode: 55_555,
+        phone: "1234567890"
+      }
+    end
 
     it "should not actually store the number" do
       expect(persisted_card.number).to be_blank
@@ -131,15 +137,15 @@ describe Spree::CreditCard, type: :model do
     end
 
     it "should save and update addresses through nested attributes" do
-      persisted_card.update_attributes({address_attributes: valid_address_attributes})
+      persisted_card.update_attributes({ address_attributes: valid_address_attributes })
       persisted_card.save!
-      updated_attributes = {id: persisted_card.address.id, address1: "123 Main St."}
-      persisted_card.update_attributes({address_attributes: updated_attributes})
+      updated_attributes = { id: persisted_card.address.id, address1: "123 Main St." }
+      persisted_card.update_attributes({ address_attributes: updated_attributes })
       expect(persisted_card.address.address1).to eq "123 Main St."
     end
   end
 
-  context "#number=" do
+  describe "#number=" do
     it "should strip non-numeric characters from card input" do
       credit_card.number = "6011000990139424"
       expect(credit_card.number).to eq("6011000990139424")
@@ -149,13 +155,35 @@ describe Spree::CreditCard, type: :model do
     end
 
     it "should not raise an exception on non-string input" do
-      credit_card.number = Hash.new
+      credit_card.number = {}
       expect(credit_card.number).to be_nil
     end
   end
 
-  # Regression test for #3847 & #3896
-  context "#expiry=" do
+  describe "#verification_value=" do
+    it "accepts a valid 3-digit value" do
+      credit_card.verification_value = "123"
+      expect(credit_card.verification_value).to eq("123")
+    end
+
+    it "accepts a valid 4-digit value" do
+      credit_card.verification_value = "1234"
+      expect(credit_card.verification_value).to eq("1234")
+    end
+
+    it "stringifies an integer" do
+      credit_card.verification_value = 123
+      expect(credit_card.verification_value).to eq("123")
+    end
+
+    it "strips any whitespace" do
+      credit_card.verification_value = ' 1 2  3 '
+      expect(credit_card.verification_value).to eq('123')
+    end
+  end
+
+  # Regression test for https://github.com/spree/spree/issues/3847 and https://github.com/spree/spree/issues/3896
+  describe "#expiry=" do
     it "can set with a 2-digit month and year" do
       credit_card.expiry = '04 / 15'
       expect(credit_card.month).to eq('4')
@@ -196,14 +224,13 @@ describe Spree::CreditCard, type: :model do
       credit_card.expiry = ''
     end
 
-    # Regression test for #4725
+    # Regression test for https://github.com/spree/spree/issues/4725
     it "does not blow up when passed one number" do
       credit_card.expiry = '12'
     end
-
   end
 
-  context "#cc_type=" do
+  describe "#cc_type=" do
     it "converts between the different types" do
       credit_card.cc_type = 'mastercard'
       expect(credit_card.cc_type).to eq('master')
@@ -230,6 +257,10 @@ describe Spree::CreditCard, type: :model do
       credit_card.cc_type = ''
       expect(credit_card.cc_type).to eq('master')
 
+      credit_card.number = '2221000000000000'
+      credit_card.cc_type = ''
+      expect(credit_card.cc_type).to eq('master')
+
       credit_card.number = '378282246310005'
       credit_card.cc_type = ''
       expect(credit_card.cc_type).to eq('american_express')
@@ -252,13 +283,13 @@ describe Spree::CreditCard, type: :model do
     end
   end
 
-  context "#associations" do
+  describe "#associations" do
     it "should be able to access its payments" do
       credit_card.payments.to_a
     end
   end
 
-  context "#first_name" do
+  describe "#first_name" do
     before do
       credit_card.name = "Ludwig van Beethoven"
     end
@@ -268,7 +299,7 @@ describe Spree::CreditCard, type: :model do
     end
   end
 
-  context "#last_name" do
+  describe "#last_name" do
     before do
       credit_card.name = "Ludwig van Beethoven"
     end
@@ -278,7 +309,7 @@ describe Spree::CreditCard, type: :model do
     end
   end
 
-  context "#to_active_merchant" do
+  describe "#to_active_merchant" do
     before do
       credit_card.number = "4111111111111111"
       credit_card.year = Time.current.year
@@ -294,7 +325,7 @@ describe Spree::CreditCard, type: :model do
       expect(am_card.month).to eq(Time.current.month)
       expect(am_card.first_name).to eq("Ludwig")
       expect(am_card.last_name).to eq("van Beethoven")
-      expect(am_card.verification_value).to eq(123)
+      expect(am_card.verification_value).to eq("123")
     end
   end
 

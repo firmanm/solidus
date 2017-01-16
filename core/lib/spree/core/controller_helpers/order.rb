@@ -1,20 +1,21 @@
+require 'spree/core/controller_helpers/pricing'
+
 module Spree
   module Core
     module ControllerHelpers
       module Order
         extend ActiveSupport::Concern
+        include ControllerHelpers::Pricing
 
         included do
-          before_filter :set_current_order
+          before_action :set_current_order
 
-          helper_method :current_currency
           helper_method :current_order
           helper_method :simple_current_order
         end
 
         # Used in the link_to_cart helper.
         def simple_current_order
-
           return @simple_current_order if @simple_current_order
 
           @simple_current_order = find_order_by_token_or_user
@@ -38,7 +39,7 @@ module Spree
           if options[:create_order_if_necessary] && (@current_order.nil? || @current_order.completed?)
             @current_order = Spree::Order.new(current_order_params)
             @current_order.user ||= try_spree_current_user
-            # See issue #3346 for reasons why this line is here
+            # See issue https://github.com/spree/spree/issues/3346 for reasons why this line is here
             @current_order.created_by ||= try_spree_current_user
             @current_order.save!
           end
@@ -58,14 +59,10 @@ module Spree
 
         def set_current_order
           if try_spree_current_user && current_order
-            try_spree_current_user.orders.incomplete.where('id != ?', current_order.id).each do |order|
+            try_spree_current_user.orders.by_store(current_store).incomplete.where('id != ?', current_order.id).each do |order|
               current_order.merge!(order, try_spree_current_user)
             end
           end
-        end
-
-        def current_currency
-          Spree::Config[:currency]
         end
 
         def ip_address
@@ -79,10 +76,10 @@ module Spree
         end
 
         def current_order_params
-          { currency: current_currency, guest_token: cookies.signed[:guest_token], store_id: current_store.id, user_id: try_spree_current_user.try(:id) }
+          { currency: current_pricing_options.currency, guest_token: cookies.signed[:guest_token], store_id: current_store.id, user_id: try_spree_current_user.try(:id) }
         end
 
-        def find_order_by_token_or_user(options={}, with_adjustments = false)
+        def find_order_by_token_or_user(options = {}, with_adjustments = false)
           options[:lock] ||= false
 
           # Find any incomplete orders for the guest_token
@@ -99,7 +96,6 @@ module Spree
 
           order
         end
-
       end
     end
   end

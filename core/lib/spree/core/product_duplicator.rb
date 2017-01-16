@@ -44,7 +44,6 @@ module Spree
         new_master.deleted_at = nil
         new_master.images = master.images.map { |image| duplicate_image image } if @include_images
         new_master.price = master.price
-        new_master.currency = master.currency
       end
     end
 
@@ -52,13 +51,13 @@ module Spree
       new_variant = variant.dup
       new_variant.sku = "COPY OF #{new_variant.sku}"
       new_variant.deleted_at = nil
-      new_variant.option_values = variant.option_values.map { |option_value| option_value}
+      new_variant.option_values = variant.option_values.map { |option_value| option_value }
       new_variant
     end
 
     def duplicate_image(image)
       new_image = image.dup
-      new_image.assign_attributes(:attachment => image.attachment.clone)
+      new_image.assign_attributes(attachment: image.attachment.clone)
       new_image
     end
 

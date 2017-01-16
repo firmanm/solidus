@@ -1,84 +1,80 @@
-<%= render :partial => 'spree/admin/shared/configuration_menu' %>
+<%= render 'spree/admin/shared/general_tabs' %>
 
-<% content_for :page_title do %>
-  <%= Spree.t(:general_settings) %>
-<% end %>
-
-<%= form_tag admin_general_settings_path, method: :put do %>
+<% admin_breadcrumb(Spree.t(:settings)) %>
+<% admin_breadcrumb(Spree.t(:general_settings)) %>
+<%= form_for @store, url: admin_general_settings_path do |f| %>
   <div id="preferences" data-hook>
 
     <fieldset class="general no-border-top">
 
-      <%= fields_for :store do |f| %>
-        <div class="field" data-hook="admin_general_setting_input_name">
+      <div data-hook="admin_general_setting_input_name">
+        <%= f.field_container :name do %>
           <%= f.label :name %>
-          <br />
           <%= f.text_field :name, class: 'fullwidth' %>
-        </div>
+          <%= f.error_message_on :name %>
+        <% end %>
+      </div>
 
-        <div class="field" data-hook="admin_general_setting_input_seo_title">
+      <div data-hook="admin_general_setting_input_seo_title">
+        <%= f.field_container :seo_title do %>
           <%= f.label :seo_title %>
-          <br />
           <%= f.text_field :seo_title, class: 'fullwidth'  %>
-        </div>
+          <%= f.error_message_on :seo_title %>
+        <% end %>
+      </div>
 
-        <div class="field" data-hook="admin_general_setting_input_meta_keywords">
+      <div data-hook="admin_general_setting_input_meta_keywords">
+        <%= f.field_container :meta_keywords do %>
           <%= f.label :meta_keywords %>
-          <br />
           <%= f.text_field :meta_keywords, class: 'fullwidth'  %>
-        </div>
+          <%= f.error_message_on :meta_keywords %>
+        <% end %>
+      </div>
 
-        <div class="field" data-hook="admin_general_setting_input_meta_description">
+      <div data-hook="admin_general_setting_input_meta_description">
+        <%= f.field_container :meta_description do %>
           <%= f.label :meta_description %>
-          <br />
           <%= f.text_field :meta_description, class: 'fullwidth'  %>
-        </div>
+          <%= f.error_message_on :meta_description %>
+        <% end %>
+      </div>
 
-        <div class="field" data-hook="admin_general_setting_input_url">
+      <div data-hook="admin_general_setting_input_url">
+        <%= f.field_container :url do %>
           <%= f.label :url %>
-          <br />
           <%= f.text_field :url, class: 'fullwidth'  %>
-        </div>
+          <%= f.error_message_on :url %>
+        <% end %>
+      </div>
 
-        <div class="field" data-hook="admin_general_setting_mail_from_address">
+      <div data-hook="admin_general_setting_mail_from_address">
+        <%= f.field_container :mail_from_address do %>
           <%= f.label :mail_from_address %>
-          <br />
           <%= f.text_field :mail_from_address, class: 'fullwidth'  %>
-        </div>
-      <% end %>
+          <%= f.error_message_on :mail_from_address %>
+        <% end %>
+      </div>
 
-      <% if can? :clear_cache, :general_settings %>
-        <div class="row">
-          <div class="alpha six columns">
-            <fieldset class="no-border-bottom">
-              <legend align="center"><%= Spree.t(:clear_cache)%></legend>
-              <div>
-                <%= Spree.t(:clear_cache_warning) %>
-              </div>
-              <div class="field" data-hook="general_settings_clear_cache">
-                <%= button Spree.t(:clear_cache), '', 'button', id: "clear_cache" %>
-              </div>
-            </fieldset>
-          </div>
-        </div>
-      <% end %>
+      <div data-hook="admin_general_setting_default_tax_country">
+        <%= f.field_container :cart_tax_country_iso do %>
+          <%= f.field_hint :cart_tax_country_iso %>
+          <%= f.label :cart_tax_country_iso %>
+          <%= f.select :cart_tax_country_iso,
+                       Spree::Country.all.map { |c| [c.name, c.iso] },
+                       { include_blank: t(".no_cart_tax_country") },
+                       { class: "select2 fullwidth" } %>
+          <%= f.error_message_on :cart_tax_country_iso %>
+        <% end %>
+      </div>
 
       <% if can? :update, :general_settings %>
         <div class="form-buttons filter-actions actions" data-hook="buttons">
-          <%= button Spree.t('actions.update'), 'refresh' %>
-          <span class="or"><%= Spree.t(:or) %></span>
-          <%= link_to_with_icon 'remove', Spree.t('actions.cancel'), edit_admin_general_settings_url, :class => 'button' %>
+          <%= button Spree.t('actions.update') %>
+          <%= link_to Spree.t('actions.cancel'), edit_admin_general_settings_url, :class => 'button' %>
         </div>
       <% end %>
 
     </fieldset>
 
   </div>
-
-
 <% end %>
-
-<script>
-  $('#store_default_currency').select2();
-  $('#currency').select2();
-</script>

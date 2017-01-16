@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Spree::Admin::SearchController, :type => :controller do
+describe Spree::Admin::SearchController, type: :controller do
   stub_authorization!
 
   # Regression test for ernie/ransack#176
@@ -13,7 +13,7 @@ describe Spree::Admin::SearchController, :type => :controller do
   end
 
   describe 'GET #users' do
-    subject { spree_xhr_get :users, params }
+    subject { get :users, params: { format: :json }.merge(params) }
 
     shared_examples_for 'user found by search' do
       it "should include users matching query" do
@@ -66,7 +66,7 @@ describe Spree::Admin::SearchController, :type => :controller do
     let!(:product_one) { create(:product, name: 'jersey') }
     let!(:product_two) { create(:product, name: 'better jersey') }
 
-    subject { spree_get :products, params }
+    subject { get :products, params: params }
 
     shared_examples_for 'product search' do
       it 'should respond with http success' do
@@ -94,7 +94,7 @@ describe Spree::Admin::SearchController, :type => :controller do
     end
 
     context 'when idds param is not present' do
-      let(:params) { { q: {name_cont: 'jersey'} } }
+      let(:params) { { q: { name_cont: 'jersey' } } }
 
       it_should_behave_like 'product search' do
         let(:expected_products) { [product_one, product_two] }

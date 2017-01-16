@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Spree::Promotion::Rules::Product, :type => :model do
+describe Spree::Promotion::Rules::Product, type: :model do
   let(:rule) { Spree::Promotion::Rules::Product.new(rule_options) }
   let(:rule_options) { {} }
 
@@ -8,7 +8,7 @@ describe Spree::Promotion::Rules::Product, :type => :model do
     let(:order) { Spree::Order.new }
 
     it "should be eligible if there are no products" do
-      allow(rule).to receive_messages(:eligible_products => [])
+      allow(rule).to receive_messages(eligible_products: [])
       expect(rule).to be_eligible(order)
     end
 
@@ -20,8 +20,8 @@ describe Spree::Promotion::Rules::Product, :type => :model do
       let(:rule_options) { super().merge(preferred_match_policy: 'any') }
 
       it "should be eligible if any of the products is in eligible products" do
-        allow(order).to receive_messages(:products => [@product1, @product2])
-        allow(rule).to receive_messages(:eligible_products => [@product2, @product3])
+        allow(order).to receive_messages(products: [@product1, @product2])
+        allow(rule).to receive_messages(eligible_products: [@product2, @product3])
         expect(rule).to be_eligible(order)
       end
 
@@ -43,8 +43,8 @@ describe Spree::Promotion::Rules::Product, :type => :model do
       let(:rule_options) { super().merge(preferred_match_policy: 'all') }
 
       it "should be eligible if all of the eligible products are ordered" do
-        allow(order).to receive_messages(:products => [@product3, @product2, @product1])
-        allow(rule).to receive_messages(:eligible_products => [@product2, @product3])
+        allow(order).to receive_messages(products: [@product3, @product2, @product1])
+        allow(rule).to receive_messages(eligible_products: [@product2, @product3])
         expect(rule).to be_eligible(order)
       end
 
@@ -66,8 +66,8 @@ describe Spree::Promotion::Rules::Product, :type => :model do
       let(:rule_options) { super().merge(preferred_match_policy: 'none') }
 
       it "should be eligible if none of the order's products are in eligible products" do
-        allow(order).to receive_messages(:products => [@product1])
-        allow(rule).to receive_messages(:eligible_products => [@product2, @product3])
+        allow(order).to receive_messages(products: [@product1])
+        allow(rule).to receive_messages(eligible_products: [@product2, @product3])
         expect(rule).to be_eligible(order)
       end
 
@@ -82,6 +82,28 @@ describe Spree::Promotion::Rules::Product, :type => :model do
           expect(rule.eligibility_errors.full_messages.first).
             to eq "Your cart contains a product that prevents this coupon code from being applied."
         end
+      end
+    end
+
+    context "with an invalid match policy" do
+      let(:rule) do
+        Spree::Promotion::Rules::Product.create!(
+          promotion: create(:promotion),
+          product_promotion_rules: [
+            Spree::ProductPromotionRule.new(product: product),
+          ],
+        ).tap do |rule|
+          rule.preferred_match_policy = 'invalid'
+          rule.save!(validate: false)
+        end
+      end
+      let(:product) { order.line_items.first!.product }
+      let(:order) { create(:order_with_line_items, line_items_count: 1) }
+
+      it 'raises' do
+        expect {
+          rule.eligible?(order)
+        }.to raise_error('unexpected match policy: "invalid"')
       end
     end
   end
@@ -137,6 +159,17 @@ describe Spree::Promotion::Rules::Product, :type => :model do
       context 'for product not in rule' do
         let(:line_item) { other_line_item }
         it { is_expected.to be_truthy }
+      end
+    end
+
+    context 'with an invalid match policy' do
+      let(:rule_options) { super().merge(preferred_match_policy: 'invalid') }
+      let(:line_item) { rule_line_item }
+
+      it 'raises' do
+        expect {
+          rule.actionable?(line_item)
+        }.to raise_error('unexpected match policy: "invalid"')
       end
     end
   end

@@ -1,9 +1,9 @@
-class CreateAdjustmentReason < ActiveRecord::Migration
+class CreateAdjustmentReason < ActiveRecord::Migration[4.2]
   def change
     create_table :spree_adjustment_reasons do |t|
       t.string   "name"
       t.string   "code"
-      t.boolean  "active",     default: true
+      t.boolean  "active", default: true
 
       t.timestamps null: true
     end

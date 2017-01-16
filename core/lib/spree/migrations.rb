@@ -22,13 +22,6 @@ module Spree
     # engine name on the file name
     def check
       if File.directory?(app_dir)
-        engine_in_app = app_migrations.map do |file_name|
-          name, engine = file_name.split(".", 2)
-          next unless match_engine?(engine)
-          name
-        end.compact
-
-        missing_migrations = engine_migrations.sort - engine_in_app.sort
         unless missing_migrations.empty?
           puts "[#{engine_name.capitalize} WARNING] Missing migrations."
           missing_migrations.each do |migration|
@@ -40,37 +33,51 @@ module Spree
       end
     end
 
-    private
-      def engine_migrations
-        Dir.entries(engine_dir).map do |file_name|
-          name = file_name.split("_", 2).last.split(".", 2).first
-          name.empty? ? next : name
-        end.compact! || []
-      end
+    def missing_migrations
+      @missing_migrations ||=
+        begin
+          engine_in_app = app_migrations.map do |file_name|
+            name, engine = file_name.split(".", 2)
+            next unless match_engine?(engine)
+            name
+          end.compact
 
-      def app_migrations
-        Dir.entries(app_dir).map do |file_name|
-          next if [".", ".."].include? file_name
-          name = file_name.split("_", 2).last
-          name.empty? ? next : name
-        end.compact! || []
-      end
-
-      def app_dir
-        "#{Rails.root}/db/migrate"
-      end
-
-      def engine_dir
-        "#{config.root}/db/migrate"
-      end
-
-      def match_engine?(engine)
-        if engine_name == "spree"
-          # Avoid stores upgrading from 1.3 getting wrong warnings
-          ["spree.rb", "spree_promo.rb"].include? engine
-        else
-          engine == "#{engine_name}.rb"
+          engine_migrations.sort - engine_in_app.sort
         end
+    end
+
+    private
+
+    def engine_migrations
+      Dir.entries(engine_dir).map do |file_name|
+        name = file_name.split("_", 2).last.split(".", 2).first
+        name.empty? ? next : name
+      end.compact! || []
+    end
+
+    def app_migrations
+      Dir.entries(app_dir).map do |file_name|
+        next if [".", ".."].include? file_name
+        name = file_name.split("_", 2).last
+        name.empty? ? next : name
+      end.compact! || []
+    end
+
+    def app_dir
+      "#{Rails.root}/db/migrate"
+    end
+
+    def engine_dir
+      "#{config.root}/db/migrate"
+    end
+
+    def match_engine?(engine)
+      if engine_name == "spree"
+        # Avoid stores upgrading from 1.3 getting wrong warnings
+        ["spree.rb", "spree_promo.rb"].include? engine
+      else
+        engine == "#{engine_name}.rb"
       end
+    end
   end
 end

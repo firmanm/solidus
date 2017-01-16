@@ -11,7 +11,7 @@ module Spree
       extend Spree::DisplayMoney
 
       has_many :role_users, foreign_key: "user_id", class_name: "Spree::RoleUser", dependent: :destroy
-      has_many :spree_roles, through: :role_users, source: :role
+      has_many :spree_roles, through: :role_users, source: :role, class_name: "Spree::Role"
 
       has_many :user_stock_locations, foreign_key: "user_id", class_name: "Spree::UserStockLocation"
       has_many :stock_locations, through: :user_stock_locations
@@ -47,7 +47,7 @@ module Spree
     # @return [Spree::Order] the most-recently-created incomplete order
     # since the customer's last complete order.
     def last_incomplete_spree_order(store: nil, only_frontend_viewable: true)
-      self_orders = self.orders
+      self_orders = orders
       self_orders = self_orders.where(frontend_viewable: true) if only_frontend_viewable
       self_orders = self_orders.where(store: store) if store
       self_orders = self_orders.where('updated_at > ?', Spree::Config.completable_order_updated_cutoff_days.days.ago) if Spree::Config.completable_order_updated_cutoff_days
@@ -57,7 +57,7 @@ module Spree
     end
 
     def total_available_store_credit
-      store_credits.reload.to_a.sum{ |credit| credit.amount_remaining }
+      store_credits.reload.to_a.sum(&:amount_remaining)
     end
   end
 end

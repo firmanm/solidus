@@ -1,4 +1,8 @@
 module Spree
+  # A concrete implementation of `Spree::PaymentMethod` intended to provide a
+  # base for extension. See https://github.com/solidusio/solidus_gateway/ for
+  # offically supported payment gateway implementations.
+  #
   class Gateway < PaymentMethod
     delegate :authorize, :purchase, :capture, :void, :credit, to: :provider
 
@@ -11,16 +15,11 @@ module Spree
       CreditCard
     end
 
-    # instantiates the selected gateway and configures with the options stored in the database
-    def self.current
-      super
-    end
-
     def provider
       gateway_options = options
-      gateway_options.delete :login if gateway_options.has_key?(:login) and gateway_options[:login].nil?
+      gateway_options.delete :login if gateway_options.key?(:login) && gateway_options[:login].nil?
       if gateway_options[:server]
-        ActiveMerchant::Billing::Base.gateway_mode = gateway_options[:server].to_sym
+        ActiveMerchant::Billing::Base.mode = gateway_options[:server].to_sym
       end
       @provider ||= provider_class.new(gateway_options)
     end
@@ -39,32 +38,22 @@ module Spree
 
     def supports?(source)
       return true unless provider_class.respond_to? :supports?
-      return false unless source.brand
-      provider_class.supports?(source.brand)
-    end
-
-    def disable_customer_profile(source)
-      if source.is_a? CreditCard
-        source.update_column :gateway_customer_profile_id, nil
-      else
-        raise 'You must implement disable_customer_profile method for this gateway.'
-      end
+      return true if source.brand && provider_class.supports?(source.brand)
+      source.has_payment_profile?
     end
 
     def sources_by_order(order)
-      source_ids = order.payments.where(payment_method_id: self.id).pluck(:source_id).uniq
+      source_ids = order.payments.where(payment_method_id: id).pluck(:source_id).uniq
       payment_source_class.where(id: source_ids).with_payment_profile
     end
 
     def reusable_sources(order)
       if order.completed?
-        sources_by_order order
+        sources_by_order(order)
+      elsif order.user_id
+        credit_cards.where(user_id: order.user_id).with_payment_profile
       else
-        if order.user_id
-          self.credit_cards.where(user_id: order.user_id).with_payment_profile
-        else
-          []
-        end
+        []
       end
     end
   end

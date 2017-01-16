@@ -57,7 +57,7 @@ describe Spree::Carton do
     subject { carton.shipment_numbers }
     let(:shipment) { carton.shipments.first }
 
-    it "returns a list of the order numbers it is associated to" do
+    it "returns a list of the shipment numbers it is associated to" do
       expect(subject).to eq [shipment.number]
     end
   end
@@ -105,7 +105,7 @@ describe Spree::Carton do
     it "contains only the items in both the carton and order" do
       expect(subject.map(&:line_item)).to eq [first_line_item]
     end
-  end 
+  end
 
   describe "#any_exchanges?" do
     subject { carton.any_exchanges? }

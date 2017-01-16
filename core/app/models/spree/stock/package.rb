@@ -2,14 +2,13 @@ module Spree
   module Stock
     class Package
       attr_reader :stock_location, :contents
-      attr_accessor :shipping_rates
+      attr_accessor :shipment
 
       # @param stock_location [Spree::StockLocation] the stock location this package originates from
       # @param contents [Array<Spree::Stock::ContentItem>] the contents of this package
-      def initialize(stock_location, contents=[])
+      def initialize(stock_location, contents = [])
         @stock_location = stock_location
         @contents = contents
-        @shipping_rates = Array.new
       end
 
       # Adds an inventory unit to this package.
@@ -45,7 +44,7 @@ module Spree
       def order
         # Fix regression that removed package.order.
         # Find it dynamically through an inventory_unit.
-        contents.detect {|item| !!item.try(:inventory_unit).try(:order) }.try(:inventory_unit).try(:order)
+        contents.detect { |item| !!item.try(:inventory_unit).try(:order) }.try(:inventory_unit).try(:order)
       end
 
       # @return [Float] the summed weight of the contents of this package
@@ -102,13 +101,15 @@ module Spree
       # @return [Array<Spree::ShippingCategory>] the shipping categories of the
       #   variants in this package
       def shipping_categories
-        contents.map { |item| item.variant.shipping_category }.compact.uniq
+        Spree::ShippingCategory.where(id: shipping_category_ids)
       end
 
-      # @return [Array<Spree::ShippingMethod>] the shipping methods available
-      #   for this pacakges shipping categories
+      # @return [ActiveRecord::Relation] the [Spree::ShippingMethod]s available
+      #   for this pacakge based on the stock location and shipping categories.
       def shipping_methods
-        shipping_categories.map(&:shipping_methods).reduce(:&).to_a
+        Spree::ShippingMethod.
+          with_all_shipping_category_ids(shipping_category_ids).
+          available_in_stock_location(stock_location)
       end
 
       # @return [Spree::Shipment] a new shipment containing this package's
@@ -121,10 +122,18 @@ module Spree
         contents.each { |content_item| content_item.inventory_unit.state = content_item.state.to_s }
 
         Spree::Shipment.new(
+          order: order,
           stock_location: stock_location,
-          shipping_rates: shipping_rates,
           inventory_units: contents.map(&:inventory_unit)
         )
+      end
+
+      private
+
+      # @return [Array<Fixnum>] the unique ids of all shipping categories of
+      #   variants in this package
+      def shipping_category_ids
+        contents.map { |item| item.variant.shipping_category_id }.compact.uniq
       end
     end
   end

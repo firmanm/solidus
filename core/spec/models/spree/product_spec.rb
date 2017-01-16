@@ -9,15 +9,14 @@ module ThirdParty
   end
 end
 
-describe Spree::Product, :type => :model do
-
+describe Spree::Product, type: :model do
   context 'product instance' do
     let(:product) { create(:product) }
-    let(:variant) { create(:variant, :product => product) }
+    let(:variant) { create(:variant, product: product) }
 
     context '#duplicate' do
       before do
-        allow(product).to receive_messages :taxons => [create(:taxon)]
+        allow(product).to receive_messages taxons: [create(:taxon)]
       end
 
       it 'duplicates product' do
@@ -38,16 +37,58 @@ describe Spree::Product, :type => :model do
       end
     end
 
-    context "master variant" do
+    describe "#save" do
+      before { product.update_columns(updated_at: 1.day.ago) }
+      subject { product.save! }
+
+      shared_examples "a change occurred" do
+        it "should change updated_at" do
+          expect { subject }.to change{ product.updated_at }
+        end
+
+        it "should touch taxons" do
+          taxon = create(:taxon, product_ids: [product.id])
+          taxon.update_columns(updated_at: 1.day.ago)
+          product.taxons.reload
+          expect { subject }.to change{ taxon.reload.updated_at }
+        end
+      end
+
+      shared_examples "no change occurred" do
+        it "should not change updated_at" do
+          expect { subject }.not_to change{ product.updated_at }
+        end
+
+        it "should not touch taxons" do
+          taxon = create(:taxon, products: [product])
+          taxon.update_columns(updated_at: 1.day.ago)
+          product.taxons.reload
+          expect { subject }.not_to change{ taxon.reload.updated_at }
+        end
+      end
+
+      context "when nothing has changed" do
+        it_behaves_like "no change occurred"
+      end
+
+      context "when the product itself was changed" do
+        before do
+          product.name = "Perri-air"
+        end
+
+        it_behaves_like "a change occurred"
+      end
 
       context "when master variant changed" do
         before do
           product.master.sku = "Something changed"
         end
 
+        it_behaves_like "a change occurred"
+
         it "saves the master" do
-          expect(product.master).to receive(:save!)
-          product.save
+          product.save!
+          expect(product.reload.master.sku).to eq "Something changed"
         end
       end
 
@@ -56,24 +97,15 @@ describe Spree::Product, :type => :model do
           master = product.master
           master.default_price.price = 11
           master.save!
+          product.update_columns(updated_at: 1.day.ago)
           product.master.default_price.price = 12
         end
 
-        it "saves the master" do
-          expect(product.master).to receive(:save!)
-          product.save
-        end
+        it_behaves_like "a change occurred"
 
-        it "saves the default price" do
-          expect(product.master.default_price).to receive(:save)
-          product.save
-        end
-      end
-
-      context "when master variant and price haven't changed" do
-        it "does not save the master" do
-          expect(product.master).not_to receive(:save!)
-          product.save
+        it "saves the default_price" do
+          product.save!
+          expect(product.reload.master.default_price.price).to eq 12
         end
       end
     end
@@ -90,7 +122,7 @@ describe Spree::Product, :type => :model do
 
     context "product has variants" do
       before do
-        create(:variant, :product => product)
+        create(:variant, product: product)
       end
 
       context "#destroy" do
@@ -103,7 +135,7 @@ describe Spree::Product, :type => :model do
     end
 
     context "#price" do
-      # Regression test for #1173
+      # Regression test for https://github.com/spree/spree/issues/1173
       it 'strips non-price characters' do
         product.price = "$10"
         expect(product.price).to eq(10.0)
@@ -157,7 +189,35 @@ describe Spree::Product, :type => :model do
       before { high.option_values.destroy_all }
 
       it "returns only variants with option values" do
-        expect(product.variants_and_option_values).to eq([low])
+        Spree::Deprecation.silence do
+          expect(product.variants_and_option_values).to eq([low])
+        end
+      end
+    end
+
+    context "variants_and_option_values_for" do
+      let!(:high) { create(:variant, product: product) }
+      let!(:low) { create(:variant, product: product) }
+
+      context "when one product does not have option values" do
+        before { high.option_values.destroy_all }
+
+        it "returns only variants with option values" do
+          expect(product.variants_and_option_values_for).to eq([low])
+        end
+      end
+
+      context "when asking with different pricing options" do
+        let(:pricing_options) { Spree::Config.pricing_options_class.new(currency: "EUR") }
+
+        before do
+          low.prices.create(amount: 99.00, currency: "EUR")
+        end
+
+        it "returns only variants which have matching prices" do
+          expect(product.variants_and_option_values_for).to contain_exactly(low, high)
+          expect(product.variants_and_option_values_for(pricing_options)).to contain_exactly(low)
+        end
       end
     end
 
@@ -236,7 +296,7 @@ describe Spree::Product, :type => :model do
       end
     end
 
-    # Regression test for #3737
+    # Regression test for https://github.com/spree/spree/issues/3737
     context "has stock items" do
       let(:product) { create(:product) }
       it "can retrieve stock items" do
@@ -246,7 +306,6 @@ describe Spree::Product, :type => :model do
     end
 
     context "slugs" do
-
       it "normalizes slug on update validation" do
         product.slug = "hey//joe"
         product.valid?
@@ -284,20 +343,35 @@ describe Spree::Product, :type => :model do
 
     context "associations" do
       describe "product_option_types" do
-        it "touches the product instance when an option type is added" do
-          expect {
-            product.product_option_types.create(option_type: create(:option_type, name: 'new-option-type'))
-            product.reload
-          }.to change { product.updated_at }
+        context "with no existing option types" do
+          before { product.update_columns(updated_at: 1.day.ago) }
+
+          it "touches the product instance when an option type is added" do
+            expect {
+              product.product_option_types.create(option_type: create(:option_type, name: 'new-option-type'))
+            }.to change { product.reload.updated_at }
+          end
         end
 
-        it "touches product instance when an option type is removed" do
-          product.product_option_types.create(option_type: create(:option_type, name: 'new-option-type'))
-          expect {
-            product.product_option_types = []
-            product.reload
-          }.to change { product.updated_at }
+        context "with an existing option type" do
+          before do
+            product.product_option_types.create(option_type: create(:option_type, name: 'new-option-type'))
+            product.update_columns(updated_at: 1.day.ago)
+          end
+
+          it "touches product instance when an option type is removed" do
+            expect {
+              product.product_option_types = []
+            }.to change { product.reload.updated_at }
+          end
         end
+      end
+    end
+
+    context "#really_destroy!" do
+      it "destroy the product" do
+        product.really_destroy!
+        expect(product).not_to be_persisted
       end
     end
   end
@@ -328,16 +402,16 @@ describe Spree::Product, :type => :model do
       }.to change { product.properties.length }.by(1)
     end
 
-    # Regression test for #2455
+    # Regression test for https://github.com/spree/spree/issues/2455
     it "should not overwrite properties' presentation names" do
-      Spree::Property.where(:name => 'foo').first_or_create!(:presentation => "Foo's Presentation Name")
+      Spree::Property.where(name: 'foo').first_or_create!(presentation: "Foo's Presentation Name")
       product.set_property('foo', 'value1')
       product.set_property('bar', 'value2')
-      expect(Spree::Property.where(:name => 'foo').first.presentation).to eq("Foo's Presentation Name")
-      expect(Spree::Property.where(:name => 'bar').first.presentation).to eq("bar")
+      expect(Spree::Property.where(name: 'foo').first.presentation).to eq("Foo's Presentation Name")
+      expect(Spree::Property.where(name: 'bar').first.presentation).to eq("bar")
     end
 
-    # Regression test for #4416
+    # Regression test for https://github.com/spree/spree/issues/4416
     context "#possible_promotions" do
       let!(:promotion) do
         create(:promotion, advertise: true, starts_at: 1.day.ago)
@@ -355,90 +429,15 @@ describe Spree::Product, :type => :model do
     end
   end
 
-  context '#create' do
-    let!(:prototype) { create(:prototype) }
-    let!(:product) { Spree::Product.new(name: "Foo", price: 1.99, shipping_category_id: create(:shipping_category).id) }
-
-    before { product.prototype_id = prototype.id }
-
-    context "when prototype is supplied" do
-      it "should create properties based on the prototype" do
-        product.save
-        expect(product.properties.count).to eq(1)
-      end
-    end
-
-    context "when prototype with option types is supplied" do
-      def build_option_type_with_values(name, values)
-        ot = create(:option_type, :name => name)
-        values.each do |val|
-          ot.option_values.create(:name => val.downcase, :presentation => val)
-        end
-        ot
-      end
-
-      let(:prototype) do
-        size = build_option_type_with_values("size", %w(Small Medium Large))
-        create(:prototype, :name => "Size", :option_types => [ size ])
-      end
-
-      let(:option_values_hash) do
-        hash = {}
-        prototype.option_types.each do |i|
-          hash[i.id.to_s] = i.option_value_ids
-        end
-        hash
-      end
-
-      it "should create option types based on the prototype" do
-        product.save
-        expect(product.option_type_ids.length).to eq(1)
-        expect(product.option_type_ids).to eq(prototype.option_type_ids)
-      end
-
-      it "should create product option types based on the prototype" do
-        product.save
-        expect(product.product_option_types.pluck(:option_type_id)).to eq(prototype.option_type_ids)
-      end
-
-      it "should create variants from an option values hash with one option type" do
-        product.option_values_hash = option_values_hash
-        product.save
-        expect(product.variants.length).to eq(3)
-      end
-
-      it "should still create variants when option_values_hash is given but prototype id is nil" do
-        product.option_values_hash = option_values_hash
-        product.prototype_id = nil
-        product.save
-        expect(product.option_type_ids.length).to eq(1)
-        expect(product.option_type_ids).to eq(prototype.option_type_ids)
-        expect(product.variants.length).to eq(3)
-      end
-
-      it "should create variants from an option values hash with multiple option types" do
-        color = build_option_type_with_values("color", %w(Red Green Blue))
-        logo  = build_option_type_with_values("logo", %w(Ruby Rails Nginx))
-        option_values_hash[color.id.to_s] = color.option_value_ids
-        option_values_hash[logo.id.to_s] = logo.option_value_ids
-        product.option_values_hash = option_values_hash
-        product.save
-        product.reload
-        expect(product.option_type_ids.length).to eq(3)
-        expect(product.variants.length).to eq(27)
-      end
-    end
-  end
-
   context "#images" do
     let(:product) { create(:product) }
     let(:image) { File.open(File.expand_path('../../../fixtures/thinking-cat.jpg', __FILE__)) }
-    let(:params) { {:viewable_id => product.master.id, :viewable_type => 'Spree::Variant', :attachment => image, :alt => "position 2", :position => 2} }
+    let(:params) { { viewable_id: product.master.id, viewable_type: 'Spree::Variant', attachment: image, alt: "position 2", position: 2 } }
 
     before do
       Spree::Image.create(params)
-      Spree::Image.create(params.merge({:alt => "position 1", :position => 1}))
-      Spree::Image.create(params.merge({:viewable_type => 'ThirdParty::Extension', :alt => "position 1", :position => 2}))
+      Spree::Image.create(params.merge({ alt: "position 1", position: 1 }))
+      Spree::Image.create(params.merge({ viewable_type: 'ThirdParty::Extension', alt: "position 1", position: 2 }))
     end
 
     it "only looks for variant images" do
@@ -450,7 +449,7 @@ describe Spree::Product, :type => :model do
     end
   end
 
-  # Regression tests for #2352
+  # Regression tests for https://github.com/spree/spree/issues/2352
   context "classifications and taxons" do
     it "is joined through classifications" do
       reflection = Spree::Product.reflect_on_association(:taxons)
@@ -466,18 +465,18 @@ describe Spree::Product, :type => :model do
   context '#total_on_hand' do
     it 'should be infinite if track_inventory_levels is false' do
       Spree::Config[:track_inventory_levels] = false
-      expect(build(:product, :variants_including_master => [build(:master_variant)]).total_on_hand).to eql(Float::INFINITY)
+      expect(build(:product, variants_including_master: [build(:master_variant)]).total_on_hand).to eql(Float::INFINITY)
     end
 
     it 'should be infinite if variant is on demand' do
       Spree::Config[:track_inventory_levels] = true
-      expect(build(:product, :variants_including_master => [build(:on_demand_master_variant)]).total_on_hand).to eql(Float::INFINITY)
+      expect(build(:product, variants_including_master: [build(:on_demand_master_variant)]).total_on_hand).to eql(Float::INFINITY)
     end
 
     it 'should return sum of stock items count_on_hand' do
       product = create(:product)
       product.stock_items.first.set_count_on_hand 5
-      product.variants_including_master(true) # force load association
+      product.variants_including_master.reload # force load association
       expect(product.total_on_hand).to eql(5)
     end
 
@@ -497,8 +496,30 @@ describe Spree::Product, :type => :model do
     it { is_expected.to be_invalid }
   end
 
-  it "initializes a master variant when building a product" do
-    product = Spree::Product.new
-    expect(product.master.is_master).to be true
+  describe '.new' do
+    let(:product) { Spree::Product.new(attributes) }
+
+    shared_examples "new product with master" do
+      it "initializes master correctly" do
+        expect(product.master.is_master).to be true
+        expect(product.master.product).to be product
+      end
+    end
+
+    context 'no attributes' do
+      let(:attributes) { {} }
+      it_behaves_like "new product with master"
+    end
+
+    context 'initializing with variant attributes' do
+      let(:attributes) { { sku: 'FOO' } }
+
+      it_behaves_like "new product with master"
+
+      it "initializes the variant with the correct attributes" do
+        expect(product.master.sku).to eq 'FOO'
+        expect(product.sku).to eq 'FOO'
+      end
+    end
   end
 end

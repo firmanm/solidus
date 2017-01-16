@@ -1,12 +1,13 @@
 require 'spec_helper'
 
-describe Spree::OrderContents, :type => :model do
-  let(:order) { Spree::Order.create }
+describe Spree::OrderContents, type: :model do
+  let!(:store) { create :store }
+  let(:order) { create(:order) }
   let(:variant) { create(:variant) }
   let!(:stock_location) { variant.stock_locations.first }
   let(:stock_location_2) { create(:stock_location) }
 
-  subject { described_class.new(order) }
+  subject(:order_contents) { described_class.new(order) }
 
   context "#add" do
     context 'given quantity is not explicitly provided' do
@@ -57,7 +58,7 @@ describe Spree::OrderContents, :type => :model do
     end
 
     it "should create stock location associations if provided" do
-      line_item = subject.add(variant, 3, stock_location_quantities: {stock_location.id => 1, stock_location_2.id => 2})
+      line_item = subject.add(variant, 3, stock_location_quantities: { stock_location.id => 1, stock_location_2.id => 2 })
       order_stock_locations = line_item.order.order_stock_locations
       expect(order_stock_locations.count).to eq(2)
       expect(order_stock_locations.map(&:quantity)).to eq([1, 2])
@@ -66,7 +67,7 @@ describe Spree::OrderContents, :type => :model do
 
     context "running promotions" do
       let(:promotion) { create(:promotion, apply_automatically: true) }
-      let(:calculator) { Spree::Calculator::FlatRate.new(:preferred_amount => 10) }
+      let(:calculator) { Spree::Calculator::FlatRate.new(preferred_amount: 10) }
 
       shared_context "discount changes order total" do
         before { subject.add(variant, 1) }
@@ -95,6 +96,38 @@ describe Spree::OrderContents, :type => :model do
         include_context "discount changes order total"
       end
     end
+
+    describe 'tax calculations' do
+      let!(:zone) { create(:global_zone) }
+      let!(:tax_rate) do
+        create(:tax_rate, zone: zone, tax_category: variant.tax_category)
+      end
+
+      context 'when the order has a taxable address' do
+        before do
+          expect(order.tax_address.country_id).to be_present
+        end
+
+        it 'creates a tax adjustment' do
+          order_contents.add(variant)
+          line_item = order.find_line_item_by_variant(variant)
+          expect(line_item.adjustments.tax.count).to eq(1)
+        end
+      end
+
+      context 'when the order does not have a taxable address' do
+        before do
+          order.update_attributes!(ship_address: nil, bill_address: nil)
+          expect(order.tax_address.country_id).to be_nil
+        end
+
+        it 'creates a tax adjustment' do
+          order_contents.add(variant)
+          line_item = order.find_line_item_by_variant(variant)
+          expect(line_item.adjustments.tax.count).to eq(0)
+        end
+      end
+    end
   end
 
   context "#remove" do
@@ -117,7 +150,7 @@ describe Spree::OrderContents, :type => :model do
 
     context 'given a shipment' do
       it "ensure shipment calls update_amounts instead of order calling ensure_updated_shipments" do
-        line_item = subject.add(variant, 1)
+        subject.add(variant, 1)
         shipment = create(:shipment)
         expect(subject.order).to_not receive(:ensure_updated_shipments)
         expect(shipment).to receive(:update_amounts)
@@ -127,7 +160,7 @@ describe Spree::OrderContents, :type => :model do
 
     context 'not given a shipment' do
       it "ensures updated shipments" do
-        line_item = subject.add(variant, 1)
+        subject.add(variant, 1)
         expect(subject.order).to receive(:ensure_updated_shipments)
         subject.remove(variant)
       end
@@ -151,12 +184,12 @@ describe Spree::OrderContents, :type => :model do
       expect(order.item_total.to_f).to eq(0.00)
       expect(order.total.to_f).to eq(0.00)
 
-      subject.add(variant,2)
+      subject.add(variant, 2)
 
       expect(order.item_total.to_f).to eq(39.98)
       expect(order.total.to_f).to eq(39.98)
 
-      subject.remove(variant,1)
+      subject.remove(variant, 1)
       expect(order.item_total.to_f).to eq(19.99)
       expect(order.total.to_f).to eq(19.99)
     end
@@ -192,7 +225,7 @@ describe Spree::OrderContents, :type => :model do
       expect(order.item_total.to_f).to eq(0.00)
       expect(order.total.to_f).to eq(0.00)
 
-      line_item = subject.add(variant,2)
+      line_item = subject.add(variant, 2)
 
       expect(order.item_total.to_f).to eq(39.98)
       expect(order.total.to_f).to eq(39.98)
@@ -202,7 +235,6 @@ describe Spree::OrderContents, :type => :model do
       expect(order.total.to_f).to eq(0.00)
     end
   end
-
 
   context "update cart" do
     let!(:shirt) { subject.add variant, 1 }
@@ -227,7 +259,7 @@ describe Spree::OrderContents, :type => :model do
     context "submits item quantity 0" do
       let(:params) do
         { line_items_attributes: {
-          "0" => { id: shirt.id, quantity: 0 },
+          "0" => { id: shirt.id, quantity: 0 }
         } }
       end
 
@@ -303,5 +335,4 @@ describe Spree::OrderContents, :type => :model do
       end
     end
   end
-
 end

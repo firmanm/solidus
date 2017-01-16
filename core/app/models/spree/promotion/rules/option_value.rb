@@ -10,7 +10,7 @@ module Spree
           promotable.is_a?(Spree::Order)
         end
 
-        def eligible?(promotable, options = {})
+        def eligible?(promotable, _options = {})
           case preferred_match_policy
           when 'any'
             promotable.line_items.any? { |item| actionable?(item) }
@@ -18,22 +18,20 @@ module Spree
         end
 
         def actionable?(line_item)
-
           pid = line_item.product.id
           ovids = line_item.variant.option_values.pluck(:id)
 
           product_ids.include?(pid) && (value_ids(pid) & ovids).present?
         end
 
-        def preferred_eligible_values_with_numerification
-          values = preferred_eligible_values_without_numerification || {}
+        def preferred_eligible_values
+          values = preferences[:eligible_values] || {}
           Hash[values.keys.map(&:to_i).zip(
             values.values.map do |v|
               (v.is_a?(Array) ? v : v.split(",")).map(&:to_i)
             end
           )]
         end
-        alias_method_chain :preferred_eligible_values, :numerification
 
         private
 

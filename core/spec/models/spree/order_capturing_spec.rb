@@ -4,8 +4,8 @@ describe Spree::OrderCapturing do
   describe '#capture_payments' do
     subject { Spree::OrderCapturing.new(order, payment_methods).capture_payments }
 
-    # Regression for the order.update! in the ensure block.
-    # See the comment there.
+    # Regression for https://github.com/solidusio/solidus/pull/407
+    # See also https://github.com/solidusio/solidus/pull/1406
     context "updating the order" do
       let(:order) { create :completed_order_with_totals }
       let(:payment_methods) { [] }
@@ -135,7 +135,7 @@ describe Spree::OrderCapturing do
         let(:payment_methods) { [Spree::Gateway::Bogus, ExceptionallyBogusPaymentMethod] }
 
         class ExceptionallyBogusPaymentMethod < Spree::Gateway::Bogus
-          def capture(*args)
+          def capture(*_args)
             raise ActiveMerchant::ConnectionError.new("foo", nil)
           end
         end

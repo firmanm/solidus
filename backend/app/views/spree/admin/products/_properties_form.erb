@@ -1,5 +1,5 @@
 <% content_for :page_title do %>
-  <%= Spree.t(:properties) %>
+  <%= plural_resource_name(Spree::Property) %>
 <% end %>
 
 <% f.fields_for :product_properties do |properties_form| %>

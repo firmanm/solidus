@@ -45,6 +45,9 @@ $ ->
     sortable.trigger('sortupdate', item: draggable)
   , 250
 
+  formatTaxon = (taxon) ->
+    Select2.util.escapeMarkup(taxon.pretty_name)
+
   $('#taxon_id').select2
     dropdownCssClass: "taxon_select_box",
     placeholder: Spree.translations.find_a_taxon,
@@ -59,14 +62,12 @@ $ ->
       results: (data) ->
         results: data['taxons'],
         more: data.current_page < data.pages
-    formatResult: (taxon) ->
-      taxon.pretty_name
-    formatSelection: (taxon) ->
-      taxon.pretty_name
+    formatResult: formatTaxon,
+    formatSelection: formatTaxon
 
   $('#taxon_id').on "change", (e) ->
     Spree.ajax
       url: Spree.routes.taxon_products_api,
-      data: { id: e.val }
+      data: { id: e.val, simple: 1 }
       success: (data) ->
         sortable.html productListTemplate(data.products)

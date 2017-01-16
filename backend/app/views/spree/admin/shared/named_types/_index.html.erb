@@ -1,14 +1,15 @@
-<%= render partial: 'spree/admin/shared/configuration_menu' %>
+<%= render 'spree/admin/shared/settings_checkout_tabs' %>
 
-<% content_for :page_title do %>
-  <%= page_title %>
-<% end %>
+<% admin_breadcrumb(root_tab) %>
+<% admin_breadcrumb(sub_tab) %>
+<% admin_breadcrumb(page_title) %>
+
 
 <% content_for :page_actions do %>
   <ul class="actions inline-menu">
     <% if can?(:create, Spree::ReturnReason) %>
       <li>
-        <%= button_link_to new_button_text, new_object_url, { icon: 'plus', id: 'admin_new_named_type' } %>
+        <%= button_link_to new_button_text, new_object_url, { id: 'admin_new_named_type' } %>
       </li>
     <% end %>
   </ul>
@@ -47,10 +48,9 @@
     </tbody>
   </table>
 <% else %>
-  <div class="alpha twelve columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: resource_name) %>
-    <% if can?(:create, Spree::ReturnReason) %>
-      <%= link_to Spree.t(:add_one), new_object_url %>!
-    <% end %>
+  <div class="col-xs-9 no-objects-found">
+    <%= render 'spree/admin/shared/no_objects_found',
+                 resource: resource,
+                 new_resource_url: new_object_url %>
   </div>
 <% end %>

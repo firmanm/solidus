@@ -1,11 +1,11 @@
 require 'spec_helper'
 
-describe Spree::Promotion, :type => :model do
+describe Spree::Promotion, type: :model do
   let(:promotion) { Spree::Promotion.new }
 
   describe "validations" do
     before :each do
-      @valid_promotion = Spree::Promotion.new :name => "A promotion"
+      @valid_promotion = Spree::Promotion.new name: "A promotion"
     end
 
     it "valid_promotion is valid" do
@@ -38,7 +38,7 @@ describe Spree::Promotion, :type => :model do
 
   describe ".advertised" do
     let(:promotion) { create(:promotion) }
-    let(:advertised_promotion) { create(:promotion, :advertise => true) }
+    let(:advertised_promotion) { create(:promotion, advertise: true) }
 
     it "only shows advertised promotions" do
       advertised = Spree::Promotion.advertised
@@ -76,7 +76,7 @@ describe Spree::Promotion, :type => :model do
   end
 
   describe "#save" do
-    let(:promotion) { Spree::Promotion.create(:name => "delete me") }
+    let(:promotion) { Spree::Promotion.create(name: "delete me") }
 
     before(:each) do
       promotion.actions << Spree::Promotion::Actions::CreateAdjustment.new
@@ -105,7 +105,7 @@ describe Spree::Promotion, :type => :model do
 
       @user = create(:user)
       @order = create(:order, user: @user, created_at: DateTime.current)
-      @payload = { :order => @order, :user => @user }
+      @payload = { order: @order, user: @user }
     end
 
     it "should check path if present" do
@@ -142,6 +142,30 @@ describe Spree::Promotion, :type => :model do
           expect(promotion.activate(@payload)).to be true
           expect(promotion.orders.first).to eql @order
         end
+
+        it 'keeps in-memory associations updated' do
+          # load all the relevant associations into memory
+          promotion.order_promotions.to_a
+          promotion.orders.to_a
+          @order.order_promotions.to_a
+          @order.promotions.to_a
+
+          expect(promotion.order_promotions.size).to eq(0)
+          expect(promotion.orders.size).to eq(0)
+          expect(@order.order_promotions.size).to eq(0)
+          expect(@order.promotions.size).to eq(0)
+
+          expect(
+            promotion.activate(@payload)
+          ).to eq(true)
+
+          aggregate_failures do
+            expect(promotion.order_promotions.size).to eq(1)
+            expect(promotion.orders.size).to eq(1)
+            expect(@order.order_promotions.size).to eq(1)
+            expect(@order.promotions.size).to eq(1)
+          end
+        end
       end
       context "when not activated" do
         it "will not assign the order" do
@@ -163,7 +187,6 @@ describe Spree::Promotion, :type => :model do
           expect(promotion.orders.reload.to_a).to eql [@order]
         end
       end
-
     end
 
     context "when there is a code" do
@@ -174,6 +197,25 @@ describe Spree::Promotion, :type => :model do
         expect(promotion.activate(order: @order, promotion_code: promotion_code)).to be true
         expect(promotion.order_promotions.map(&:promotion_code)).to eq [promotion_code]
       end
+    end
+  end
+
+  describe '#remove_from' do
+    let(:promotion) { create(:promotion, :with_line_item_adjustment) }
+    let(:order) { create(:order_with_line_items) }
+
+    before do
+      promotion.activate(order: order)
+    end
+
+    it 'removes the promotion' do
+      expect(order.promotions).to include(promotion)
+      expect(order.line_items.flat_map(&:adjustments)).to be_present
+
+      promotion.remove_from(order)
+
+      expect(order.promotions).to be_empty
+      expect(order.line_items.flat_map(&:adjustments)).to be_empty
     end
   end
 
@@ -295,35 +337,35 @@ describe Spree::Promotion, :type => :model do
     end
   end
 
-  context "#expired" do
+  context "#inactive" do
     it "should not be exipired" do
-      expect(promotion).not_to be_expired
+      expect(promotion).not_to be_inactive
     end
 
-    it "should be expired if it hasn't started yet" do
+    it "should be inactive if it hasn't started yet" do
       promotion.starts_at = Time.current + 1.day
-      expect(promotion).to be_expired
+      expect(promotion).to be_inactive
     end
 
-    it "should be expired if it has already ended" do
+    it "should be inactive if it has already ended" do
       promotion.expires_at = Time.current - 1.day
-      expect(promotion).to be_expired
+      expect(promotion).to be_inactive
     end
 
-    it "should not be expired if it has started already" do
+    it "should not be inactive if it has started already" do
       promotion.starts_at = Time.current - 1.day
-      expect(promotion).not_to be_expired
+      expect(promotion).not_to be_inactive
     end
 
-    it "should not be expired if it has not ended yet" do
+    it "should not be inactive if it has not ended yet" do
       promotion.expires_at = Time.current + 1.day
-      expect(promotion).not_to be_expired
+      expect(promotion).not_to be_inactive
     end
 
-    it "should not be expired if current time is within starts_at and expires_at range" do
+    it "should not be inactive if current time is within starts_at and expires_at range" do
       promotion.starts_at = Time.current - 1.day
       promotion.expires_at = Time.current + 1.day
-      expect(promotion).not_to be_expired
+      expect(promotion).not_to be_inactive
     end
   end
 
@@ -370,13 +412,13 @@ describe Spree::Promotion, :type => :model do
       create(
         :promotion,
         name: "Foo",
-        code: "XXX",
+        code: "XXX"
       )
     end
 
     let!(:action) do
       calculator = Spree::Calculator::FlatRate.new
-      action_params = { :promotion => promotion, :calculator => calculator }
+      action_params = { promotion: promotion, calculator: calculator }
       action = Spree::Promotion::Actions::CreateAdjustment.create(action_params)
       promotion.actions << action
       action
@@ -399,7 +441,7 @@ describe Spree::Promotion, :type => :model do
       expect(promotion.usage_count).to eq(0)
     end
 
-    # Regression test for #4112
+    # Regression test for https://github.com/spree/spree/issues/4112
     it "does not count ineligible adjustments" do
       adjustment.update_column(:eligible, false)
       expect(promotion.usage_count).to eq(0)
@@ -538,7 +580,7 @@ describe Spree::Promotion, :type => :model do
     end
 
     it "true if there are no applicable rules" do
-      promotion.promotion_rules = [stub_model(Spree::PromotionRule, :eligible? => true, :applicable? => false)]
+      promotion.promotion_rules = [stub_model(Spree::PromotionRule, eligible?: true, applicable?: false)]
       allow(promotion.promotion_rules).to receive(:for).and_return([])
       expect(promotion.eligible_rules(promotable)).to eq []
     end
@@ -586,14 +628,14 @@ describe Spree::Promotion, :type => :model do
     end
 
     context "with 'any' match policy" do
-      let(:promotion) { Spree::Promotion.create(:name => "Promo", :match_policy => 'any') }
+      let(:promotion) { Spree::Promotion.create(name: "Promo", match_policy: 'any') }
       let(:promotable) { double('Promotable') }
 
       it "should have eligible rules if any of the rules are eligible" do
-        allow_any_instance_of(Spree::PromotionRule).to receive_messages(:applicable? => true)
-        true_rule = Spree::PromotionRule.create(:promotion => promotion)
-        allow(true_rule).to receive_messages(:eligible? => true)
-        allow(promotion).to receive_messages(:rules => [true_rule])
+        allow_any_instance_of(Spree::PromotionRule).to receive_messages(applicable?: true)
+        true_rule = Spree::PromotionRule.create(promotion: promotion)
+        allow(true_rule).to receive_messages(eligible?: true)
+        allow(promotion).to receive_messages(rules: [true_rule])
         allow(promotion).to receive_message_chain(:rules, :for).and_return([true_rule])
         expect(promotion.eligible_rules(promotable)).to eq [true_rule]
       end
@@ -620,7 +662,7 @@ describe Spree::Promotion, :type => :model do
 
   describe '#line_item_actionable?' do
     let(:order) { double Spree::Order }
-    let(:line_item) { double Spree::LineItem}
+    let(:line_item) { double Spree::LineItem }
     let(:true_rule) { double Spree::PromotionRule, eligible?: true, applicable?: true, actionable?: true }
     let(:false_rule) { double Spree::PromotionRule, eligible?: true, applicable?: true, actionable?: false }
     let(:rules) { [] }
@@ -643,12 +685,12 @@ describe Spree::Promotion, :type => :model do
 
           context 'when all rules allow action on the line item' do
             let(:rules) { [true_rule] }
-            it { is_expected.to be}
+            it { is_expected.to be }
           end
 
           context 'when at least one rule does not allow action on the line item' do
             let(:rules) { [true_rule, false_rule] }
-            it { is_expected.not_to be}
+            it { is_expected.not_to be }
           end
         end
 
@@ -662,8 +704,14 @@ describe Spree::Promotion, :type => :model do
 
           context 'when no rules allow action on the line item' do
             let(:rules) { [false_rule] }
-            it { is_expected.not_to be}
+            it { is_expected.not_to be }
           end
+        end
+
+        context 'when the line item has an non-promotionable product' do
+          let(:rules) { [true_rule] }
+          let(:line_item) { build(:line_item) { |li| li.product.promotionable = false } }
+          it { is_expected.not_to be }
         end
       end
     end
@@ -688,11 +736,11 @@ describe Spree::Promotion, :type => :model do
     end
   end
 
-  # regression for #4059
+  # regression for https://github.com/spree/spree/issues/4059
   # admin form posts the code and path as empty string
   describe "normalize blank values for path" do
     it "will save blank value as nil value instead" do
-      promotion = Spree::Promotion.create(:name => "A promotion", :path => "")
+      promotion = Spree::Promotion.create(name: "A promotion", path: "")
       expect(promotion.path).to be_nil
     end
   end
@@ -740,6 +788,11 @@ describe Spree::Promotion, :type => :model do
 
       context 'when the order is not complete' do
         let(:order) { create :order, user: user }
+
+        # The before clause above sets the completed at
+        # value for this order
+        before { order.update completed_at: nil }
+
         it { is_expected.to be false }
       end
     end
@@ -764,13 +817,13 @@ describe Spree::Promotion, :type => :model do
       order.update!
 
       expect(line_item.adjustments.size).to eq(1)
-      expect(order.adjustment_total).to eq -5
+      expect(order.adjustment_total).to eq(-5)
 
       other_line_item = order.contents.add(variant, 1, currency: order.currency)
 
       expect(other_line_item).not_to eq line_item
       expect(other_line_item.adjustments.size).to eq(1)
-      expect(order.adjustment_total).to eq -10
+      expect(order.adjustment_total).to eq(-10)
     end
   end
 end

@@ -1,17 +1,21 @@
 require 'spec_helper'
 
 describe Spree::UnreturnedItemCharger do
-  let(:shipped_order) { create(:shipped_order, line_items_count: 1, with_cartons: false) }
+  let(:ship_address) { create(:address) }
+  let(:shipped_order) { create(:shipped_order, ship_address: ship_address, line_items_count: 1, with_cartons: false) }
   let(:original_shipment) { shipped_order.shipments.first }
   let(:original_stock_location) { original_shipment.stock_location }
   let(:original_inventory_unit) { shipped_order.inventory_units.first }
   let(:original_variant) { original_inventory_unit.variant }
+  let(:shipping_method) { create(:shipping_method, tax_category: original_variant.tax_category) }
+
   let(:exchange_shipment) do
     create(:shipment,
            order: shipped_order,
            state: 'shipped',
            stock_location: original_stock_location,
-           created_at: 5.days.ago)
+           created_at: 5.days.ago,
+           shipping_method: shipping_method)
   end
   let(:exchange_inventory_unit) { exchange_shipment.inventory_units.first }
   let(:return_item) do
@@ -43,25 +47,17 @@ describe Spree::UnreturnedItemCharger do
     end
 
     context 'in tax zone' do
-      let!(:tax_zone) { Spree::Zone.global }
+      let!(:tax_zone) { create(:zone, countries: [ship_address.country]) }
       let!(:tax_rate) { create(:tax_rate, zone: tax_zone, tax_category: original_variant.tax_category) }
-      before { tax_zone.update_attributes!(default_tax: true) }
 
       it "applies tax" do
-        exchange_shipment.shipping_rates.update_all(tax_rate_id: tax_rate.id)
         exchange_order = exchange_shipment.order
-        exchange_order.create_tax_charge!
         exchange_order.update!
         subject
         expect(new_order.additional_tax_total).to be > 0
         expect(new_order.line_items[0].additional_tax_total).to be > 0
         expect(new_order.shipments[0].additional_tax_total).to be > 0
       end
-    end
-
-    it "updates shipment cost" do
-      exchange_shipment.update_attributes!(cost: 0)
-      expect { subject }.to change { exchange_shipment.reload.cost }
     end
 
     it "creates a new completed order" do

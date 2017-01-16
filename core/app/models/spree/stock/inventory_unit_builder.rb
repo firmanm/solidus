@@ -7,8 +7,8 @@ module Spree
 
       def units
         @order.line_items.flat_map do |line_item|
-          line_item.quantity.times.map do |i|
-            @order.inventory_units.build(
+          Array.new(line_item.quantity) do
+            Spree::InventoryUnit.new(
               pending: true,
               variant: line_item.variant,
               line_item: line_item,

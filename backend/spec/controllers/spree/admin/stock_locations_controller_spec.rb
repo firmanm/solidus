@@ -2,26 +2,27 @@ require 'spec_helper'
 
 module Spree
   module Admin
-    describe StockLocationsController, :type => :controller do
+    describe StockLocationsController, type: :controller do
       stub_authorization!
-      
-      # Regression for #4272
+
+      # Regression for https://github.com/spree/spree/issues/4272
       context "with no countries present" do
         it "cannot create a new stock location" do
-          spree_get :new
+          get :new
           expect(flash[:error]).to eq(Spree.t(:stock_locations_need_a_default_country))
           expect(response).to redirect_to(spree.admin_stock_locations_path)
         end
       end
 
-      context "with a default country present" do
+      context "with a default country other than the US present" do
+        let(:country) { create :country, iso: "BR" }
+
         before do
-          country = FactoryGirl.create(:country)
-          Spree::Config[:default_country_id] = country.id
+          Spree::Config[:default_country_iso] = country.iso
         end
 
         it "can create a new stock location" do
-          spree_get :new
+          get :new
           expect(response).to be_success
         end
       end
@@ -32,9 +33,9 @@ module Spree
         end
 
         it "can create a new stock location" do
-          spree_get :new
+          get :new
           expect(response).to be_success
-        end 
+        end
       end
     end
   end

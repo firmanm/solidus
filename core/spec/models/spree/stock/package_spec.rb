@@ -2,7 +2,7 @@ require 'spec_helper'
 
 module Spree
   module Stock
-    describe Package, :type => :model do
+    describe Package, type: :model do
       let(:variant) { build(:variant, weight: 25.0) }
       let(:stock_location) { build(:stock_location) }
       let(:order) { build(:order) }
@@ -10,7 +10,7 @@ module Spree
       subject { Package.new(stock_location) }
 
       def build_inventory_unit
-        build(:inventory_unit, variant: variant)
+        build(:inventory_unit, variant: variant, order: order)
       end
 
       it 'calculates the weight of all the contents' do
@@ -47,7 +47,25 @@ module Spree
         expect(item.quantity).to eq 1
       end
 
-      # Contains regression test for #2804
+      it 'builds the correct list of shipping methods based on stock location and categories' do
+        category1 = create(:shipping_category)
+        category2 = create(:shipping_category)
+        method1   = create(:shipping_method, available_to_all: true)
+        method2   = create(:shipping_method, stock_locations: [stock_location])
+        method1.shipping_categories = [category1, category2]
+        method2.shipping_categories = [category1, category2]
+        variant1 = mock_model(Variant, shipping_category_id: category1.id)
+        variant2 = mock_model(Variant, shipping_category_id: category2.id)
+        variant3 = mock_model(Variant, shipping_category_id: nil)
+        contents = [ContentItem.new(build(:inventory_unit, variant: variant1)),
+                    ContentItem.new(build(:inventory_unit, variant: variant1)),
+                    ContentItem.new(build(:inventory_unit, variant: variant2)),
+                    ContentItem.new(build(:inventory_unit, variant: variant3))]
+
+        package = Package.new(stock_location, contents)
+        expect(package.shipping_methods).to match_array([method1, method2])
+      end
+      # Contains regression test for https://github.com/spree/spree/issues/2804
       it 'builds a list of shipping methods common to all categories' do
         category1 = create(:shipping_category)
         category2 = create(:shipping_category)
@@ -55,20 +73,20 @@ module Spree
         method2   = create(:shipping_method)
         method1.shipping_categories = [category1, category2]
         method2.shipping_categories = [category1]
-        variant1 = mock_model(Variant, shipping_category: category1)
-        variant2 = mock_model(Variant, shipping_category: category2)
-        variant3 = mock_model(Variant, shipping_category: nil)
+        variant1 = mock_model(Variant, shipping_category_id: category1.id)
+        variant2 = mock_model(Variant, shipping_category_id: category2.id)
+        variant3 = mock_model(Variant, shipping_category_id: nil)
         contents = [ContentItem.new(build(:inventory_unit, variant: variant1)),
                     ContentItem.new(build(:inventory_unit, variant: variant1)),
                     ContentItem.new(build(:inventory_unit, variant: variant2)),
                     ContentItem.new(build(:inventory_unit, variant: variant3))]
 
         package = Package.new(stock_location, contents)
-        expect(package.shipping_methods).to eq([method1])
+        expect(package.shipping_methods).to match_array([method1])
       end
 
       it 'builds an empty list of shipping methods when no categories' do
-        variant  = mock_model(Variant, shipping_category: nil)
+        variant  = mock_model(Variant, shipping_category_id: nil)
         contents = [ContentItem.new(build(:inventory_unit, variant: variant))]
         package  = Package.new(stock_location, contents)
         expect(package.shipping_methods).to be_empty
@@ -79,9 +97,9 @@ module Spree
         subject.add build_inventory_unit, :backordered
 
         shipping_method = build(:shipping_method)
-        subject.shipping_rates = [ Spree::ShippingRate.new(shipping_method: shipping_method, cost: 10.00, selected: true) ]
 
         shipment = subject.to_shipment
+        shipment.shipping_rates = [Spree::ShippingRate.new(shipping_method: shipping_method, cost: 10.00, selected: true)]
         expect(shipment.stock_location).to eq subject.stock_location
         expect(shipment.inventory_units.size).to eq 3
 
@@ -124,7 +142,6 @@ module Spree
       describe "#remove" do
         let(:unit) { build_inventory_unit }
         context "there is a content item for the inventory unit" do
-
           before { subject.add unit }
 
           it "removes that content item" do
@@ -143,7 +160,6 @@ module Spree
       describe "#order" do
         let(:unit) { build_inventory_unit }
         context "there is an inventory unit" do
-
           before { subject.add unit }
 
           it "returns an order" do

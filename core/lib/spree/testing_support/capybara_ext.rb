@@ -1,13 +1,12 @@
 module CapybaraExt
   def page!
-    save_and_open_page
   end
 
   def click_icon(type)
     find(".fa-#{type}").click
   end
 
-  def eventually_fill_in(field, options={})
+  def eventually_fill_in(field, options = {})
     expect(page).to have_css('#' + field)
     fill_in field, options
   end
@@ -22,16 +21,21 @@ module CapybaraExt
 
   def fill_in_quantity(table_column, selector, quantity)
     within(table_column) do
-      fill_in selector, :with => quantity
+      fill_in selector, with: quantity
     end
   end
 
   def select2_search(value, options)
+    options = {
+      search: value, # by default search for the value
+      select: true
+    }.merge(options)
     label = find_label_by_text(options[:from])
-    within label.first(:xpath,".//..") do
-      options[:from] = "##{find(".select2-container")["id"]}"
+    within label.first(:xpath, ".//..") do
+      options[:from] = "##{find('.select2-container')['id']}"
     end
-    targetted_select2_search(value, options)
+    select2_search_without_selection(options[:search], from: options[:from])
+    select_select2_result(value) if options[:select]
   end
 
   def select2_search_without_selection(value, options)
@@ -57,17 +61,16 @@ module CapybaraExt
   def select2(value, options)
     label = find_label_by_text(options[:from])
 
-    within label.first(:xpath,".//..") do
-      options[:from] = "##{find(".select2-container")["id"]}"
+    within label.first(:xpath, ".//..") do
+      options[:from] = "##{find('.select2-container')['id']}"
     end
     targetted_select2(value, options)
   end
 
-  def select2_no_label value, options={}
-    raise "Must pass a hash containing 'from'" if not options.is_a?(Hash) or not options.has_key?(:from)
+  def select2_no_label(value, options = {})
+    raise "Must pass a hash containing 'from'" if !options.is_a?(Hash) || !options.key?(:from)
 
     placeholder = options[:from]
-    minlength = options[:minlength] || 4
 
     click_link placeholder
 
@@ -83,7 +86,7 @@ module CapybaraExt
   def select_select2_result(value)
     # results are in a div appended to the end of the document
     within_entire_page do
-      page.find("div.select2-result-label", text: %r{#{Regexp.escape(value)}}i, match: :prefer_exact).click
+      page.find("div.select2-result-label", text: /#{Regexp.escape(value)}/i, match: :prefer_exact).click
     end
   end
 
@@ -93,10 +96,17 @@ module CapybaraExt
     # We need to select labels which are not .select2-offscreen, as select2
     # makes a duplicate label with the same text, and we want to be sure to
     # find the original.
-    find('label:not(.select2-offscreen)', text: %r{#{Regexp.escape(text)}}i, match: :one)
+    find('label:not(.select2-offscreen)', text: /#{Regexp.escape(text)}/i, match: :one)
   end
 
   def wait_for_ajax
+
+    Spree::Deprecation.warn <<-WARN.squish, caller
+      wait_for_ajax has been deprecated.
+      Please refer to the capybara documentation on how to properly wait for asyncronous behavior:
+      https://github.com/teamcapybara/capybara#asynchronous-javascript-ajax-and-friends
+    WARN
+
     counter = 0
     while page.evaluate_script("typeof($) === 'undefined' || $.active > 0")
       counter += 1
@@ -104,22 +114,10 @@ module CapybaraExt
       raise "AJAX request took longer than 5 seconds." if counter >= 50
     end
   end
-
-  def accept_alert
-    page.evaluate_script('window.confirm = function() { return true; }')
-    yield
-  end
-
-  def dismiss_alert
-    page.evaluate_script('window.confirm = function() { return false; }')
-    yield
-    # Restore existing default
-    page.evaluate_script('window.confirm = function() { return true; }')
-  end
 end
 
 RSpec::Matchers.define :have_meta do |name, expected|
-  match do |actual|
+  match do |_actual|
     has_css?("meta[name='#{name}'][content='#{expected}']", visible: false)
   end
 
@@ -129,21 +127,6 @@ RSpec::Matchers.define :have_meta do |name, expected|
       "expected that meta #{name} would have content='#{expected}' but was '#{actual[:content]}'"
     else
       "expected that meta #{name} would exist with content='#{expected}'"
-    end
-  end
-end
-
-RSpec::Matchers.define :have_title do |expected|
-  match do |actual|
-    has_css?("title", text: expected, visible: false)
-  end
-
-  failure_message do |actual|
-    actual = first("title")
-    if actual
-      "expected that title would have been '#{expected}' but was '#{actual.text}'"
-    else
-      "expected that title would exist with '#{expected}'"
     end
   end
 end

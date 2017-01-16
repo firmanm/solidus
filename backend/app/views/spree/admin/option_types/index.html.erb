@@ -1,16 +1,14 @@
-<% content_for :page_title do %>
-  <%= Spree.t(:option_types) %>
-<% end %>
+<% admin_breadcrumb(link_to plural_resource_name(Spree::Product), spree.admin_products_path) %>
+<% admin_breadcrumb(plural_resource_name(Spree::OptionType)) %>
+
 
 <% content_for :page_actions do %>
   <% if can?(:create, Spree::OptionType) %>
     <li id="new_ot_link">
-      <%= button_link_to Spree.t(:new_option_type), new_admin_option_type_url, { :remote => true, :icon => 'plus', :id => 'new_option_type_link' } %>
+      <%= button_link_to Spree.t(:new_option_type), new_admin_option_type_url, { :remote => true, :id => 'new_option_type_link' } %>
     </li>
   <% end %>
 <% end %>
-
-<%= render :partial => 'spree/admin/shared/product_sub_menu' %>
 
 <div id="new_option_type"></div>
 
@@ -25,8 +23,8 @@
   <thead>
     <tr data-hook="option_header">
       <th class="no-border"></th>
-      <th><%= Spree.t(:name) %></th>
-      <th><%= Spree.t(:presentation) %></th>
+      <th><%= Spree::OptionType.human_attribute_name(:name) %></th>
+      <th><%= Spree::OptionType.human_attribute_name(:presentation) %></th>
       <th class="actions"></th>
     </tr>
   </thead>
@@ -49,10 +47,9 @@
   </tbody>
 </table>
 <% else %>
-  <div class="alpha twelve columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/option_type')) %>
-    <% if can?(:create, Spree::OptionType) %>
-      <%= link_to Spree.t(:add_one), spree.new_admin_option_type_path %>!
-    <% end %>
+  <div class="col-xs-9 no-objects-found">
+    <%= render 'spree/admin/shared/no_objects_found',
+                 resource: Spree::OptionType,
+                 new_resource_url: new_object_url %>
   </div>
 <% end %>

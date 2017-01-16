@@ -15,15 +15,19 @@ module Spree
   # inventory level determine "on_hand" level for the product.
   class Variant < Spree::Base
     acts_as_paranoid
+    acts_as_list scope: :product
 
+    attr_writer :rebuild_vat_prices
     include Spree::DefaultPrice
 
-    belongs_to :product, touch: true, class_name: 'Spree::Product', inverse_of: :variants
+    belongs_to :product, -> { with_deleted }, touch: true, class_name: 'Spree::Product', inverse_of: :variants
     belongs_to :tax_category, class_name: 'Spree::TaxCategory'
 
     delegate :name, :description, :slug, :available_on, :shipping_category_id,
              :meta_description, :meta_keywords, :shipping_category,
              to: :product
+    delegate :tax_category, to: :product, prefix: true
+    delegate :tax_rates, to: :tax_category
 
     has_many :inventory_units, inverse_of: :variant
     has_many :line_items, inverse_of: :variant
@@ -33,7 +37,7 @@ module Spree
     has_many :stock_locations, through: :stock_items
     has_many :stock_movements, through: :stock_items
 
-    has_many :option_values_variants, dependent: :destroy
+    has_many :option_values_variants
     has_many :option_values, through: :option_values_variants
 
     has_many :images, -> { order(:position) }, as: :viewable, dependent: :destroy, class_name: "Spree::Image"
@@ -41,21 +45,34 @@ module Spree
     has_many :prices,
       class_name: 'Spree::Price',
       dependent: :destroy,
-      inverse_of: :variant
+      inverse_of: :variant,
+      autosave: true
+
+    has_many :currently_valid_prices,
+      -> { currently_valid },
+      class_name: 'Spree::Price',
+      dependent: :destroy,
+      inverse_of: :variant,
+      autosave: true
 
     before_validation :set_cost_currency
+    before_validation :set_price
+    before_validation :build_vat_prices, if: -> { rebuild_vat_prices? || new_record? }
 
     validate :check_price
 
     validates :cost_price, numericality: { greater_than_or_equal_to: 0, allow_nil: true }
     validates :price,      numericality: { greater_than_or_equal_to: 0, allow_nil: true }
-    validates_uniqueness_of :sku, allow_blank: true, conditions: -> { where(deleted_at: nil) }
+    validates_uniqueness_of :sku, allow_blank: true, unless: :deleted_at
 
     after_create :create_stock_items
     after_create :set_position
     after_create :set_master_out_of_stock, unless: :is_master?
 
+    after_save :clear_in_stock_cache
     after_touch :clear_in_stock_cache
+
+    after_real_destroy :destroy_option_values_variants
 
     # Returns variants that are in stock. When stock locations are provided as
     # a parameter, the scope is limited to variants that are in stock in the
@@ -64,6 +81,7 @@ module Spree
     # @param stock_locations [Array<Spree::StockLocation>] the stock locations to check
     # @return [ActiveRecord::Relation]
     def self.in_stock(stock_locations = nil)
+      return all unless Spree::Config.track_inventory_levels
       in_stock_variants = joins(:stock_items).where(Spree::StockItem.arel_table[:count_on_hand].gt(0).or(arel_table[:track_inventory].eq(false)))
       if stock_locations.present?
         in_stock_variants = in_stock_variants.where(spree_stock_items: { stock_location_id: stock_locations.map(&:id) })
@@ -77,19 +95,29 @@ module Spree
     # Returns variants that are not deleted and have a price in the given
     # currency.
     #
+    # @deprecated Please use the .with_prices scope instead
     # @param currency [String] the currency to filter by; defaults to Spree's default
     # @return [ActiveRecord::Relation]
     def self.active(currency = nil)
+      Spree::Deprecation.warn("`Variant.active(currency)` is deprecated. Please use `Variant.with_prices(pricing_options)` instead.", caller)
       joins(:prices).where(deleted_at: nil).where('spree_prices.currency' => currency || Spree::Config[:currency]).where('spree_prices.amount IS NOT NULL')
     end
 
+    # Returns variants that have a price for the given pricing options
+    #
+    # @param pricing_options A Pricing Options object as defined on the price selector class
+    # @return [ActiveRecord::Relation]
+    def self.with_prices(pricing_options = Spree::Config.default_pricing_options)
+      joins(:prices).merge(Spree::Price.currently_valid.where(pricing_options.search_arguments))
+    end
+
     # @return [Spree::TaxCategory] the variant's tax category
+    #
+    # This returns the product's tax category if the tax category ID on the variant is nil. It looks
+    # like an association, but really is an override.
+    #
     def tax_category
-      if self[:tax_category_id].nil?
-        product.tax_category
-      else
-        TaxCategory.find(self[:tax_category_id])
-      end
+      super || product_tax_category
     end
 
     # Sets the cost_price for the variant.
@@ -124,7 +152,7 @@ module Spree
     #
     # @return [String] a sentence-ified string of option values.
     def options_text
-      values = self.option_values.includes(:option_type).sort_by do |option_value|
+      values = option_values.includes(:option_type).sort_by do |option_value|
         option_value.option_type.position
       end
 
@@ -158,14 +186,6 @@ module Spree
       !!deleted_at
     end
 
-    # Override ActiveRecord finder to function even if the product has been
-    # deleted.
-    #
-    # @return [Spree::Product]
-    def product
-      Spree::Product.unscoped { super }
-    end
-
     # Assign given options hash to option values.
     #
     # @param options [Array] array of hashes with a name and value.
@@ -181,22 +201,22 @@ module Spree
     # @param opt_value [String] the value to set to the option
     def set_option_value(opt_name, opt_value)
       # no option values on master
-      return if self.is_master
+      return if is_master
 
       option_type = Spree::OptionType.where(name: opt_name).first_or_initialize do |o|
         o.presentation = opt_name
         o.save!
       end
 
-      current_value = self.option_values.detect { |o| o.option_type.name == opt_name }
+      current_value = option_values.detect { |o| o.option_type.name == opt_name }
 
-      unless current_value.nil?
+      if current_value
         return if current_value.name == opt_value
-        self.option_values.delete(current_value)
+        option_values.delete(current_value)
       else
         # then we have to check to make sure that the product has the option type
-        unless self.product.option_types.include? option_type
-          self.product.option_types << option_type
+        unless product.option_types.include? option_type
+          product.option_types << option_type
         end
       end
 
@@ -205,8 +225,8 @@ module Spree
         o.save!
       end
 
-      self.option_values << option_value
-      self.save
+      option_values << option_value
+      save
     end
 
     # Fetches the option value for the given option name.
@@ -214,60 +234,56 @@ module Spree
     # @param opt_name [String] the name of the option whose value you want
     # @return [String] the option value
     def option_value(opt_name)
-      self.option_values.detect { |o| o.option_type.name == opt_name }.try(:presentation)
+      option_values.detect { |o| o.option_type.name == opt_name }.try(:presentation)
+    end
+
+    # Returns an instance of the globally configured variant price selector class for this variant.
+    # It's cached so we don't create too many objects.
+    #
+    # @return [Spree::Variant::PriceSelector] The default price selector class
+    def price_selector
+      @price_selector ||= Spree::Config.variant_price_selector_class.new(self)
+    end
+
+    # Chooses an appropriate price for the given pricing options
+    #
+    # @see Spree::Variant::PriceSelector#price_for
+    # @param [Spree::Config.pricing_options_class] An instance of pricing options
+    # @return [Spree::Money] The chosen price as a Money object
+    delegate :price_for, to: :price_selector
+
+    # Returns the difference in price from the master variant
+    def price_difference_from_master(pricing_options = Spree::Config.default_pricing_options)
+      master_price = product.master.price_for(pricing_options)
+      variant_price = price_for(pricing_options)
+      return unless master_price && variant_price
+      variant_price - master_price
+    end
+
+    def price_same_as_master?(pricing_options = Spree::Config.default_pricing_options)
+      diff = price_difference_from_master(pricing_options)
+      diff && diff.zero?
     end
 
     # Converts the variant's price to the given currency.
     #
+    # @deprecated Please use #price_for(pricing_options) instead
     # @param currency [String] the desired currency
     # @return [Spree::Price] the price in the desired currency
     def price_in(currency)
-      prices.detect{ |price| price.currency == currency && price.is_default } || Spree::Price.new(variant_id: self.id, currency: currency)
+      prices.currently_valid.find_by(currency: currency)
     end
+    deprecate price_in: :price_for, deprecator: Spree::Deprecation
 
     # Fetches the price amount in the specified currency.
     #
+    # @deprecated Please use #price_for instead and use a money object rathern than a BigDecimal.
     # @param currency (see #price)
     # @return [Float] the amount in the specified currency.
     def amount_in(currency)
       price_in(currency).try(:amount)
     end
-
-    # Calculates the sum of the specified price modifiers in the specified
-    # currency.
-    #
-    # @param currency [String] (see #price)
-    # @param options (see #price_modifier_amount)
-    # @return (see #price_modifier_amount)
-    def price_modifier_amount_in(currency, options = {})
-      return 0 unless options.present?
-
-      options.keys.map { |key|
-        m = "#{key}_price_modifier_amount_in".to_sym
-        if self.respond_to? m
-          self.send(m, currency, options[key])
-        else
-          0
-        end
-      }.sum
-    end
-
-    # Calculates the sum of the specified price modifiers.
-    #
-    # @param options [Hash] for specifying keys, eg: `{keys: ['key_1', 'key_2']}`
-    # @return [Fixnum] the sum
-    def price_modifier_amount(options = {})
-      return 0 unless options.present?
-
-      options.keys.map { |key|
-        m = "#{options[key]}_price_modifier_amount".to_sym
-        if self.respond_to? m
-          self.send(m, options[key])
-        else
-          0
-        end
-      }.sum
-    end
+    deprecate amount_in: :price_for, deprecator: Spree::Deprecation
 
     # Generates a friendly name and sku string.
     #
@@ -292,7 +308,7 @@ module Spree
 
     # @param quantity [Fixnum] how many are desired
     # @return [Boolean] true if the desired quantity can be supplied
-    def can_supply?(quantity=1)
+    def can_supply?(quantity = 1)
       Spree::Stock::Quantifier.new(self).can_supply?(quantity)
     end
 
@@ -309,7 +325,7 @@ module Spree
     #
     # @return [Boolean] true if inventory tracking is enabled
     def should_track_inventory?
-      self.track_inventory? && Spree::Config.track_inventory_levels
+      track_inventory? && Spree::Config.track_inventory_levels
     end
 
     # Image that can be used for the variant.
@@ -329,53 +345,67 @@ module Spree
     #
     # @return [Array<Spree::VariantPropertyRuleValue>] variant_properties
     def variant_properties
-      self.product.variant_property_rules.map do |rule|
+      product.variant_property_rules.map do |rule|
         rule.values if rule.applies_to_variant?(self)
       end.flatten.compact
     end
 
     private
 
-      def set_master_out_of_stock
-        if product.master && product.master.in_stock?
-          product.master.stock_items.update_all(:backorderable => false)
-          product.master.stock_items.each { |item| item.reduce_count_on_hand_to_zero }
-        end
-      end
+    def rebuild_vat_prices?
+      @rebuild_vat_prices != "0" && @rebuild_vat_prices
+    end
 
-      # Ensures a new variant takes the product master price when price is not supplied
-      def check_price
-        if price.nil? && Spree::Config[:require_master_price]
-          raise 'No master variant found to infer price' unless (product && product.master)
-          raise 'Must supply price for variant or master.price for product.' if self == product.master
-          self.price = product.master.price
-        end
-        if currency.nil?
-          self.currency = Spree::Config[:currency]
-        end
+    def set_master_out_of_stock
+      if product.master && product.master.in_stock?
+        product.master.stock_items.update_all(backorderable: false)
+        product.master.stock_items.each(&:reduce_count_on_hand_to_zero)
       end
+    end
 
-      def set_cost_currency
-        self.cost_currency = Spree::Config[:currency] if cost_currency.blank?
+    # Ensures a new variant takes the product master price when price is not supplied
+    def set_price
+      if price.nil? && Spree::Config[:require_master_price] && !is_master?
+        raise 'No master variant found to infer price' unless product && product.master
+        self.price = product.master.price
       end
+    end
 
-      def create_stock_items
-        StockLocation.where(propagate_all_variants: true).each do |stock_location|
-          stock_location.propagate_variant(self)
-        end
+    def check_price
+      if price.nil? && Spree::Config[:require_master_price] && is_master?
+        errors.add :price, 'Must supply price for variant or master.price for product.'
       end
+    end
 
-      def set_position
-        self.update_column(:position, product.variants.maximum(:position).to_i + 1)
-      end
+    def set_cost_currency
+      self.cost_currency = Spree::Config[:currency] if cost_currency.blank?
+    end
 
-      def in_stock_cache_key
-        "variant-#{id}-in_stock"
+    def create_stock_items
+      StockLocation.where(propagate_all_variants: true).each do |stock_location|
+        stock_location.propagate_variant(self)
       end
+    end
 
-      def clear_in_stock_cache
-        Rails.cache.delete(in_stock_cache_key)
-      end
+    def build_vat_prices
+      VatPriceGenerator.new(self).run
+    end
+
+    def set_position
+      update_column(:position, product.variants.maximum(:position).to_i + 1)
+    end
+
+    def in_stock_cache_key
+      "variant-#{id}-in_stock"
+    end
+
+    def clear_in_stock_cache
+      Rails.cache.delete(in_stock_cache_key)
+    end
+
+    def destroy_option_values_variants
+      option_values_variants.destroy_all
+    end
   end
 end
 

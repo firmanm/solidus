@@ -1,120 +1,102 @@
-base_url = null
+Handlebars.registerHelper 'isRootTaxon', ->
+  !@parent_id?
 
-tree_error_handler = (data) ->
-  rollback = data.rlbk
-  (XMLHttpRequest, textStatus, errorThrown) ->
-    $.jstree.rollback(rollback)
-    $("#ajax_error").show().html("<strong>#{server_error}</strong><br />" + taxonomy_tree_error)
-
-handle_move = (e, data) ->
-  position = data.rslt.cp
-  node = data.rslt.o
-  new_parent = data.rslt.np
-
-  url = "#{base_url}/#{node.prop("id")}"
+get_taxonomy = ->
   Spree.ajax
-    type: "PUT",
-    dataType: "json",
-    url: url,
-    data: ({"taxon[parent_id]": new_parent.prop("id"), "taxon[child_index]": position }),
-    error: tree_error_handler(data)
+    url: "#{Spree.routes.taxonomy_path}?set=nested"
 
-  true
-
-handle_create = (e, data) ->
-  node = data.rslt.obj
-  name = data.rslt.name
-  position = data.rslt.position
-  new_parent = data.rslt.parent
-
+create_taxon = ({name, parent_id, child_index}) ->
   Spree.ajax
     type: "POST",
     dataType: "json",
-    url: base_url,
-    data: {
-      "taxon[name]": name,
-      "taxon[parent_id]": new_parent.prop("id"),
-      "taxon[child_index]": position,
-    },
-    error: tree_error_handler(data)
-    success: (data,result) ->
-      node.prop('id', data.id)
+    url: Spree.routes.taxonomy_taxons_path,
+    data:
+      taxon: {name, parent_id, child_index}
+    complete: redraw_tree
 
-handle_rename = (e, data) ->
-  node = data.rslt.obj
-  name = data.rslt.new_name
-
-  url = "#{base_url}/#{node.prop("id")}"
-
+update_taxon = ({id, parent_id, child_index}) ->
   Spree.ajax
-    type: "PUT",
-    dataType: "json",
-    url: url,
-    data: {
-      "taxon[name]": name,
-    },
-    error: tree_error_handler(data)
+    type: "PUT"
+    dataType: "json"
+    url: "#{Spree.routes.taxonomy_taxons_path}/#{id}"
+    data:
+      taxon: {parent_id, child_index}
+    error: redraw_tree
 
-handle_delete = (e, data) ->
-  node = data.rslt.obj
-  delete_url = "#{base_url}/#{node.prop("id")}"
+delete_taxon = ({id}) ->
+  Spree.ajax
+    type: "DELETE"
+    dataType: "json"
+    url: "#{Spree.routes.taxonomy_taxons_path}/#{id}"
+    error: redraw_tree
+
+draw_tree = (taxonomy) ->
+  taxons_template = HandlebarsTemplates["taxons/tree"]
+  $('#taxonomy_tree')
+    .html( taxons_template({ taxons: [taxonomy.root] }) )
+    .find('ul')
+    .sortable
+      connectWith: '#taxonomy_tree ul'
+      placeholder: 'sortable-placeholder ui-state-highlight'
+      tolerance: 'pointer'
+      cursorAt: { left: 5 }
+
+redraw_tree = ->
+  get_taxonomy().done(draw_tree)
+
+resize_placeholder = (ui) ->
+  handleHeight = ui.helper.find('.sortable-handle').outerHeight()
+  ui.placeholder.height(handleHeight)
+
+restore_sort_targets = ->
+  $('.ui-sortable-over').removeClass('ui-sortable-over')
+
+highlight_sort_targets = (ui) ->
+  restore_sort_targets()
+  ui.placeholder.parents('ul').addClass('ui-sortable-over')
+
+handle_move = (el) ->
+  update_taxon
+    id: el.data('taxon-id')
+    parent_id: el.parent().closest('li').data('taxon-id')
+    child_index: el.index()
+
+handle_delete = (e) ->
+  el = $(e.target).closest('li')
   if confirm(Spree.translations.are_you_sure_delete)
-    Spree.ajax
-      type: "DELETE",
-      dataType: "json",
-      url: delete_url,
-      error: tree_error_handler(data)
-  else
-    $.jstree.rollback(data.rlbk)
+    delete_taxon({id: el.data('taxon-id')})
+    el.remove()
 
-@setup_taxonomy_tree = (taxonomy_id) ->
-  if taxonomy_id != undefined
-    # this is defined within admin/taxonomies/edit
-    base_url = Spree.routes.taxonomy_taxons_path
+handle_add_child = (e) ->
+  el = $(e.target).closest('li')
+  parent_id = el.data('taxon-id')
+  name = 'New node'
+  child_index = 0
+  create_taxon({name, parent_id, child_index})
 
-    Spree.ajax
-      url: base_url.replace("/taxons", "/jstree"),
-      success: (taxonomy) ->
-        last_rollback = null
+get_create_handler = (taxonomy_id) ->
+  handle_create = (e) ->
+    e.preventDefault()
+    get_taxonomy().done (taxonomy) ->
+      name = 'New node'
+      parent_id = taxonomy.root.id
+      child_index = 0
+      create_taxon({name, parent_id, child_index})
 
-        conf =
-          json_data:
-            data: taxonomy,
-            ajax:
-              headers: { "X-Spree-Token": Spree.api_key }
-              url: (e) ->
-                "#{base_url}/#{e.prop('id')}/jstree"
-          themes:
-            theme: "apple",
-            url: Spree.routes.jstree_theme_path
-          strings:
-            new_node: new_taxon,
-            loading: Spree.translations.loading + "..."
-          crrm:
-            move:
-              check_move: (m) ->
-                position = m.cp
-                node = m.o
-                new_parent = m.np
+setup_taxonomy_tree = (taxonomy_id) ->
+  redraw_tree()
+  $("#taxonomy_tree").on
+      sortstart: (e, ui) ->
+        resize_placeholder(ui)
+      sortover: (e, ui) ->
+        highlight_sort_targets(ui)
+      sortstop: restore_sort_targets
+      sortupdate: (e, ui) ->
+        handle_move(ui.item) unless ui.sender?
+    .on('click', '.js-taxon-delete', handle_delete)
+    .on('click', '.js-taxon-add-child', handle_add_child)
+  $('.add-taxon-button').on('click', get_create_handler(taxonomy_id))
 
-                # no parent or cant drag and drop
-                if !new_parent || node.prop("rel") == "root"
-                  return false
-
-                # can't drop before root
-                if new_parent.prop("id") == "taxonomy_tree" && position == 0
-                  return false
-
-                true
-          contextmenu:
-            items: (obj) ->
-              taxon_tree_menu(obj, this)
-          plugins: ["themes", "json_data", "dnd", "crrm", "contextmenu"]
-
-        $("#taxonomy_tree").jstree(conf)
-          .bind("move_node.jstree", handle_move)
-          .bind("remove.jstree", handle_delete)
-          .bind("create.jstree", handle_create)
-          .bind("rename.jstree", handle_rename)
-          .bind "loaded.jstree", ->
-            $(this).jstree("core").toggle_node($('.jstree-icon').first())
+$ ->
+  if $('#taxonomy_tree').length
+    setup_taxonomy_tree($('#taxonomy_tree').data("taxonomy-id"))

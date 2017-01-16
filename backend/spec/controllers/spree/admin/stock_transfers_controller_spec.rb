@@ -1,20 +1,20 @@
 require 'spec_helper'
 
 module Spree
-  describe Admin::StockTransfersController, :type => :controller do
+  describe Admin::StockTransfersController, type: :controller do
     stub_authorization!
 
-    let(:warehouse) { StockLocation.create(name: "Warehouse")}
-    let(:ny_store) { StockLocation.create(name: "NY Store")}
-    let(:la_store) { StockLocation.create(name: "LA Store")}
+    let(:warehouse) { StockLocation.create(name: "Warehouse") }
+    let(:ny_store) { StockLocation.create(name: "NY Store") }
+    let(:la_store) { StockLocation.create(name: "LA Store") }
 
     context "#index" do
-
       let!(:stock_transfer1) {
         StockTransfer.create do |transfer|
           transfer.source_location_id = warehouse.id
           transfer.destination_location_id = ny_store.id
-        end }
+        end
+      }
 
       let!(:stock_transfer2) {
         StockTransfer.create do |transfer|
@@ -22,12 +22,13 @@ module Spree
           transfer.destination_location_id = la_store.id
           transfer.finalized_at = DateTime.current
           transfer.closed_at = DateTime.current
-        end }
+        end
+      }
 
       describe "stock location filtering" do
         let(:user) { create(:admin_user) }
         let(:ability) { Spree::Ability.new(user) }
-        let!(:sf_store) { StockLocation.create(name: "SF Store")}
+        let!(:sf_store) { StockLocation.create(name: "SF Store") }
 
         before do
           ability.cannot :manage, Spree::StockLocation
@@ -39,33 +40,33 @@ module Spree
         end
 
         it "doesn't display stock locations the user doesn't have access to" do
-          spree_get :index
+          get :index
           expect(assigns(:stock_locations)).to match_array [warehouse, ny_store, la_store]
         end
       end
 
       it "searches by stock location" do
-        spree_get :index, :q => { :source_location_id_or_destination_location_id_eq => ny_store.id }
+        get :index, params: { q: { source_location_id_or_destination_location_id_eq: ny_store.id } }
         expect(assigns(:stock_transfers).count).to eq 1
         expect(assigns(:stock_transfers)).to include(stock_transfer1)
       end
 
       it "filters the closed stock transfers" do
-        spree_get :index, :q => { :closed_at_null => '1' }
+        get :index, params: { q: { closed_at_null: '1' } }
         expect(assigns(:stock_transfers)).to match_array [stock_transfer1]
       end
 
       it "doesn't filter any stock transfers" do
-        spree_get :index, :q => { :closed_at_null => '0' }
+        get :index, params: { q: { closed_at_null: '0' } }
         expect(assigns(:stock_transfers)).to match_array [stock_transfer1, stock_transfer2]
       end
     end
 
     context "#create" do
-      let(:warehouse) { StockLocation.create(name: "Warehouse", active: false)}
+      let(:warehouse) { StockLocation.create(name: "Warehouse", active: false) }
 
       subject do
-        spree_post :create, stock_transfer: { source_location_id: warehouse.id, description: nil }
+        post :create, params: { stock_transfer: { source_location_id: warehouse.id, description: nil } }
       end
 
       context "user doesn't have read access to the selected stock location" do
@@ -96,6 +97,18 @@ module Spree
           expect(assigns(:stock_transfer).created_by).to eq(user)
         end
       end
+
+      # Regression spec for Solidus issue #1087
+      context "missing source_stock_location parameter" do
+        subject do
+          post :create, params: { stock_transfer: { source_location_id: nil, description: nil } }
+        end
+
+        it "sets a flash error" do
+          subject
+          expect(flash[:error]).to eq assigns(:stock_transfer).errors.full_messages.join(', ')
+        end
+      end
     end
 
     context "#receive" do
@@ -105,7 +118,7 @@ module Spree
       let(:parameters)           { { id: transfer_with_items.to_param } }
 
       subject do
-        spree_get :receive, parameters
+        get :receive, params: parameters
       end
 
       context 'stock transfer is not receivable' do
@@ -158,7 +171,7 @@ module Spree
       end
 
       subject do
-        spree_put :finalize, id: transfer_with_items.to_param
+        put :finalize, params: { id: transfer_with_items.to_param }
       end
 
       context 'stock transfer is not finalizable' do
@@ -216,7 +229,7 @@ module Spree
       end
 
       subject do
-        spree_put :close, id: transfer_with_items.to_param
+        put :close, params: { id: transfer_with_items.to_param }
       end
 
       context 'stock transfer is not receivable' do
@@ -302,11 +315,13 @@ module Spree
       end
     end
 
-    context "#finish" do
-      let(:stock_transfer) { Spree::StockTransfer.create(source_location: warehouse, destination_location: ny_store, created_by: create(:admin_user))}
+    context "#ship" do
+      let(:stock_transfer) { Spree::StockTransfer.create(source_location: warehouse, destination_location: ny_store, created_by: create(:admin_user)) }
       let(:transfer_variant) { create(:variant) }
       let(:warehouse_stock_item) { warehouse.stock_items.find_by(variant: transfer_variant) }
       let(:ny_stock_item) { ny_store.stock_items.find_by(variant: transfer_variant) }
+
+      subject { put :ship, params: { id: stock_transfer.number } }
 
       before do
         warehouse_stock_item.set_count_on_hand(1)
@@ -314,16 +329,15 @@ module Spree
       end
 
       context "with transferable items" do
-
         it "marks the transfer shipped" do
-          spree_put :ship, :id => stock_transfer.number
+          subject
 
           expect(stock_transfer.reload.shipped_at).to_not be_nil
           expect(flash[:success]).to be_present
         end
 
         it "makes stock movements for the transferred items" do
-          spree_put :ship, :id => stock_transfer.number
+          subject
 
           expect(Spree::StockMovement.count).to eq 1
           expect(warehouse_stock_item.reload.count_on_hand).to eq 0
@@ -334,13 +348,13 @@ module Spree
         before { warehouse_stock_item.set_count_on_hand(0) }
 
         it "does not mark the transfer shipped" do
-          spree_put :ship, :id => stock_transfer.number
+          subject
 
           expect(stock_transfer.reload.shipped_at).to be_nil
         end
 
         it "errors and redirects to tracking_info page" do
-          spree_put :ship, :id => stock_transfer.number
+          subject
 
           expect(flash[:error]).to match /not enough inventory/
           expect(response).to redirect_to(spree.tracking_info_admin_stock_transfer_path(stock_transfer))

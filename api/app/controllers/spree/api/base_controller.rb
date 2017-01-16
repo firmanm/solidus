@@ -8,6 +8,7 @@ module Spree
 
       include CanCan::ControllerAdditions
       include Spree::Core::ControllerHelpers::Store
+      include Spree::Core::ControllerHelpers::Pricing
       include Spree::Core::ControllerHelpers::StrongParameters
 
       class_attribute :admin_line_item_attributes
@@ -18,7 +19,7 @@ module Spree
       class_attribute :error_notifier
 
       before_action :load_user
-      before_action :authorize_for_order, if: Proc.new { order_token.present? }
+      before_action :authorize_for_order, if: proc { order_token.present? }
       before_action :authenticate_user
       before_action :load_user_roles
 
@@ -47,9 +48,9 @@ module Spree
       def authenticate_user
         unless @current_api_user
           if requires_authentication? && api_key.blank? && order_token.blank?
-            render "spree/api/errors/must_specify_api_key", :status => 401
+            render "spree/api/errors/must_specify_api_key", status: 401
           elsif order_token.blank? && (requires_authentication? || api_key.present?)
-            render "spree/api/errors/invalid_api_key", :status => 401
+            render "spree/api/errors/invalid_api_key", status: 401
           end
         end
       end
@@ -72,8 +73,7 @@ module Spree
 
         error_notifier.call(exception, self) if error_notifier
 
-        render text: { exception: exception.message }.to_json,
-          status: 422
+        render json: { exception: exception.message }, status: 422
       end
 
       def gateway_error(exception)
@@ -93,15 +93,10 @@ module Spree
         Spree::Ability.new(current_api_user)
       end
 
-      def current_currency
-        Spree::Config[:currency]
-      end
-      helper_method :current_currency
-
       def invalid_resource!(resource)
         Rails.logger.error "invalid_resouce_errors=#{resource.errors.full_messages}"
         @resource = resource
-        render "spree/api/errors/invalid_resource", :status => 422
+        render "spree/api/errors/invalid_resource", status: 422
       end
 
       def api_key
@@ -121,13 +116,13 @@ module Spree
 
       def product_scope
         if can?(:admin, Spree::Product)
-          scope = Product.with_deleted.accessible_by(current_ability, :read).includes(*product_includes)
+          scope = Spree::Product.with_deleted.accessible_by(current_ability, :read).includes(*product_includes)
 
           unless params[:show_deleted]
             scope = scope.not_deleted
           end
         else
-          scope = Product.accessible_by(current_ability, :read).active.includes(*product_includes)
+          scope = Spree::Product.accessible_by(current_ability, :read).available.includes(*product_includes)
         end
 
         scope
@@ -138,7 +133,7 @@ module Spree
       end
 
       def product_includes
-        [ :option_types, :taxons, product_properties: :property, variants: variants_associations, master: variants_associations ]
+        [:option_types, :taxons, product_properties: :property, variants: variants_associations, master: variants_associations]
       end
 
       def order_id
@@ -153,20 +148,29 @@ module Spree
       def lock_order
         OrderMutex.with_lock!(@order) { yield }
       rescue Spree::OrderMutex::LockFailed => e
-        render text: e.message, status: 409
+        render plain: e.message, status: 409
       end
 
       def insufficient_stock_error(exception)
         logger.error "insufficient_stock_error #{exception.inspect}"
         render(
           json: {
-            errors: [I18n.t(:quantity_is_not_available, :scope => "spree.api.order")],
-            type: 'insufficient_stock',
+            errors: [I18n.t(:quantity_is_not_available, scope: "spree.api.order")],
+            type: 'insufficient_stock'
           },
-          status: 422,
+          status: 422
         )
       end
 
+      def paginate(resource)
+        resource.
+          page(params[:page]).
+          per(params[:per_page] || default_per_page)
+      end
+
+      def default_per_page
+        Kaminari.config.default_per_page
+      end
     end
   end
 end

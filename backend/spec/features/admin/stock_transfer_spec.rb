@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe 'Stock Transfers', :type => :feature, :js => true do
+describe 'Stock Transfers', type: :feature, js: true do
   stub_authorization!
 
   let(:admin_user) { create(:admin_user) }
@@ -12,15 +12,15 @@ describe 'Stock Transfers', :type => :feature, :js => true do
 
   describe 'create stock transfer' do
     it 'can create a stock transfer' do
-      source_location = create(:stock_location_with_items, :name => 'NY')
-      destination_location = create(:stock_location, :name => 'SF')
+      create(:stock_location_with_items, name: 'NY')
+      create(:stock_location, name: 'SF')
 
       visit spree.new_admin_stock_transfer_path
       select "SF", from: 'stock_transfer[source_location_id]'
       fill_in 'stock_transfer_description', with: description
       click_button 'Continue'
 
-      expect(page.find('#stock_transfer_description').value).to eq description
+      expect(page).to have_field('stock_transfer_description', with: description)
 
       select "NY", from: 'stock_transfer[destination_location_id]'
       within "form.edit_stock_transfer" do
@@ -28,8 +28,18 @@ describe 'Stock Transfers', :type => :feature, :js => true do
       end
 
       expect(page).to have_content('Stock Transfer has been successfully updated')
-      expect(page).to have_css(:div, '#finalize-stock-transfer-warning')
       expect(page).to have_content("NY")
+    end
+
+    # Regression spec for Solidus issue #1087
+    it 'displays an error if no source location is selected' do
+      create(:stock_location_with_items, name: 'NY')
+      create(:stock_location, name: 'SF')
+      visit spree.new_admin_stock_transfer_path
+      fill_in 'stock_transfer_description', with: description
+      click_button 'Continue'
+
+      expect(page).to have_content("Source location can't be blank")
     end
   end
 
@@ -64,7 +74,7 @@ describe 'Stock Transfers', :type => :feature, :js => true do
       it 'adds tracking number' do
         visit spree.tracking_info_admin_stock_transfer_path(stock_transfer)
 
-        fill_in 'stock_transfer_tracking_number', :with => "12345"
+        fill_in 'stock_transfer_tracking_number', with: "12345"
         click_button 'Save'
 
         expect(page).to have_content('Stock Transfer has been successfully updated')
@@ -75,10 +85,9 @@ describe 'Stock Transfers', :type => :feature, :js => true do
     describe 'with enough stock' do
       it 'ships stock transfer' do
         visit spree.tracking_info_admin_stock_transfer_path(stock_transfer)
-        click_link 'ship'
+        click_on 'Ship'
 
-        find('#confirm-ship-link', visible: false).click
-        expect(current_path).to eq spree.admin_stock_transfers_path
+        expect(page).to have_current_path(spree.admin_stock_transfers_path)
         expect(stock_transfer.reload.shipped_at).to_not be_nil
       end
     end
@@ -93,10 +102,9 @@ describe 'Stock Transfers', :type => :feature, :js => true do
       it 'does not ship stock transfer' do
         visit spree.tracking_info_admin_stock_transfer_path(stock_transfer)
 
-        click_link 'ship'
+        click_on 'Ship'
 
-        find('#confirm-ship-link', visible: false).click
-        expect(current_path).to eq spree.tracking_info_admin_stock_transfer_path(stock_transfer)
+        expect(page).to have_current_path(spree.tracking_info_admin_stock_transfer_path(stock_transfer))
         expect(stock_transfer.reload.shipped_at).to be_nil
       end
     end

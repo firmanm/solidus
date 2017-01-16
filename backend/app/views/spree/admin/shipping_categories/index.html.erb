@@ -1,13 +1,14 @@
-<%= render 'spree/admin/shared/configuration_menu' %>
+<%= render 'spree/admin/shared/shipping_tabs' %>
 
-<% content_for :page_title do %>
-  <%= Spree.t(:shipping_categories) %>
-<% end %>
+<% admin_breadcrumb(Spree.t(:settings)) %>
+<% admin_breadcrumb(Spree.t('admin.tab.shipping')) %>
+<% admin_breadcrumb(plural_resource_name(Spree::ShippingCategory)) %>
+
 
 <% content_for :page_actions do %>
   <% if can?(:create, Spree::ShippingCategory) %>
     <li>
-      <%= button_link_to Spree.t(:new_shipping_category), new_object_url, :icon => 'plus' %>
+      <%= button_link_to Spree.t(:new_shipping_category), new_object_url %>
     </li>
   <% end %>
 <% end %>
@@ -20,7 +21,7 @@
   </colgroup>
   <thead>
     <tr data-hook="categories_header">
-      <th><%= Spree.t(:name) %></th>
+      <th><%= Spree::ShippingCategory.human_attribute_name(:name) %></th>
       <th class="actions"></th>
     </tr>
   </thead>
@@ -42,10 +43,9 @@
   </tbody>
 </table>
 <% else %>
-  <div class="alpha twelve columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/shipping_category')) %>
-    <% if can?(:create, Spree::ShippingCategory) %>
-      <%= link_to Spree.t(:add_one), spree.new_admin_shipping_category_path %>!
-    <% end %>
+  <div class="col-xs-9 no-objects-found">
+    <%= render 'spree/admin/shared/no_objects_found',
+                 resource: Spree::ShippingCategory,
+                 new_resource_url: new_object_url %>
   </div>
 <% end %>

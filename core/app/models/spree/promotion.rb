@@ -7,10 +7,10 @@ module Spree
 
     belongs_to :promotion_category
 
-    has_many :promotion_rules, autosave: true, dependent: :destroy
+    has_many :promotion_rules, autosave: true, dependent: :destroy, inverse_of: :promotion
     alias_method :rules, :promotion_rules
 
-    has_many :promotion_actions, autosave: true, dependent: :destroy
+    has_many :promotion_actions, autosave: true, dependent: :destroy, inverse_of: :promotion
     alias_method :actions, :promotion_actions
 
     has_many :order_promotions, class_name: "Spree::OrderPromotion"
@@ -35,12 +35,12 @@ module Spree
     scope :coupons, -> { where.not(code: nil) }
     scope :advertised, -> { where(advertise: true) }
     scope :active, -> do
-      table = self.arel_table
+      table = arel_table
       time = Time.current
       where(table[:starts_at].eq(nil).or(table[:starts_at].lt(time))).
         where(table[:expires_at].eq(nil).or(table[:expires_at].gt(time)))
     end
-    scope :applied, -> { joins(:order_promotions).uniq }
+    scope :applied, -> { joins(:order_promotions).distinct }
 
     self.whitelisted_ransackable_associations = ['codes']
     self.whitelisted_ransackable_attributes = ['path', 'promotion_category_id']
@@ -58,7 +58,7 @@ module Spree
       raise "Attempted to call code on a Spree::Promotion. Promotions are now tied to multiple code records"
     end
 
-    def code=(val)
+    def code=(_val)
       raise "Attempted to call code= on a Spree::Promotion. Promotions are now tied to multiple code records"
     end
 
@@ -68,18 +68,18 @@ module Spree
       ).first
     end
 
-    def as_json(options={})
+    def as_json(options = {})
       options[:except] ||= :code
       super
-    end
-
-    def expired?
-      !active?
     end
 
     def active?
       (starts_at.nil? || starts_at < Time.current) &&
         (expires_at.nil? || expires_at > Time.current)
+    end
+
+    def inactive?
+      !active?
     end
 
     def activate(order:, line_item: nil, user: nil, path: nil, promotion_code: nil)
@@ -91,7 +91,7 @@ module Spree
         line_item: line_item,
         user: user,
         path: path,
-        promotion_code: promotion_code,
+        promotion_code: promotion_code
       }
 
       # Track results from actions to see if any action has been taken.
@@ -105,18 +105,21 @@ module Spree
 
       if action_taken
         # connect to the order
-        order_promotions.find_or_create_by!(
-          order_id: order.id,
-          promotion_code_id: promotion_code.try!(:id),
+        order.order_promotions.find_or_create_by!(
+          promotion: self,
+          promotion_code: promotion_code,
         )
+        order.promotions.reset
+        order_promotions.reset
+        orders.reset
       end
 
-      return action_taken
+      action_taken
     end
 
     # called anytime order.update! happens
     def eligible?(promotable, promotion_code: nil)
-      return false if expired?
+      return false if inactive?
       return false if usage_limit_exceeded?
       return false if promotion_code && promotion_code.usage_limit_exceeded?
       return false if blacklisted?(promotable)
@@ -176,8 +179,9 @@ module Spree
         count(:order_id)
     end
 
-    # TODO: specs
     def line_item_actionable?(order, line_item, promotion_code: nil)
+      return false if blacklisted?(line_item)
+
       if eligible?(order, promotion_code: promotion_code)
         rules = eligible_rules(order)
         if rules.blank?
@@ -210,6 +214,20 @@ module Spree
       end
     end
 
+    # Removes a promotion and any adjustments or other side effects from an
+    # order.
+    # @param order [Spree::Order] the order to remove the promotion from.
+    # @return [void]
+    def remove_from(order)
+      actions.each do |action|
+        action.remove_from(order)
+      end
+      # note: this destroys the join table entry, not the promotion itself
+      order.promotions.destroy(self)
+      order.order_promotions.reset
+      order_promotions.reset
+    end
+
     private
 
     def blacklisted?(promotable)
@@ -218,7 +236,7 @@ module Spree
         !promotable.product.promotionable?
       when Spree::Order
         promotable.line_items.any? &&
-          promotable.line_items.joins(:product).where(spree_products: {promotionable: false}).any?
+          promotable.line_items.joins(:product).where(spree_products: { promotionable: false }).any?
       end
     end
 

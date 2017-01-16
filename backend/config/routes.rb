@@ -1,7 +1,7 @@
-Spree::Core::Engine.add_routes do
+Spree::Core::Engine.routes.draw do
   namespace :admin do
     get '/search/users', to: "search#users", as: :search_users
-    get '/search/products', :to => "search#products", :as => :search_products
+    get '/search/products', to: "search#products", as: :search_products
 
     resources :dashboards, only: [] do
       collection do
@@ -49,7 +49,8 @@ Spree::Core::Engine.add_routes do
           post :update_positions
         end
       end
-      resources :variants_including_master,   only: [:update]
+      resources :variants_including_master, only: [:update]
+      resources :prices, only: [:destroy, :index, :edit, :update, :new, :create]
     end
     get '/products/:product_slug/stock', to: "stock_items#index", as: :product_stock
 
@@ -69,16 +70,6 @@ Spree::Core::Engine.add_routes do
     end
 
     delete '/product_properties/:id', to: "product_properties#destroy", as: :product_property
-
-    resources :prototypes do
-      member do
-        get :select
-      end
-
-      collection do
-        get :available
-      end
-    end
 
     resources :orders, except: [:show] do
       member do
@@ -116,7 +107,7 @@ Spree::Core::Engine.add_routes do
         resources :refunds, only: [:new, :create, :edit, :update]
       end
 
-      resources :reimbursements, only: [:create, :show, :edit, :update] do
+      resources :reimbursements, only: [:index, :create, :show, :edit, :update] do
         member do
           post :perform
         end
@@ -129,20 +120,13 @@ Spree::Core::Engine.add_routes do
       end
     end
 
-    resource :general_settings do
-      collection do
-        post :clear_cache
-      end
-    end
+    resource :general_settings, only: [:edit, :update]
 
     resources :return_items, only: [:update]
 
     resources :taxonomies do
       collection do
         post :update_positions
-      end
-      member do
-        get :get_children
       end
       resources :taxons
     end
@@ -168,7 +152,7 @@ Spree::Core::Engine.add_routes do
     resources :shipping_methods
     resources :shipping_categories
 
-    resources :stock_transfers, :except => [:destroy] do
+    resources :stock_transfers, except: [:destroy] do
       member do
         get :receive
         put :finalize
@@ -186,11 +170,14 @@ Spree::Core::Engine.add_routes do
       end
     end
 
-    resources :stock_items, :except => [:show, :new, :edit]
+    resources :stock_items, except: [:show, :new, :edit]
     resources :tax_rates
 
-    resources :trackers
-    resources :payment_methods
+    resources :payment_methods do
+      collection do
+        post :update_positions
+      end
+    end
 
     resources :users do
       member do
@@ -208,6 +195,8 @@ Spree::Core::Engine.add_routes do
         end
       end
     end
+
+    resources :style_guide, only: [:index]
   end
 
   get '/admin', to: 'admin/root#index', as: :admin

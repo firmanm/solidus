@@ -1,7 +1,5 @@
 module Spree::Promotion::Actions
   class CreateQuantityAdjustments < CreateItemAdjustments
-    include Spree::CalculatedAdjustments
-
     preference :group_size, :integer, default: 1
 
     has_many :line_item_actions, foreign_key: :action_id, dependent: :destroy
@@ -54,12 +52,17 @@ module Spree::Promotion::Actions
     # adjustment. +adjustment_amount * 3+ or $15.
     #
     def compute_amount(line_item)
-      adjustment_amount = calculator.compute(PartialLineItem.new(line_item)).to_f.abs
+      adjustment_amount = calculator.compute(PartialLineItem.new(line_item))
+      if !adjustment_amount.is_a?(BigDecimal)
+        Spree::Deprecation.warn "#{calculator.class.name}#compute returned #{adjustment_amount.inspect}, it should return a BigDecimal"
+      end
+      adjustment_amount ||= BigDecimal.new(0)
+      adjustment_amount = adjustment_amount.abs
 
       order = line_item.order
       line_items = actionable_line_items(order)
 
-      actioned_line_items = order.line_item_adjustments(true).
+      actioned_line_items = order.line_item_adjustments.reload.
         select { |a| a.source == self && a.amount < 0 }.
         map(&:adjustable)
       other_line_items = actioned_line_items - [line_item]
@@ -71,7 +74,7 @@ module Spree::Promotion::Actions
         line_item.quantity
       ].min
 
-      persist_quantity(usable_quantity,  line_item)
+      persist_quantity(usable_quantity, line_item)
 
       amount = adjustment_amount * usable_quantity
       [line_item.amount, amount].min * -1
@@ -80,7 +83,7 @@ module Spree::Promotion::Actions
     private
 
     def actionable_line_items(order)
-      order.line_items(true).select do |item|
+      order.line_items.select do |item|
         promotion.line_item_actionable? order, item
       end
     end
@@ -119,6 +122,10 @@ module Spree::Promotion::Actions
 
       def amount
         @line_item.price
+      end
+
+      def order
+        @line_item.order
       end
 
       def currency

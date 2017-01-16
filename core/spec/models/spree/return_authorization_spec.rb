@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Spree::ReturnAuthorization, :type => :model do
+describe Spree::ReturnAuthorization, type: :model do
   let(:order) { create(:shipped_order) }
   let(:stock_location) { create(:stock_location) }
   let(:rma_reason) { create(:return_reason) }
@@ -52,13 +52,11 @@ describe Spree::ReturnAuthorization, :type => :model do
       subject                    { create(:return_authorization, order: order, return_items: [exchange_return_item, return_item]) }
 
       before do
-        @expediteted_exchanges_config = Spree::Config[:expedited_exchanges]
         Spree::Config[:expedited_exchanges] = true
         @pre_exchange_hooks = subject.class.pre_expedited_exchange_hooks
       end
 
       after do
-        Spree::Config[:expedited_exchanges] = @expediteted_exchanges_config
         subject.class.pre_expedited_exchange_hooks = @pre_exchange_hooks
       end
 
@@ -66,7 +64,7 @@ describe Spree::ReturnAuthorization, :type => :model do
         subject { create(:return_authorization, order: order) }
 
         it "does not create a reimbursement" do
-          expect{subject.save}.to_not change { Spree::Reimbursement.count }
+          expect{ subject.save }.to_not change { Spree::Reimbursement.count }
         end
       end
 
@@ -104,7 +102,6 @@ describe Spree::ReturnAuthorization, :type => :model do
           end
         end
       end
-
     end
   end
 
@@ -140,19 +137,19 @@ describe Spree::ReturnAuthorization, :type => :model do
   end
 
   describe "#pre_tax_total" do
-    let(:pre_tax_amount_1) { 15.0 }
-    let!(:return_item_1) { create(:return_item, return_authorization: return_authorization, pre_tax_amount: pre_tax_amount_1) }
+    let(:amount_1) { 15.0 }
+    let!(:return_item_1) { create(:return_item, return_authorization: return_authorization, amount: amount_1) }
 
-    let(:pre_tax_amount_2) { 50.0 }
-    let!(:return_item_2) { create(:return_item, return_authorization: return_authorization, pre_tax_amount: pre_tax_amount_2) }
+    let(:amount_2) { 50.0 }
+    let!(:return_item_2) { create(:return_item, return_authorization: return_authorization, amount: amount_2) }
 
-    let(:pre_tax_amount_3) { 5.0 }
-    let!(:return_item_3) { create(:return_item, return_authorization: return_authorization, pre_tax_amount: pre_tax_amount_3) }
+    let(:amount_3) { 5.0 }
+    let!(:return_item_3) { create(:return_item, return_authorization: return_authorization, amount: amount_3) }
 
-    subject { return_authorization.pre_tax_total }
+    subject { return_authorization.reload.pre_tax_total }
 
-    it "sums it's associated return_item's pre-tax amounts" do
-      expect(subject).to eq (pre_tax_amount_1 + pre_tax_amount_2 + pre_tax_amount_3)
+    it "sums it's associated return_item's amounts" do
+      expect(subject).to eq(amount_1 + amount_2 + amount_3)
     end
   end
 
@@ -163,44 +160,28 @@ describe Spree::ReturnAuthorization, :type => :model do
     end
   end
 
-  context "can_receive?" do
-    before do
-      pending "TODO: get this method into our fork"
-    end
-
-    it "should allow_receive when inventory units assigned" do
-      allow(return_authorization).to receive_messages(:inventory_units => [1,2,3])
-      expect(return_authorization.can_receive?).to be true
-    end
-
-    it "should not allow_receive with no inventory units" do
-      allow(return_authorization).to receive_messages(:inventory_units => [])
-      expect(return_authorization.can_receive?).to be false
-    end
-  end
-
   describe "#refundable_amount" do
-    let(:weighted_line_item_pre_tax_amount) { 5.0 }
-    let(:line_item_count)                   { return_authorization.order.line_items.count }
+    let(:line_item_price) { 5.0 }
+    let(:line_item_count) { return_authorization.order.line_items.count }
 
     subject { return_authorization.refundable_amount }
 
     before do
-      return_authorization.order.line_items.update_all(pre_tax_amount: weighted_line_item_pre_tax_amount)
+      return_authorization.order.line_items.update_all(price: line_item_price)
       return_authorization.order.update_attribute(:promo_total, promo_total)
     end
 
     context "no promotions" do
       let(:promo_total) { 0.0 }
       it "returns the pre-tax line item total" do
-        expect(subject).to eq (weighted_line_item_pre_tax_amount * line_item_count)
+        expect(subject).to eq(line_item_price * line_item_count)
       end
     end
 
     context "promotions" do
       let(:promo_total) { -10.0 }
       it "returns the pre-tax line item total minus the order level promotion value" do
-        expect(subject).to eq (weighted_line_item_pre_tax_amount * line_item_count) + promo_total
+        expect(subject).to eq((line_item_price * line_item_count) + promo_total)
       end
     end
   end

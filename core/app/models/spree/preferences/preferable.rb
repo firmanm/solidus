@@ -97,6 +97,7 @@ module Spree::Preferences::Preferable
   private
 
   def convert_preference_value(value, type)
+    return nil if value.nil?
     case type
     when :string, :text
       value.to_s
@@ -110,7 +111,7 @@ module Spree::Preferences::Preferable
       if !value ||
          value == 0 ||
          value =~ /\A(f|false|0)\Z/i ||
-         (value.respond_to? :empty? and value.empty?)
+         (value.respond_to?(:empty?) && value.empty?)
          false
       else
          true

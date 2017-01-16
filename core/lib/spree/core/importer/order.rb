@@ -2,9 +2,9 @@ module Spree
   module Core
     module Importer
       class Order
-
         def self.import(user, params)
-          begin
+          params = params.to_h
+          ActiveRecord::Base.transaction do
             ensure_country_id_from_params params[:ship_address_attributes]
             ensure_state_id_from_params params[:ship_address_attributes]
             ensure_country_id_from_params params[:bill_address_attributes]
@@ -19,7 +19,7 @@ module Spree
             shipments_attrs = params.delete(:shipments_attributes)
 
             create_shipments_from_params(shipments_attrs, order)
-            create_line_items_from_params(params.delete(:line_items_attributes),order)
+            create_line_items_from_params(params.delete(:line_items_attributes), order)
             create_adjustments_from_params(params.delete(:adjustments_attributes), order)
             create_payments_from_params(params.delete(:payments_attributes), order)
 
@@ -45,18 +45,14 @@ module Spree
               end
             end
             order.reload
-          rescue
-            order.destroy if order && order.persisted?
-            raise
           end
         end
 
         def self.create_shipments_from_params(shipments_hash, order)
           return [] unless shipments_hash
 
-          line_items = order.line_items
           shipments_hash.each do |s|
-            shipment = order.shipments.build
+            shipment = Shipment.new
             shipment.tracking       = s[:tracking]
             shipment.stock_location = Spree::StockLocation.find_by_admin_name(s[:stock_location]) || Spree::StockLocation.find_by_name!(s[:stock_location])
 
@@ -64,19 +60,19 @@ module Spree
             inventory_units.each do |iu|
               ensure_variant_id_from_params(iu)
 
-              unit = shipment.inventory_units.build
-              unit.order = order
+              unless line_item = order.line_items.find_by(variant_id: iu[:variant_id])
+                line_item = order.contents.add(Spree::Variant.find(iu[:variant_id]), 1)
+              end
 
               # Spree expects a Inventory Unit to always reference a line
               # item and variant otherwise users might get exceptions when
               # trying to view these units. Note the Importer might not be
               # able to find the line item if line_item.variant_id |= iu.variant_id
-              unit.variant_id = iu[:variant_id]
-              if line_item = order.line_items.find_by(variant_id: iu[:variant_id])
-                unit.line_item = line_item
-              else
-                unit.line_item = order.contents.add(Spree::Variant.find(iu[:variant_id]), 1)
-              end
+              shipment.inventory_units.new(
+                order: order,
+                variant_id: iu[:variant_id],
+                line_item: line_item
+              )
             end
 
             # Mark shipped if it should be.
@@ -88,11 +84,12 @@ module Spree
               end
             end
 
+            order.shipments << shipment
             shipment.save!
 
             shipping_method = Spree::ShippingMethod.find_by_name(s[:shipping_method]) || Spree::ShippingMethod.find_by_admin_name!(s[:shipping_method])
-            rate = shipment.shipping_rates.create!(:shipping_method => shipping_method,
-                                                   :cost => s[:cost])
+            rate = shipment.shipping_rates.create!(shipping_method: shipping_method,
+                                                   cost: s[:cost])
             shipment.selected_shipping_rate_id = rate.id
             shipment.update_amounts
           end
@@ -157,13 +154,13 @@ module Spree
         def self.ensure_variant_id_from_params(hash)
           sku = hash.delete(:sku)
           unless hash[:variant_id].present?
-            hash[:variant_id] = Spree::Variant.active.find_by_sku!(sku).id
+            hash[:variant_id] = Spree::Variant.with_prices.find_by_sku!(sku).id
           end
           hash
         end
 
         def self.ensure_country_id_from_params(address)
-          return if address.nil? or address[:country_id].present? or address[:country].nil?
+          return if address.nil? || address[:country_id].present? || address[:country].nil?
 
           search = {}
           if name = address[:country]['name']
@@ -181,7 +178,7 @@ module Spree
         end
 
         def self.ensure_state_id_from_params(address)
-          return if address.nil? or address[:state_id].present? or address[:state].nil?
+          return if address.nil? || address[:state_id].present? || address[:state].nil?
 
           search = {}
           if name = address[:state]['name']
@@ -199,7 +196,6 @@ module Spree
             address[:state_name] = search[:name] || search[:abbr]
           end
         end
-
       end
     end
   end

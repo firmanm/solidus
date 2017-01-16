@@ -2,7 +2,6 @@ require 'spec_helper'
 
 module Spree
   describe UserAddressBook do
-
     #
     # Using LegacyUser as a subject
     # since it uses the UserAddressBookExtension
@@ -50,7 +49,6 @@ module Spree
           end
 
           context "an odd flip-flop corner case discovered running backfill rake task" do
-
             before do
               user.save_in_address_book(original_default_address.attributes, true)
               user.save_in_address_book(address.attributes, true)
@@ -77,7 +75,7 @@ module Spree
           end
 
           context "and changing another address field at the same time" do
-            let(:updated_address_attributes) { address.attributes.tap {|a| a[:first_name] = "Newbie"} }
+            let(:updated_address_attributes) { address.attributes.tap { |a| a[:first_name] = "Newbie" } }
 
             subject { user.save_in_address_book(updated_address_attributes, true) }
 
@@ -104,7 +102,7 @@ module Spree
         let(:address1) { create(:address) }
         let(:address2) { create(:address, firstname: "Different") }
         let(:updated_attrs) do
-          address2.attributes.tap {|a| a[:firstname] = "Johnny" }
+          address2.attributes.tap { |a| a[:firstname] = "Johnny" }
         end
 
         before do
@@ -220,7 +218,7 @@ module Spree
     context "#remove_from_address_book" do
       let(:address1) { create(:address) }
       let(:address2) { create(:address, firstname: "Different") }
-      let(:remove_id) { address1.id}
+      let(:remove_id) { address1.id }
       subject { user.remove_from_address_book(remove_id) }
 
       before do
@@ -240,11 +238,20 @@ module Spree
       end
 
       it "returns false if the addresses is not there" do
-        expect(user.remove_from_address_book(42)).to be false
+        expect(user.remove_from_address_book(0)).to be false
       end
     end
 
     context "#persist_order_address" do
+      it 'will save the bill/ship_address reference if it can' do
+        order = create :order
+        user.persist_order_address(order)
+
+        expect( user.bill_address_id ).to eq order.bill_address_id
+        expect( user.ship_address_id ).to eq order.ship_address_id
+        expect( user.bill_address_id ).not_to eq user.ship_address_id
+      end
+
       context "when automatic_default_address preference is at a default of true" do
         before do
           Spree::Config.automatic_default_address = true
@@ -261,8 +268,8 @@ module Spree
       context "when automatic_default_address preference is false" do
         before do
           Spree::Config.automatic_default_address = false
-          expect(user).to receive(:save_in_address_book).with(kind_of(Hash),false).twice
-            #and not the optional 2nd argument
+          expect(user).to receive(:save_in_address_book).with(kind_of(Hash), false).twice
+          # and not the optional 2nd argument
         end
 
         it "does not set the default: true flag" do
@@ -307,11 +314,11 @@ module Spree
           user.persist_order_address(order)
         end
 
-          it "does not call save_in_address_book on bill address" do
-          order = build(:order)
-          order.bill_address = nil
+        it "does not call save_in_address_book on bill address" do
+        order = build(:order)
+        order.bill_address = nil
 
-          user.persist_order_address(order)
+        user.persist_order_address(order)
         end
       end
     end
@@ -327,6 +334,23 @@ module Spree
 
     it "is also available as default_address" do
       expect(subject.default_address).to eq ship_address
+    end
+  end
+
+  describe "ship_address=" do
+    let!(:user) { create(:user) }
+    let!(:address) { create(:address) }
+
+    # https://github.com/solidusio/solidus/issues/1241
+    it "resets the association and persists" do
+      # Load (which will cache) the has_one association
+      expect(user.ship_address).to be_nil
+
+      user.update!(ship_address: address)
+      expect(user.ship_address).to eq(address)
+
+      user.reload
+      expect(user.ship_address).to eq(address)
     end
   end
 end

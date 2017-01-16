@@ -3,37 +3,27 @@
 require 'spec_helper'
 
 module Spree
-  describe ProductsHelper, :type => :helper do
+  describe ProductsHelper, type: :helper do
     include ProductsHelper
 
-    let(:product) { create(:product) }
+    let(:product) { create(:product, price: product_price) }
+    let(:product_price) { 10 }
+    let(:variant) { create(:variant, product: product, price: variant_price) }
     let(:currency) { 'USD' }
+    let(:pricing_options) do
+      Spree::Config.pricing_options_class.new(currency: currency)
+    end
 
     before do
-      allow(helper).to receive(:current_currency) { currency }
+      allow(helper).to receive(:current_pricing_options) { pricing_options }
     end
 
     context "#variant_price_diff" do
-      let(:product_price) { 10 }
       let(:variant_price) { 10 }
 
-      before do
-        @variant = create(:variant, :product => product)
-        product.price = 15
-        @variant.price = 10
-        allow(product).to receive(:amount_in) { product_price }
-        allow(@variant).to receive(:amount_in) { variant_price }
-      end
-
-      subject { helper.variant_price(@variant) }
+      subject { helper.variant_price(variant) }
 
       context "when variant is same as master" do
-        it { is_expected.to be_nil }
-      end
-
-      context "when the master has no price" do
-        let(:product_price) { nil }
-
         it { is_expected.to be_nil }
       end
 
@@ -42,7 +32,7 @@ module Spree
           let(:variant_price) { 15 }
 
           it { is_expected.to eq("(Add: $5.00)") }
-          # Regression test for #2737
+          # Regression test for https://github.com/spree/spree/issues/2737
           it { is_expected.to be_html_safe }
         end
 
@@ -57,6 +47,11 @@ module Spree
         let(:variant_price) { 100 }
         let(:product_price) { 100 }
         let(:currency) { 'JPY' }
+
+        before do
+          variant
+          product.prices.update_all(currency: currency)
+        end
 
         context "when variant is more than master" do
           let(:variant_price) { 150 }
@@ -73,55 +68,53 @@ module Spree
     end
 
     context "#variant_price_full" do
+      let!(:variant_2) { create(:variant, product: product, price: variant_2_price) }
+      let(:variant_2_price) { 20 }
+      let(:variant_price) { 15 }
+
       before do
         Spree::Config[:show_variant_full_price] = true
-        @variant1 = create(:variant, :product => product)
-        @variant2 = create(:variant, :product => product)
+        variant
       end
 
       context "when currency is default" do
         it "should return the variant price if the price is different than master" do
-          product.price = 10
-          @variant1.price = 15
-          @variant2.price = 20
-          expect(helper.variant_price(@variant1)).to eq("$15.00")
-          expect(helper.variant_price(@variant2)).to eq("$20.00")
+          expect(helper.variant_price(variant)).to eq("$15.00")
+          expect(helper.variant_price(variant_2)).to eq("$20.00")
         end
       end
 
       context "when currency is JPY" do
         let(:currency) { 'JPY' }
+        let(:product_price) { 100 }
+        let(:variant_price) { 150 }
 
         before do
-          product.variants.active.each do |variant|
-            variant.prices.each do |price|
-              price.currency = currency
-              price.save!
-            end
-          end
+          variant
+          product.prices.update_all(currency: currency)
         end
 
         it "should return the variant price if the price is different than master" do
-          product.price = 100
-          @variant1.price = 150
-          expect(helper.variant_price(@variant1)).to eq("&#x00A5;150")
+          expect(helper.variant_price(variant)).to eq("&#x00A5;150")
         end
       end
 
-      it "should be nil when all variant prices are equal" do
-        product.price = 10
-        @variant1.default_price.update_column(:amount, 10)
-        @variant2.default_price.update_column(:amount, 10)
-        expect(helper.variant_price(@variant1)).to be_nil
-        expect(helper.variant_price(@variant2)).to be_nil
+      context "when all variant prices are equal" do
+        let(:product_price) { 10 }
+        let(:variant_price) { 10 }
+        let(:variant_2_price) { 10 }
+
+        it "should be nil" do
+          expect(helper.variant_price(variant)).to be_nil
+          expect(helper.variant_price(variant_2)).to be_nil
+        end
       end
     end
 
-
     context "#product_description" do
-      # Regression test for #1607
+      # Regression test for https://github.com/spree/spree/issues/1607
       it "renders a product description without excessive paragraph breaks" do
-        product.description = %Q{
+        product.description = %{
 <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus a ligula leo. Proin eu arcu at ipsum dapibus ullamcorper. Pellentesque egestas orci nec magna condimentum luctus. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Ut ac ante et mauris bibendum ultricies non sed massa. Fusce facilisis dui eget lacus scelerisque eget aliquam urna ultricies. Duis et rhoncus quam. Praesent tellus nisi, ultrices sed iaculis quis, euismod interdum ipsum.</p>
 <ul>
 <li>Lorem ipsum dolor sit amet</li>
@@ -133,17 +126,17 @@ module Spree
       end
 
       it "renders a product description with automatic paragraph breaks" do
-        product.description = %Q{
+        product.description = %{
 THIS IS THE BEST PRODUCT EVER!
 
 "IT CHANGED MY LIFE" - Sue, MD}
 
         description = product_description(product)
-        expect(description.strip).to eq(%Q{<p>\nTHIS IS THE BEST PRODUCT EVER!</p>"IT CHANGED MY LIFE" - Sue, MD})
+        expect(description.strip).to eq(%{<p>\nTHIS IS THE BEST PRODUCT EVER!</p>"IT CHANGED MY LIFE" - Sue, MD})
       end
 
       it "renders a product description without any formatting based on configuration" do
-        initialDescription = %Q{
+        description = %{
             <p>hello world</p>
 
             <p>tihs is completely awesome and it works</p>
@@ -151,13 +144,12 @@ THIS IS THE BEST PRODUCT EVER!
             <p>why so many spaces in the code. and why some more formatting afterwards?</p>
         }
 
-        product.description = initialDescription
+        product.description = description
 
         Spree::Config[:show_raw_product_description] = true
         description = product_description(product)
-        expect(description).to eq(initialDescription)
+        expect(description).to eq(description)
       end
-
     end
 
     context '#line_item_description_text' do
@@ -180,7 +172,7 @@ THIS IS THE BEST PRODUCT EVER!
       subject { helper.cache_key_for_products }
       before(:each) do
         @products = double('products collection')
-        allow(helper).to receive(:params) { {:page => 10} }
+        allow(helper).to receive(:params) { { page: 10 } }
       end
 
       context 'when there is a maximum updated date' do
@@ -196,7 +188,7 @@ THIS IS THE BEST PRODUCT EVER!
       context 'when there is no considered maximum updated date' do
         let(:today) { Date.new(2013, 12, 11) }
         before :each do
-          allow(@products).to receive(:count) { 1234567 }
+          allow(@products).to receive(:count) { 1_234_567 }
           allow(@products).to receive(:maximum).with(:updated_at) { nil }
           allow(Date).to receive(:today) { today }
         end

@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module Spree
-  describe StockLocation, :type => :model do
+  describe StockLocation, type: :model do
     subject { create(:stock_location_with_items, backorderable_default: true) }
     let(:stock_item) { subject.stock_items.order(:id).first }
     let(:variant) { stock_item.variant }
@@ -88,7 +88,7 @@ module Spree
     end
 
     it 'returns nil when stock_item is not found for variant' do
-      stock_item = subject.stock_item(100)
+      stock_item = subject.stock_item(0)
       expect(stock_item).to be_nil
     end
 
@@ -137,14 +137,14 @@ module Spree
     end
 
     it 'can be deactivated' do
-      create(:stock_location, :active => true)
-      create(:stock_location, :active => false)
+      create(:stock_location, active: true)
+      create(:stock_location, active: false)
       expect(Spree::StockLocation.active.count).to eq 1
     end
 
     it 'ensures only one stock location is default at a time' do
-      first = create(:stock_location, :active => true, :default => true)
-      second = create(:stock_location, :active => true, :default => true)
+      first = create(:stock_location, active: true, default: true)
+      second = create(:stock_location, active: true, default: true)
 
       expect(first.reload.default).to eq false
       expect(second.reload.default).to eq true
@@ -170,10 +170,7 @@ module Spree
       end
 
       it 'zero on_hand with all backordered' do
-        zero_stock_item = mock_model(StockItem,
-                                     count_on_hand: 0,
-                                     backorderable?: true)
-        expect(subject).to receive(:stock_item).with(variant).and_return(zero_stock_item)
+        stock_item.set_count_on_hand(0)
 
         on_hand, backordered = subject.fill_status(variant, 20)
         expect(on_hand).to eq 0
@@ -182,12 +179,11 @@ module Spree
 
       context 'when backordering is not allowed' do
         before do
-          @stock_item = mock_model(StockItem, backorderable?: false)
-          expect(subject).to receive(:stock_item).with(variant).and_return(@stock_item)
+          stock_item.update!(backorderable: false)
         end
 
         it 'all on_hand' do
-          allow(@stock_item).to receive_messages(count_on_hand: 10)
+          stock_item.set_count_on_hand(10)
 
           on_hand, backordered = subject.fill_status(variant, 5)
           expect(on_hand).to eq 5
@@ -195,7 +191,7 @@ module Spree
         end
 
         it 'some on_hand' do
-          allow(@stock_item).to receive_messages(count_on_hand: 10)
+          stock_item.set_count_on_hand(10)
 
           on_hand, backordered = subject.fill_status(variant, 20)
           expect(on_hand).to eq 10
@@ -203,7 +199,7 @@ module Spree
         end
 
         it 'zero on_hand' do
-          allow(@stock_item).to receive_messages(count_on_hand: 0)
+          stock_item.set_count_on_hand(0)
 
           on_hand, backordered = subject.fill_status(variant, 20)
           expect(on_hand).to eq 0
@@ -244,7 +240,6 @@ module Spree
       end
     end
 
-
     describe "#move" do
       let!(:variant) { create(:variant) }
       def move
@@ -272,7 +267,6 @@ module Spree
             }.not_to change { subject.stock_items.count }
           end
         end
-
       end
     end
   end

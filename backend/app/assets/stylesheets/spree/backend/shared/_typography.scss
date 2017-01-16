@@ -27,6 +27,9 @@ a {
   text-decoration: none;
   line-height: inherit;
 
+  &:active, &:hover {
+    text-decoration: none;
+  }
   &:visited {
     color: $color-link-visited;
   }
@@ -62,6 +65,8 @@ h6 { font-size: $h6-size; line-height: $h1-size }
 //--------------------------------------------------------------
 ul {
   &.inline-menu {
+    margin: 0;
+
     li {
       display: inline-block;
     }
@@ -76,7 +81,8 @@ ul {
 ul.text_list {
   border-top: none;
   margin: 0;
-  list-style: disc inside none;
+  list-style-type: none;
+  padding-left: 0;
 }
 
 dl {
@@ -96,7 +102,6 @@ dl {
     width: 40%;
     font-weight: $font-weight-bold;
     padding-left: 0;
-    text-transform: uppercase;
     font-size: 85%;
     clear: left;
   }
@@ -130,7 +135,6 @@ dl {
 .no-objects-found {
   text-align: center;
   font-size: 120%;
-  text-transform: uppercase;
   padding: 40px 0px;
   color: lighten($color-body-text, 15);
 }

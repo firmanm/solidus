@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Spree::CustomerReturn, :type => :model do
+describe Spree::CustomerReturn, type: :model do
   before do
     allow_any_instance_of(Spree::Order).to receive_messages(return!: true)
   end
@@ -33,7 +33,6 @@ describe Spree::CustomerReturn, :type => :model do
           subject
           expect(customer_return.errors.full_messages).to include(Spree.t(:return_items_cannot_be_associated_with_multiple_orders))
         end
-
       end
 
       context "return items are part of the same order" do
@@ -73,52 +72,60 @@ describe Spree::CustomerReturn, :type => :model do
   end
 
   describe "#total" do
-    let(:pre_tax_amount)  { 15.0 }
-    let(:tax_amount)  { 5.0 }
+    let(:amount) { 15.0 }
+    let(:tax_amount) { 5.0 }
     let(:customer_return) { create(:customer_return, line_items_count: 2) }
 
     before do
-      Spree::ReturnItem.where(customer_return_id: customer_return.id).update_all(pre_tax_amount: pre_tax_amount, additional_tax_total: tax_amount)
+      Spree::ReturnItem.where(customer_return_id: customer_return.id).update_all(amount: amount, additional_tax_total: tax_amount)
       customer_return.reload
     end
 
     subject { customer_return.total }
 
     it "returns the sum of the return item's total amount" do
-      expect(subject).to eq ((pre_tax_amount * 2) + (tax_amount * 2))
+      expect(subject).to eq((amount * 2) + (tax_amount * 2))
     end
   end
 
   describe "#display_total" do
-    let(:customer_return) { Spree::CustomerReturn.new }
+    let(:customer_return) { stub_model(Spree::CustomerReturn, total: 21.22, currency: "GBP") }
 
     it "returns a Spree::Money" do
-      allow(customer_return).to receive_messages(total: 21.22)
-      expect(customer_return.display_total).to eq(Spree::Money.new(21.22))
+      expect(customer_return.display_total).to eq(Spree::Money.new(21.22, currency: "GBP"))
     end
   end
 
-  describe "#pre_tax_total" do
-    let(:pre_tax_amount)  { 15.0 }
+  describe "#currency" do
+    let(:order) { stub_model(Spree::Order, currency: "GBP") }
+    let(:customer_return) { stub_model(Spree::CustomerReturn, order: order) }
+
+    it 'returns the order currency' do
+      expect(Spree::Config.currency).to eq("USD")
+      expect(customer_return.currency).to eq("GBP")
+    end
+  end
+
+  describe "#amount" do
+    let(:amount) { 15.0 }
     let(:customer_return) { create(:customer_return, line_items_count: 2) }
 
     before do
-      Spree::ReturnItem.where(customer_return_id: customer_return.id).update_all(pre_tax_amount: pre_tax_amount)
+      Spree::ReturnItem.where(customer_return_id: customer_return.id).update_all(amount: amount)
     end
 
-    subject { customer_return.pre_tax_total }
+    subject { customer_return.amount }
 
-    it "returns the sum of the return item's pre_tax_amount" do
-      expect(subject).to eq (pre_tax_amount * 2)
+    it "returns the sum of the return item's amount" do
+      expect(subject).to eq(amount * 2)
     end
   end
 
-  describe "#display_pre_tax_total" do
-    let(:customer_return) { Spree::CustomerReturn.new }
+  describe "#display_amount" do
+    let(:customer_return) { stub_model(Spree::CustomerReturn, amount: 21.22, currency: "RUB") }
 
     it "returns a Spree::Money" do
-      allow(customer_return).to receive_messages(pre_tax_total: 21.22)
-      expect(customer_return.display_pre_tax_total).to eq(Spree::Money.new(21.22))
+      expect(customer_return.display_amount).to eq(Spree::Money.new(21.22, currency: "RUB"))
     end
   end
 
@@ -159,7 +166,6 @@ describe Spree::CustomerReturn, :type => :model do
     let(:return_item)     { build(:return_item, inventory_unit: inventory_unit) }
 
     context "to the initial stock location" do
-
       it "should mark the received inventory units are returned" do
         create(:customer_return_without_return_items, return_items: [return_item], stock_location_id: inventory_unit.shipment.stock_location_id)
         return_item.receive!
@@ -189,7 +195,7 @@ describe Spree::CustomerReturn, :type => :model do
     end
 
     context "to a different stock location" do
-      let(:new_stock_location) { create(:stock_location, :name => "other") }
+      let(:new_stock_location) { create(:stock_location, name: "other") }
 
       it "should update the stock item counts in new stock location" do
         expect {
@@ -213,7 +219,6 @@ describe Spree::CustomerReturn, :type => :model do
     end
 
     context "it was not received" do
-
       before do
         return_item.update_attributes!(reception_status: "lost_in_transit")
       end
@@ -243,7 +248,6 @@ describe Spree::CustomerReturn, :type => :model do
     end
 
     context 'when all return items are decided' do
-
       context 'when all return items are rejected' do
         before { customer_return.return_items.each(&:reject!) }
 

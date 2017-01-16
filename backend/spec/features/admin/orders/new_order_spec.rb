@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe "New Order", :type => :feature do
+describe "New Order", type: :feature do
   let!(:product) { create(:product_in_stock) }
   let!(:state) { create(:state) }
   let!(:store) { create(:store) }
@@ -28,8 +28,8 @@ describe "New Order", :type => :feature do
 
     fill_in_quantity("table.stock-levels", "quantity_0", 2)
 
-    click_icon :plus
-    click_on "Customer Details"
+    click_button 'Add'
+    click_on "Customer"
 
     within "#select-customer" do
       targetted_select2_search user.email, from: "#s2id_customer_search"
@@ -53,11 +53,40 @@ describe "New Order", :type => :feature do
     click_icon "capture"
 
     click_on "Shipments"
-    click_on "ship"
+    click_on "Ship"
 
     within '.carton-state' do
-      expect(page).to have_content('SHIPPED')
+      expect(page).to have_content('shipped')
     end
+  end
+
+  it 'can create split payments', js: true do
+    click_on 'Cart'
+    select2_search product.name, from: Spree.t(:name_or_sku)
+
+    fill_in_quantity("table.stock-levels", "quantity_0", 2)
+
+    click_button 'Add'
+    click_on "Customer"
+
+    within "#select-customer" do
+      targetted_select2_search user.email, from: "#s2id_customer_search"
+    end
+
+    check "order_use_billing"
+    fill_in_address
+    click_on "Update"
+
+    click_on "Payments"
+    fill_in "Amount", with: '10.00'
+    click_on 'Update'
+
+    click_on 'New Payment'
+    fill_in "Amount", with: '29.98'
+    click_on 'Update'
+
+    expect(page).to have_content("$10.00")
+    expect(page).to have_content("$29.98")
   end
 
   context "adding new item to the order", js: true do
@@ -67,13 +96,13 @@ describe "New Order", :type => :feature do
 
       fill_in_quantity('table.stock-levels', 'quantity_0', 2)
 
-      click_icon :plus
+      click_button 'Add'
 
       within(".line-items") do
         expect(page).to have_content(product.name)
       end
 
-      click_on "Customer Details"
+      click_on "Customer"
 
       within "#select-customer" do
         targetted_select2_search user.email, from: "#s2id_customer_search"
@@ -91,7 +120,7 @@ describe "New Order", :type => :feature do
     end
   end
 
-  # Regression test for #3958
+  # Regression test for https://github.com/spree/spree/issues/3958
   context "without a delivery step", js: true do
     before do
       allow(Spree::Order).to receive_messages checkout_step_names: [:address, :payment, :confirm, :complete]
@@ -103,7 +132,7 @@ describe "New Order", :type => :feature do
 
       fill_in_quantity('table.stock-levels', 'quantity_0', 1)
 
-      click_icon :plus
+      click_button 'Add'
 
       within(".line-items") do
         within(".line-item-name") do
@@ -119,10 +148,10 @@ describe "New Order", :type => :feature do
     end
   end
 
-  # Regression test for #3336
+  # Regression test for https://github.com/spree/spree/issues/3336
   context "start by customer address" do
     it "completes order fine", js: true do
-      click_on "Customer Details"
+      click_on "Customer"
 
       within "#select-customer" do
         targetted_select2_search user.email, from: "#s2id_customer_search"
@@ -144,12 +173,12 @@ describe "New Order", :type => :feature do
       click_on "Continue"
 
       within(".additional-info .state") do
-        expect(page).to have_content("CONFIRM")
+        expect(page).to have_content("confirm")
       end
     end
   end
 
-  # Regression test for #5327
+  # Regression test for https://github.com/spree/spree/issues/5327
   context "customer with default credit card", js: true do
     before do
       create(:credit_card, default: true, user: user)
@@ -161,14 +190,26 @@ describe "New Order", :type => :feature do
         find('.variant_quantity').set(1)
       end
 
-      click_icon :plus
+      click_button 'Add'
 
       expect(page).to have_css('.line-item')
 
-      click_link "Customer Details"
+      click_link "Customer"
       targetted_select2 user.email, from: "#s2id_customer_search"
       click_button "Update"
       expect(Spree::Order.last.state).to eq 'delivery'
+    end
+  end
+
+  context "customer with attempted XSS", js: true do
+    let(:xss_string) { %(<script>throw("XSS")</script>) }
+    before do
+      user.update!(email: xss_string)
+    end
+    it "displays the user's email escaped without executing" do
+      click_on "Customer"
+      targetted_select2_search user.email, from: "#s2id_customer_search"
+      expect(page).to have_field("Customer E-Mail", with: xss_string)
     end
   end
 

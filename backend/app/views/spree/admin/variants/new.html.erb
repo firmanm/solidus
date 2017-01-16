@@ -1,8 +1,13 @@
+<%= render :partial => 'spree/admin/shared/product_tabs', :locals => { :current => 'Variants' } %>
 <%= render :partial => 'spree/shared/error_messages', :locals => { :target => @variant } %>
+
+<% admin_breadcrumb(link_to plural_resource_name(Spree::Variant), admin_product_variants_path(@product)) %>
+<% admin_breadcrumb(Spree.t(:new_variant)) %>
+
 
 <%= form_for [:admin, @product, @variant] do |f| %>
   <fieldset data-hook="admin_variant_new_form">
-    <legend align="center"><%= Spree.t(:new_variant) %></legend>
+    <legend><%= t('.new_variant') %></legend>
     <%= render :partial => 'form', :locals => { :f => f } %>
     <%= render :partial => 'spree/admin/shared/new_resource_links' %>
   </fieldset>

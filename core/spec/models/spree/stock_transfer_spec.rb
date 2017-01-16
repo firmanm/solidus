@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module Spree
-  describe StockTransfer, :type => :model do
+  describe StockTransfer, type: :model do
     let(:destination_location) { create(:stock_location_with_items) }
     let(:source_location) { create(:stock_location_with_items) }
     let(:stock_item) { source_location.stock_items.order(:id).first }
@@ -249,6 +249,26 @@ module Spree
       end
     end
 
+    describe '#ship' do
+      let(:stock_transfer) { create(:stock_transfer, tracking_number: "ABC123") }
+
+      context "tracking number is provided" do
+        subject { stock_transfer.ship(tracking_number: "XYZ123") }
+
+        it "updates the tracking number" do
+          expect { subject }.to change { stock_transfer.tracking_number }.from("ABC123").to("XYZ123")
+        end
+      end
+
+      context "tracking number is not provided" do
+        subject { stock_transfer.ship }
+
+        it "preserves the existing tracking number" do
+          expect { subject }.to_not change { stock_transfer.tracking_number }.from("ABC123")
+        end
+      end
+    end
+
     describe '#transfer' do
       let(:stock_transfer) { create(:stock_transfer_with_items) }
 
@@ -259,7 +279,6 @@ module Spree
       subject { stock_transfer.transfer }
 
       context 'with enough stock' do
-
         it 'creates stock movements for transfer items' do
           expect{ subject }.to change{ Spree::StockMovement.count }.by(stock_transfer.transfer_items.count)
         end
@@ -283,7 +302,6 @@ module Spree
         it 'returns false' do
           expect(subject).to eq false
         end
-
       end
     end
   end

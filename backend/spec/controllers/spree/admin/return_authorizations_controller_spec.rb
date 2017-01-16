@@ -1,9 +1,9 @@
 require 'spec_helper'
 
-describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
+describe Spree::Admin::ReturnAuthorizationsController, type: :controller do
   stub_authorization!
 
-  # Regression test for #1370 #3
+  # Regression test for https://github.com/spree/spree/issues/1370 #3
   let!(:order) { create(:shipped_order, line_items_count: 3) }
   let!(:return_reason) { create(:return_reason) }
   let(:inventory_unit_1) { order.inventory_units.order('id asc')[0] }
@@ -19,7 +19,7 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
       let(:return_authorization) { return_item.return_authorization }
 
       it "loads all the active rma reasons" do
-        spree_get :edit, id: return_authorization.to_param, order_id: return_authorization.order.to_param
+        get :edit, params: { id: return_authorization.to_param, order_id: return_authorization.order.to_param }
         expect(assigns(:reasons)).to include(return_reason)
         expect(assigns(:reasons)).to include(inactive_rma_reason)
         expect(assigns(:reasons)).not_to include(other_inactive_rma_reason)
@@ -30,14 +30,14 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
       let(:return_authorization) { create(:return_authorization, reason: return_reason) }
 
       it "loads all the active rma reasons" do
-        spree_get :edit, id: return_authorization.to_param, order_id: return_authorization.order.to_param
+        get :edit, params: { id: return_authorization.to_param, order_id: return_authorization.order.to_param }
         expect(assigns(:reasons)).to eq [return_reason]
       end
     end
 
     context "return authorization doesn't have an associated reason" do
       it "loads all the active rma reasons" do
-        spree_get :new, order_id: order.to_param
+        get :new, params: { order_id: order.to_param }
         expect(assigns(:reasons)).to eq [return_reason]
       end
     end
@@ -68,16 +68,16 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
     end
 
     context '#new' do
-      subject { spree_get :new, order_id: order.to_param }
+      subject { get :new, params: { order_id: order.to_param } }
 
       include_context 'without existing return items'
     end
 
     context '#edit' do
       subject do
-        spree_get :edit, {
+        get :edit, params: {
           id: return_authorization.to_param,
-          order_id: order.to_param,
+          order_id: order.to_param
         }
       end
 
@@ -89,9 +89,9 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
 
     context '#create failed' do
       subject do
-        spree_post :create, {
-          return_authorization: {stock_location_id: nil}, # return authorization requires valid stock location, so this will fail
-          order_id: order.to_param,
+        post :create, params: {
+          return_authorization: { stock_location_id: nil }, # return authorization requires valid stock location, so this will fail
+          order_id: order.to_param
         }
       end
 
@@ -100,10 +100,10 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
 
     context '#update failed' do
       subject do
-        spree_put :update, {
-          return_authorization: {stock_location_id: nil}, # return authorization requires valid stock location, so this will fail
+        put :update, params: {
+          return_authorization: { stock_location_id: nil }, # return authorization requires valid stock location, so this will fail
           id: return_authorization.to_param,
-          order_id: order.to_param,
+          order_id: order.to_param
         }
       end
 
@@ -121,7 +121,7 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
     let!(:second_active_reimbursement_type) { create(:reimbursement_type) }
 
     before do
-      spree_get :new, order_id: order.to_param
+      get :new, params: { order_id: order.to_param }
     end
 
     it "loads all the active reimbursement types" do
@@ -136,7 +136,7 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
     let!(:inactive_stock_location) { create(:stock_location, active: false) }
 
     before do
-      spree_get :new, order_id: order.to_param
+      get :new, params: { order_id: order.to_param }
     end
 
     it "loads all the active stock locations" do
@@ -148,12 +148,12 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
   context '#create' do
     let(:stock_location) { create(:stock_location) }
 
-    subject { spree_post :create, params }
+    subject { post :create, params: params }
 
     let(:params) do
       {
         order_id: order.to_param,
-        return_authorization: return_authorization_params,
+        return_authorization: return_authorization_params
       }
     end
 
@@ -161,7 +161,7 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
       {
         memo: "",
         stock_location_id: stock_location.id,
-        return_reason_id: return_reason.id,
+        return_reason_id: return_reason.id
       }
     end
 
@@ -178,22 +178,22 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
       {
         id: return_authorization.to_param,
         order_id: order.to_param,
-        return_authorization: return_authorization_params,
+        return_authorization: return_authorization_params
       }
     end
     let(:return_authorization_params) do
       {
         memo: "",
-        return_items_attributes: return_items_params,
+        return_items_attributes: return_items_params
       }
     end
 
-    subject { spree_put :update, params }
+    subject { put :update, params: params }
 
     context "adding an item" do
       let(:return_items_params) do
         {
-          '0' => {inventory_unit_id: inventory_unit_1.to_param}
+          '0' => { inventory_unit_id: inventory_unit_1.to_param }
         }
       end
 
@@ -208,7 +208,7 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
           create(:return_item, {
             return_authorization: return_authorization,
             inventory_unit: inventory_unit_1,
-            reception_status: 'received',
+            reception_status: 'received'
           })
         end
 
@@ -226,7 +226,7 @@ describe Spree::Admin::ReturnAuthorizationsController, :type => :controller do
 
       let(:return_items_params) do
         {
-          '0' => {id: return_item.to_param, _destroy: '1'}
+          '0' => { id: return_item.to_param, _destroy: '1' }
         }
       end
 

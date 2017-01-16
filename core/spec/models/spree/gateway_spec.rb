@@ -1,14 +1,18 @@
 require 'spec_helper'
 
-describe Spree::Gateway, :type => :model do
+describe Spree::Gateway, type: :model do
   class Provider
     def initialize(options)
     end
 
     def authorize; 'authorize'; end
+
     def purchase; 'purchase'; end
+
     def capture; 'capture'; end
+
     def void; 'void'; end
+
     def credit; 'credit'; end
   end
 
@@ -43,8 +47,9 @@ describe Spree::Gateway, :type => :model do
   end
 
   context "fetching payment sources" do
+    let(:store) { create :store }
     let(:user) { create :user }
-    let(:order) { Spree::Order.create(user: user, completed_at: completed_at) }
+    let(:order) { Spree::Order.create(user: user, completed_at: completed_at, store: store) }
 
     let(:payment_method) { create(:credit_card_payment_method) }
 
@@ -98,7 +103,7 @@ describe Spree::Gateway, :type => :model do
     let(:payment_method){ create(:credit_card_payment_method, preference_source: 'test_preference_source') }
 
     it "reads static preferences" do
-      expect(payment_method.options).to eq({:server=>"bar"})
+      expect(payment_method.options).to eq({ server: "bar" })
     end
   end
 end

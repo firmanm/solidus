@@ -13,6 +13,7 @@ describe Spree::Core::ControllerHelpers::Order, type: :controller do
 
   before do
     allow(controller).to receive_messages(current_store: store)
+    allow(controller).to receive_messages(current_pricing_options: Spree::Config.pricing_options_class.new(currency: Spree::Config.currency))
     allow(controller).to receive_messages(try_spree_current_user: user)
   end
 
@@ -65,22 +66,27 @@ describe Spree::Core::ControllerHelpers::Order, type: :controller do
   end
 
   describe '#set_current_order' do
-    let(:incomplete_order) { create(:order, user: user) }
+    let(:incomplete_order) { create(:order, store: incomplete_order_store, user: user) }
 
     context 'when current order not equal to users incomplete orders' do
       before { allow(controller).to receive_messages(current_order: order, last_incomplete_order: incomplete_order, cookies: double(signed: { guest_token: 'guest_token' })) }
 
-      it 'calls Spree::Order#merge! method' do
-        expect(order).to receive(:merge!).with(incomplete_order, user)
-        controller.set_current_order
-      end
-    end
-  end
+      context "an order from another store" do
+        let(:incomplete_order_store) { create(:store) }
 
-  describe '#current_currency' do
-    it 'returns current currency' do
-      Spree::Config[:currency] = 'USD'
-      expect(controller.current_currency).to eq 'USD'
+        it 'doesnt call Spree::Order#merge! method' do
+          expect(order).to_not receive(:merge!)
+          controller.set_current_order
+        end
+      end
+      context "an order from the same store" do
+        let(:incomplete_order_store) { store }
+
+        it 'calls Spree::Order#merge! method' do
+          expect(order).to receive(:merge!).with(incomplete_order, user)
+          controller.set_current_order
+        end
+      end
     end
   end
 

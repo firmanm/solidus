@@ -8,7 +8,6 @@ describe Spree::OrderShipping do
   end
 
   shared_examples 'shipment shipping' do
-
     it "marks the inventory units as shipped" do
       expect { subject }.to change { order.inventory_units.reload.map(&:state) }.from(['on_hand']).to(['shipped'])
     end
@@ -31,7 +30,7 @@ describe Spree::OrderShipping do
 
     it "updates shipment.shipped_at" do
       Timecop.freeze do |now|
-        expect { subject }.to change { shipment.shipped_at }.from(nil).to(now)
+        expect { subject }.to change { shipment.shipped_at }.from(nil).to be_within(1.second).of(now)
       end
     end
 
@@ -41,9 +40,8 @@ describe Spree::OrderShipping do
         Timecop.freeze(future) do
           subject
         end
-      end.to change { order.updated_at }.from(order.updated_at).to(future)
+      end.to change { order.updated_at }.to be_within(1.second).of(future)
     end
-
   end
 
   describe "#ship" do
@@ -52,14 +50,14 @@ describe Spree::OrderShipping do
         inventory_units: inventory_units,
         stock_location: stock_location,
         address: address,
-        shipping_method: shipping_method,
+        shipping_method: shipping_method
       )
     end
 
     let(:shipment) { order.shipments.to_a.first }
     let(:inventory_units) { shipment.inventory_units }
     let(:stock_location) { shipment.stock_location }
-    let(:address) { shipment.address }
+    let(:address) { order.ship_address }
     let(:shipping_method) { shipment.shipping_method }
 
     it_behaves_like 'shipment shipping'
@@ -71,7 +69,7 @@ describe Spree::OrderShipping do
           stock_location: stock_location,
           address: address,
           shipping_method: shipping_method,
-          external_number: 'some-external-number',
+          external_number: 'some-external-number'
         )
       end
 
@@ -87,7 +85,7 @@ describe Spree::OrderShipping do
           stock_location: stock_location,
           address: address,
           shipping_method: shipping_method,
-          tracking_number: 'tracking-number',
+          tracking_number: 'tracking-number'
         )
       end
 
@@ -103,7 +101,7 @@ describe Spree::OrderShipping do
           stock_location: stock_location,
           address: address,
           shipping_method: shipping_method,
-          suppress_mailer: true,
+          suppress_mailer: true
         )
       end
 
@@ -148,7 +146,7 @@ describe Spree::OrderShipping do
       subject do
         order.shipping.ship_shipment(
           shipment,
-          external_number: 'some-external-number',
+          external_number: 'some-external-number'
         )
       end
 
@@ -161,7 +159,7 @@ describe Spree::OrderShipping do
       subject do
         order.shipping.ship_shipment(
           shipment,
-          tracking_number: 'tracking-number',
+          tracking_number: 'tracking-number'
         )
       end
 
@@ -192,8 +190,8 @@ describe Spree::OrderShipping do
         order.shipping.ship(
           inventory_units: shipped_inventory,
           stock_location: shipment.stock_location,
-          address: shipment.address,
-          shipping_method: shipment.shipping_method,
+          address: order.ship_address,
+          shipping_method: shipment.shipping_method
         )
       end
 
@@ -211,7 +209,7 @@ describe Spree::OrderShipping do
       subject do
         order.shipping.ship_shipment(
           shipment,
-          suppress_mailer: true,
+          suppress_mailer: true
         )
       end
 
@@ -225,8 +223,7 @@ describe Spree::OrderShipping do
       let(:shipment) do
         FactoryGirl.create(
           :shipment,
-          order: order,
-          address: FactoryGirl.create(:address)
+          order: order
         )
       end
 

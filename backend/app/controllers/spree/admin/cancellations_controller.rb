@@ -1,7 +1,7 @@
 module Spree
   module Admin
     class CancellationsController < Spree::Admin::BaseController
-      before_filter :load_order, :only => [:index, :short_ship]
+      before_action :load_order, only: [:index, :short_ship]
 
       def index
         @inventory_units = @order.inventory_units.cancelable
@@ -32,7 +32,7 @@ module Spree
       end
 
       def load_order
-        @order = Order.find_by_number!(params[:order_id])
+        @order = Spree::Order.find_by_number!(params[:order_id])
         authorize! action, @order
       end
 

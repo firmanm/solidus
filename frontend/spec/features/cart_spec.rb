@@ -1,13 +1,15 @@
 require 'spec_helper'
 
 describe "Cart", type: :feature, inaccessible: true do
+  before { create(:store) }
+
   it "shows cart icon on non-cart pages" do
     visit spree.root_path
-    expect(page).to have_selector("li#link-to-cart a", :visible => true)
+    expect(page).to have_selector("li#link-to-cart a", visible: true)
   end
 
-  it "prevents double clicking the remove button on cart", :js => true do
-    @product = create(:product, :name => "RoR Mug")
+  it "prevents double clicking the remove button on cart", js: true do
+    @product = create(:product, name: "RoR Mug")
 
     visit spree.root_path
     click_link "RoR Mug"
@@ -21,7 +23,7 @@ describe "Cart", type: :feature, inaccessible: true do
     expect(page).to have_selector('button#update-button[disabled]')
   end
 
-  # Regression test for #2006
+  # Regression test for https://github.com/spree/spree/issues/2006
   it "does not error out with a 404 when GET'ing to /orders/populate" do
     visit '/orders/populate'
     within(".error") do
@@ -29,8 +31,8 @@ describe "Cart", type: :feature, inaccessible: true do
     end
   end
 
-  it 'allows you to remove an item from the cart', :js => true do
-    create(:product, :name => "RoR Mug")
+  it 'allows you to remove an item from the cart', js: true do
+    create(:product, name: "RoR Mug")
     visit spree.root_path
     click_link "RoR Mug"
     click_button "add-to-cart-button"
@@ -45,7 +47,7 @@ describe "Cart", type: :feature, inaccessible: true do
   end
 
   it 'allows you to empty the cart', js: true do
-    create(:product, :name => "RoR Mug")
+    create(:product, name: "RoR Mug")
     visit spree.root_path
     click_link "RoR Mug"
     click_button "add-to-cart-button"
@@ -59,7 +61,7 @@ describe "Cart", type: :feature, inaccessible: true do
     end
   end
 
-  # regression for #2276
+  # regression for https://github.com/spree/spree/issues/2276
   context "product contains variants but no option values" do
     let(:variant) { create(:variant) }
     let(:product) { variant.product }

@@ -30,6 +30,7 @@
     .select2-search-choice-close {
       @extend .fa;
       @extend .fa-times;
+      display: none;
       margin-top: 2px;
       font-size: 100% !important;
       background-image: none !important;
@@ -111,7 +112,8 @@
 }
 
 .select2-results {
-  padding-left: 0 !important;
+  margin: 4px 0;
+  padding: 0 4px;
 
   li {
     font-size: 85% !important;
@@ -123,7 +125,7 @@
 
     &.select2-highlighted {
       .select2-result-label {
-        &, h6 {
+        &, .media-heading, .media-content, .customer-email {
           color: $color-1 !important;
         }
       }
@@ -134,6 +136,14 @@
       min-height: 22px;
       clear: both;
       overflow: auto;
+
+      .variant-autocomplete-item {
+        .media-content {
+          dd {
+            margin: 0;
+          }
+        }
+      }
     }
 
     &.select2-no-results, &.select2-searching {
@@ -142,7 +152,6 @@
       color: $color-body-text;
       text-align: center;
       font-weight: $font-weight-bold;
-      text-transform: uppercase;
     }
   }
 

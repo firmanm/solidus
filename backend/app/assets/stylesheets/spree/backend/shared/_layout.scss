@@ -1,99 +1,64 @@
-// Basics
-//---------------------------------------------------
-* {
-  -webkit-box-sizing: border-box;
-     -moz-box-sizing: border-box;
-          box-sizing: border-box;
+html {
+  height: 100%;
 }
 
-// Helpers
-.block-table {
-  display: table;
-  width: 100%;
+body {
+  position: relative;
+  min-height: 100%;
 
-  .table-cell {
-    display: table-cell;
-    vertical-align: middle;
-    padding: 0 10px;
-
-    &:first-child {
-      padding-left: 0;
-    }
-    &:last-child {
-      padding-right: 0;
-    }
+  &.new-layout {
+    padding-left: $width-sidebar;
   }
 }
 
-.hidden {
-  display: none;
+.admin-nav {
+  @include position(absolute, 0 null 0 0);
+  width: $width-sidebar;
+  img {
+    max-width: 100%;
+  }
+  @media print { display: none }
 }
 
-// For block grids
-.frameless {
-  margin-left: -10px;
-  margin-right: -10px;
-}
+.content-wrapper {
+  body:not(.new-layout) & {
+    margin-left: $width-sidebar;
+    @media print { margin-left: 0 }
+  }
 
-.container .column,
-.container .columns {
-  // Float container right instead of left.
-  .right {
-    float: right;
+  body.new-layout & {
+    @include padding(1rem $grid-gutter-width null);
+  }
+
+  &.centered {
+    @include margin(null auto);
+    max-width: map-get($container-max-widths, "xl");
   }
 }
 
-// Header
-//---------------------------------------------------
-#header {
-  background-color: $color-1;
-  padding: 5px 0;
+.content {
+  @include make-row();
 }
 
-#logo { height: 40px }
+.content-main {
+  @include make-col();
+  @include make-col-span(12);
+  overflow-x: hidden; // makes sure that the tabs are able to resize
 
-[data-hook="admin-title"] { font-size: 14px }
-
-.page-title {
-  i {
-    color: $color-2;
+  .has-sidebar & {
+    @include make-col-span(9);
   }
 }
 
-// Content
-//---------------------------------------------------
+.content-sidebar {
+  @include make-col();
+  @include make-col-span(3);
+}
+
 #content {
   background-color: $color-1;
   position: relative;
   z-index: 0;
   padding: 0;
   margin-top: 15px;
-}
-
-#content-header {
-  padding: 15px 0;
-  background-color: very-light($color-3, 4);
-  border-bottom: 1px solid $color-border;
-
-  .page-title {
-    font-size: 20px;
-
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-  .page-actions {
-    text-align: right;
-    line-height: 38px;
-    form {
-      display: inline-block;
-    }
-  }
-}
-
-// Footer
-//---------------------------------------------------
-#footer {
-  margin-top: 15px;
-  border-top: 1px solid $color-border;
-  padding: 10px 0;
 }

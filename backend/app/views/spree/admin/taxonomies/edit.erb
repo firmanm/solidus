@@ -1,39 +1,30 @@
-<%= render :partial => 'spree/admin/shared/configuration_menu' %>
+<% admin_breadcrumb(link_to plural_resource_name(Spree::Product), spree.admin_products_path) %>
+<% admin_breadcrumb(link_to plural_resource_name(Spree::Taxonomy), spree.admin_taxonomies_path) %>
+<% admin_breadcrumb(@taxonomy.name) %>
 
-<%= render :partial => 'js_head' %>
-
-<% content_for :page_title do %>
-  <%= Spree.t(:taxonomy_edit) %>
-<% end %>
 
 <% content_for :page_actions do %>
   <li>
-    <%= button_link_to Spree.t(:back_to_taxonomies_list), spree.admin_taxonomies_path, :icon => 'arrow-left' %>
+    <%= button_link_to Spree.t(:add_taxon), spree.admin_taxonomies_path, { class: 'add-taxon-button' } %>
   </li>
 <% end %>
-
-<div id="ajax_error" class="errorExplanation" style="display:none;"></div>
 
 <%= form_for [:admin, @taxonomy] do |f| %>
   <fieldset class="no-border-top">
     <%= render :partial => 'form', :locals => { :f => f } %>
     <div class="filter-actions actions">
-      <%= button Spree.t('actions.update'), 'refresh' %>
-      <span class="or"><%= Spree.t(:or) %></span>
-      <%= button_link_to Spree.t('actions.cancel'), admin_taxonomies_path, :icon => 'remove' %>
+      <%= button Spree.t('actions.update') %>
+      <%= button_link_to Spree.t('actions.cancel'), admin_taxonomies_path %>
     </div>
   </fieldset>
 
 
   <div>
-    <%= label_tag nil, Spree.t(:tree) %><br />
     <script>
+      Spree.routes.taxonomy_path = "<%= spree.api_taxonomy_path(@taxonomy) %>";
       Spree.routes.taxonomy_taxons_path = "<%= spree.api_taxonomy_taxons_path(@taxonomy) %>";
       Spree.routes.admin_taxonomy_taxons_path = "<%= spree.admin_taxonomy_taxons_path(@taxonomy) %>";
-      Spree.routes.jstree_theme_path = "<%= stylesheet_path("jquery.jstree/themes/apple/style.css") %>";
     </script>
-    <div id="taxonomy_tree" class="tree"></div>
-
-    <div class="info"><%= Spree.t(:taxonomy_tree_instruction) %></div>
+    <div id="taxonomy_tree" class="tree" data-taxonomy-id="<%= @taxonomy.id %>"></div>
   </div>
 <% end %>

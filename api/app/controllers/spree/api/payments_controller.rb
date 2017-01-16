@@ -1,18 +1,17 @@
 module Spree
   module Api
     class PaymentsController < Spree::Api::BaseController
-
-      before_filter :find_order
-      around_filter :lock_order, only: [:create, :update, :destroy, :authorize, :capture, :purchase, :void, :credit]
-      before_filter :find_payment, only: [:update, :show, :authorize, :purchase, :capture, :void, :credit]
+      before_action :find_order
+      around_action :lock_order, only: [:create, :update, :destroy, :authorize, :capture, :purchase, :void, :credit]
+      before_action :find_payment, only: [:update, :show, :authorize, :purchase, :capture, :void, :credit]
 
       def index
-        @payments = @order.payments.ransack(params[:q]).result.page(params[:page]).per(params[:per_page])
+        @payments = paginate(@order.payments.ransack(params[:q]).result)
         respond_with(@payments)
       end
 
       def new
-        @payment_methods = Spree::PaymentMethod.available
+        @payment_methods = Spree::PaymentMethod.available_to_users.available_to_admin
         respond_with(@payment_method)
       end
 
@@ -58,24 +57,24 @@ module Spree
 
       private
 
-        def find_order
-          @order = Spree::Order.find_by(number: order_id)
-          authorize! :read, @order, order_token
-        end
+      def find_order
+        @order = Spree::Order.find_by(number: order_id)
+        authorize! :read, @order, order_token
+      end
 
-        def find_payment
-          @payment = @order.payments.find(params[:id])
-        end
+      def find_payment
+        @payment = @order.payments.find(params[:id])
+      end
 
-        def perform_payment_action(action, *args)
-          authorize! action, Payment
-          @payment.send("#{action}!", *args)
-          respond_with(@payment, default_template: :show)
-        end
+      def perform_payment_action(action, *args)
+        authorize! action, Payment
+        @payment.send("#{action}!", *args)
+        respond_with(@payment, default_template: :show)
+      end
 
-        def payment_params
-          params.require(:payment).permit(permitted_payment_attributes)
-        end
+      def payment_params
+        params.require(:payment).permit(permitted_payment_attributes)
+      end
     end
   end
 end

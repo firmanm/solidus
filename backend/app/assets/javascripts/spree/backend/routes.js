@@ -1,6 +1,5 @@
 Spree.routes.checkouts_api = Spree.pathFor('api/checkouts')
 Spree.routes.classifications_api = Spree.pathFor('api/classifications')
-Spree.routes.clear_cache = Spree.pathFor('admin/general_settings/clear_cache')
 Spree.routes.option_value_search = Spree.pathFor('api/option_values')
 Spree.routes.option_type_search = Spree.pathFor('api/option_types')
 Spree.routes.orders_api = Spree.pathFor('api/orders')
@@ -13,6 +12,7 @@ Spree.routes.taxon_products_api = Spree.pathFor('api/taxons/products')
 Spree.routes.taxons_search = Spree.pathFor('api/taxons')
 Spree.routes.user_search = Spree.pathFor('admin/search/users')
 Spree.routes.variants_api = Spree.pathFor('api/variants')
+Spree.routes.users_api = Spree.pathFor('api/users')
 
 Spree.routes.line_items_api = function(order_id) {
   return Spree.pathFor('api/orders/' + order_id + '/line_items')

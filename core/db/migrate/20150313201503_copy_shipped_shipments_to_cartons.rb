@@ -1,4 +1,4 @@
-class CopyShippedShipmentsToCartons < ActiveRecord::Migration
+class CopyShippedShipmentsToCartons < ActiveRecord::Migration[4.2]
   # Prevent everything from running in one giant transaction in postrgres.
   disable_ddl_transaction!
 
@@ -9,5 +9,4 @@ class CopyShippedShipmentsToCartons < ActiveRecord::Migration
   def down
     Rake::Task["spree:migrations:copy_shipped_shipments_to_cartons:down"].invoke
   end
-
 end

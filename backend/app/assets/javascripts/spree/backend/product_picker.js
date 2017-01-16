@@ -5,6 +5,10 @@ $.fn.productAutocomplete = function (options) {
   options = options || {}
   var multiple = typeof(options['multiple']) !== 'undefined' ? options['multiple'] : true
 
+  function formatProduct(product) {
+    return Select2.util.escapeMarkup(product.name);
+  }
+
   this.select2({
     minimumInputLength: 3,
     multiple: multiple,
@@ -24,9 +28,9 @@ $.fn.productAutocomplete = function (options) {
         return {
           q: {
             name_cont: term,
-            sku_cont: term
+            variants_including_master_sku_start: term,
+            m: 'or'
           },
-          m: 'OR',
           token: Spree.api_key,
           page: page
         };
@@ -39,12 +43,8 @@ $.fn.productAutocomplete = function (options) {
         };
       }
     },
-    formatResult: function (product) {
-      return product.name;
-    },
-    formatSelection: function (product) {
-      return product.name;
-    }
+    formatResult: formatProduct,
+    formatSelection: formatProduct
   });
 };
 

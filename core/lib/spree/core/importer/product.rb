@@ -7,8 +7,8 @@ module Spree
         def initialize(product, product_params, options = {})
           @product = product || Spree::Product.new(product_params)
 
-          @product_attrs = product_params
-          @variants_attrs = options[:variants_attrs] || []
+          @product_attrs = product_params.to_h
+          @variants_attrs = (options[:variants_attrs] || []).map(&:to_h)
           @options_attrs = options[:options_attrs] || []
         end
 
@@ -44,18 +44,19 @@ module Spree
         end
 
         private
-          def set_up_options
-            options_attrs.each do |name|
-              option_type = Spree::OptionType.where(name: name).first_or_initialize do |option_type|
-                option_type.presentation = name
-                option_type.save!
-              end
 
-              unless product.option_types.include?(option_type)
-                product.option_types << option_type
-              end
+        def set_up_options
+          options_attrs.each do |name|
+            option_type = Spree::OptionType.where(name: name).first_or_initialize do |ot|
+              ot.presentation = name
+              ot.save!
+            end
+
+            unless product.option_types.include?(option_type)
+              product.option_types << option_type
             end
           end
+        end
       end
     end
   end

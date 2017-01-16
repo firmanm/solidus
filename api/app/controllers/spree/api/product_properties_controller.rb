@@ -1,14 +1,18 @@
 module Spree
   module Api
     class ProductPropertiesController < Spree::Api::BaseController
-
       before_action :find_product
       before_action :product_property, only: [:show, :update, :destroy]
 
       def index
-        @product_properties = @product.product_properties.accessible_by(current_ability, :read).
-                              ransack(params[:q]).result.
-                              page(params[:page]).per(params[:per_page])
+        @product_properties = @product.
+          product_properties.
+          accessible_by(current_ability, :read).
+          ransack(params[:q]).
+          result
+
+        @product_properties = paginate(@product_properties)
+
         respond_with(@product_properties)
       end
 
@@ -51,22 +55,22 @@ module Spree
 
       private
 
-        def find_product
-          @product = super(params[:product_id])
-          authorize! :read, @product
-        end
+      def find_product
+        @product = super(params[:product_id])
+        authorize! :read, @product
+      end
 
-        def product_property
-          if @product
-            @product_property ||= @product.product_properties.find_by(id: params[:id])
-            @product_property ||= @product.product_properties.includes(:property).where(spree_properties: { name: params[:id] }).first
-            authorize! :read, @product_property
-          end
+      def product_property
+        if @product
+          @product_property ||= @product.product_properties.find_by(id: params[:id])
+          @product_property ||= @product.product_properties.includes(:property).where(spree_properties: { name: params[:id] }).first
+          authorize! :read, @product_property
         end
+      end
 
-        def product_property_params
-          params.require(:product_property).permit(permitted_product_properties_attributes)
-        end
+      def product_property_params
+        params.require(:product_property).permit(permitted_product_properties_attributes)
+      end
     end
   end
 end

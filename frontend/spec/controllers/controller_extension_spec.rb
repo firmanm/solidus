@@ -6,7 +6,7 @@ require 'spec_helper'
 class Spree::CustomController < Spree::BaseController
   def index
     respond_with(Spree::Address.new) do |format|
-      format.html { render :text => "neutral" }
+      format.html { render plain: "neutral" }
     end
   end
 
@@ -18,7 +18,7 @@ class Spree::CustomController < Spree::BaseController
   end
 end
 
-describe Spree::CustomController, :type => :controller do
+describe Spree::CustomController, type: :controller do
   after do
     Spree::CustomController.clear_overrides!
   end
@@ -37,21 +37,21 @@ describe Spree::CustomController, :type => :controller do
       context "specify symbol for handler instead of Proc" do
         before do
           Spree::CustomController.class_eval do
-            respond_override({:index => {:html => {:success => :success_method}}})
+            respond_override({ index: { html: { success: :success_method } } })
 
             private
 
             def success_method
-              render :text => 'success!!!'
+              render plain: 'success!!!'
             end
           end
         end
 
         describe "GET" do
           it "has value success" do
-            spree_get :index
+            get :index
             expect(response).to be_success
-            assert (response.body =~ /success!!!/)
+            expect(response.body).to match(/success!!!/)
           end
         end
       end
@@ -59,16 +59,16 @@ describe Spree::CustomController, :type => :controller do
       context "render" do
         before do
           Spree::CustomController.instance_eval do
-            respond_override({:index => {:html => {:success => lambda { render(:text => 'success!!!') }}}})
-            respond_override({:index => {:html => {:failure => lambda { render(:text => 'failure!!!') }}}})
+            respond_override({ index: { html: { success: lambda { render(plain: 'success!!!') } } } })
+            respond_override({ index: { html: { failure: lambda { render(plain: 'failure!!!') } } } })
           end
         end
 
         describe "GET" do
           it "has value success" do
-            spree_get :index
+            get :index
             expect(response).to be_success
-            assert (response.body =~ /success!!!/)
+            expect(response.body).to match(/success!!!/)
           end
         end
       end
@@ -76,14 +76,14 @@ describe Spree::CustomController, :type => :controller do
       context "redirect" do
         before do
           Spree::CustomController.instance_eval do
-            respond_override({:index => {:html => {:success => lambda { redirect_to('/cart') }}}})
-            respond_override({:index => {:html => {:failure => lambda { render(:text => 'failure!!!') }}}})
+            respond_override({ index: { html: { success: lambda { redirect_to('/cart') } } } })
+            respond_override({ index: { html: { failure: lambda { render(plain: 'failure!!!') } } } })
           end
         end
 
         describe "GET" do
           it "has value success" do
-            spree_get :index
+            get :index
             expect(response).to be_redirect
           end
         end
@@ -93,16 +93,16 @@ describe Spree::CustomController, :type => :controller do
         before do
           Spree::CustomController.instance_eval do
             respond_to :html
-            respond_override({:create => {:html => {:success => lambda { render(:text => 'success!!!') }}}})
-            respond_override({:create => {:html => {:failure => lambda { render(:text => 'failure!!!') }}}})
+            respond_override({ create: { html: { success: lambda { render(plain: 'success!!!') } } } })
+            respond_override({ create: { html: { failure: lambda { render(plain: 'failure!!!') } } } })
           end
         end
 
         describe "POST" do
           it "has value success" do
-            spree_post :create
+            post :create
             expect(response).to be_success
-            assert (response.body =~ /success!/)
+            expect(response.body).to match(/success!/)
           end
         end
       end
@@ -110,14 +110,14 @@ describe Spree::CustomController, :type => :controller do
       context 'A different controllers respond_override. Regression test for #1301' do
         before do
           Spree::CheckoutController.instance_eval do
-            respond_override({:index => {:html => {:success => lambda { render(:text => 'success!!!') }}}})
+            respond_override({ index: { html: { success: lambda { render(plain: 'success!!!') } } } })
           end
         end
 
         describe "POST" do
           it "should not effect the wrong controller" do
-            spree_get :index
-            assert (response.body =~ /neutral/)
+            get :index
+            expect(response.body).to match(/neutral/)
           end
         end
       end

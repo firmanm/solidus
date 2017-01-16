@@ -1,16 +1,22 @@
 #!/bin/sh
 # Used in the sandbox rake task in Rakefile
 
+set -e
+
 case "$DB" in
 postgres|postgresql)
-	RAILSDB="postgresql"
-	;;
+  RAILSDB="postgresql"
+  ;;
 mysql)
-	RAILSDB="mysql"
-	;;
+  RAILSDB="mysql"
+  ;;
+sqlite|'')
+  RAILSDB="sqlite3"
+  ;;
 *)
-	RAILSDB="sqlite3"
-	;;
+  echo "Invalid DB specified: $DB"
+  exit 1
+  ;;
 esac
 
 rm -rf ./sandbox

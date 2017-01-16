@@ -1,5 +1,8 @@
-$ ->
+Spree.ready ($) ->
   if $('#checkout_form_address').is('*')
+    # Hidden by default to support browsers with javascript disabled
+    $('.js-address-fields').show()
+
     $('#checkout_form_address').validate()
 
     getCountryId = (region) ->
@@ -49,7 +52,6 @@ $ ->
         else
           stateSelect.removeClass('required')
           stateSpanRequired.hide()
-        stateSelect.removeClass('hidden')
         stateInput.removeClass('required')
       else
         stateSelect.hide().prop 'disabled', true
@@ -63,7 +65,6 @@ $ ->
           stateInput.removeClass('required')
         statePara.toggle(!!statesRequired)
         stateInput.prop('disabled', !statesRequired)
-        stateInput.removeClass('hidden')
         stateSelect.removeClass('required')
 
     $('#bcountry select').change ->

@@ -1,20 +1,20 @@
 require 'spec_helper'
 
 describe "viewing products", type: :feature, inaccessible: true do
-  let!(:taxonomy) { create(:taxonomy, :name => "Category") }
-  let!(:super_clothing) { taxonomy.root.children.create(:name => "Super Clothing") }
-  let!(:t_shirts) { super_clothing.children.create(:name => "T-Shirts") }
-  let!(:xxl) { t_shirts.children.create(:name => "XXL") }
+  let!(:taxonomy) { create(:taxonomy, name: "Category") }
+  let!(:super_clothing) { taxonomy.root.children.create(name: "Super Clothing") }
+  let!(:t_shirts) { super_clothing.children.create(name: "T-Shirts") }
+  let!(:xxl) { t_shirts.children.create(name: "XXL") }
   let!(:product) do
-    product = create(:product, :name => "Superman T-Shirt")
+    product = create(:product, name: "Superman T-Shirt")
     product.taxons << t_shirts
   end
-  let(:metas) { { :meta_description => 'Brand new Ruby on Rails TShirts', :meta_title => "Ruby On Rails TShirt", :meta_keywords => 'ror, tshirt, ruby' } }
+  let(:metas) { { meta_description: 'Brand new Ruby on Rails TShirts', meta_title: "Ruby On Rails TShirt", meta_keywords: 'ror, tshirt, ruby' } }
   let(:store_name) do
     ((first_store = Spree::Store.first) && first_store.name).to_s
   end
 
-  # Regression test for #1796
+  # Regression test for https://github.com/spree/spree/issues/1796
   it "can see a taxon's products, even if that taxon has child taxons" do
     visit '/t/category/super-clothing/t-shirts'
     expect(page).to have_content("Superman T-Shirt")
@@ -45,7 +45,7 @@ describe "viewing products", type: :feature, inaccessible: true do
       expect(page).to have_title('Category - T-Shirts - ' + store_name)
     end
 
-    # Regression test for #2814
+    # Regression test for https://github.com/spree/spree/issues/2814
     it "doesn't use meta_title as heading on page" do
       t_shirts.update_attributes metas
       visit '/t/category/super-clothing/t-shirts'
@@ -74,12 +74,12 @@ describe "viewing products", type: :feature, inaccessible: true do
       tmp = page.all('ul.product-listing li a').map(&:text).flatten.compact
       tmp.delete("")
       array = ["Ruby on Rails Bag",
-       "Ruby on Rails Baseball Jersey",
-       "Ruby on Rails Jr. Spaghetti",
-       "Ruby on Rails Mug",
-       "Ruby on Rails Ringer T-Shirt",
-       "Ruby on Rails Stein",
-       "Ruby on Rails Tote"]
+               "Ruby on Rails Baseball Jersey",
+               "Ruby on Rails Jr. Spaghetti",
+               "Ruby on Rails Mug",
+               "Ruby on Rails Ringer T-Shirt",
+               "Ruby on Rails Stein",
+               "Ruby on Rails Tote"]
       expect(tmp.sort!).to eq(array)
     end
 
@@ -108,10 +108,10 @@ describe "viewing products", type: :feature, inaccessible: true do
       tmp = page.all('ul.product-listing li a').map(&:text).flatten.compact
       tmp.delete("")
       expect(tmp.sort!).to eq(["Apache Baseball Jersey",
-     "Ruby Baseball Jersey",
-     "Ruby on Rails Baseball Jersey",
-     "Ruby on Rails Jr. Spaghetti",
-     "Ruby on Rails Ringer T-Shirt"])
+                               "Ruby Baseball Jersey",
+                               "Ruby on Rails Baseball Jersey",
+                               "Ruby on Rails Jr. Spaghetti",
+                               "Ruby on Rails Ringer T-Shirt"])
     end
 
     it "should be able to visit category Mugs" do

@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Spree::LineItem, :type => :model do
+describe Spree::LineItem, type: :model do
   let(:order) { create :order_with_line_items, line_items_count: 1 }
   let(:line_item) { order.line_items.first }
 
@@ -26,25 +26,6 @@ describe Spree::LineItem, :type => :model do
   end
 
   context "#save" do
-    context "line item changes" do
-      before do
-        line_item.quantity = line_item.quantity + 1
-      end
-
-      it "triggers adjustment total recalculation" do
-        expect(line_item).to receive(:update_tax_charge) # Regression test for https://github.com/spree/spree/issues/4671
-        expect(line_item).to receive(:recalculate_adjustments)
-        line_item.save
-      end
-    end
-
-    context "line item does not change" do
-      it "does not trigger adjustment total recalculation" do
-        expect(line_item).not_to receive(:recalculate_adjustments)
-        line_item.save
-      end
-    end
-
     context "target_shipment is provided" do
       it "verifies inventory" do
         line_item.target_shipment = Spree::Shipment.new
@@ -54,61 +35,61 @@ describe Spree::LineItem, :type => :model do
     end
   end
 
-  context "#create" do
-    let(:variant) { create(:variant) }
+  describe 'line item creation' do
+    let(:variant) { create :variant }
 
-    before do
-      create(:tax_rate, :zone => order.tax_zone, :tax_category => variant.tax_category)
-    end
+    subject(:line_item) { Spree::LineItem.new(variant: variant, order: order) }
 
-    context "when order has a tax zone" do
-      before do
-        expect(order.tax_zone).to be_present
+    # Tests for https://github.com/spree/spree/issues/3391
+    context 'before validation' do
+      before { line_item.valid? }
+
+      it 'copies the variants price' do
+        expect(line_item.price).to eq(variant.price)
       end
 
-      it "creates a tax adjustment" do
-        order.contents.add(variant)
-        line_item = order.find_line_item_by_variant(variant)
-        expect(line_item.adjustments.tax.count).to eq(1)
+      it 'copies the variants cost_price' do
+        expect(line_item.cost_price).to eq(variant.cost_price)
+      end
+
+      it "copies the order's currency" do
+        expect(line_item.currency).to eq(order.currency)
+      end
+
+      # Test for https://github.com/spree/spree/issues/3481
+      it 'copies the variants tax category' do
+        expect(line_item.tax_category).to eq(line_item.variant.tax_category)
       end
     end
 
-    context "when order does not have a tax zone" do
-      before do
-        order.bill_address = nil
-        order.ship_address = nil
-        order.save
-        expect(order.reload.tax_zone).to be_nil
+    # Specs for https://github.com/solidusio/solidus/pull/522#issuecomment-170668125
+    context "with `#copy_price` defined" do
+      before(:context) do
+        Spree::LineItem.class_eval do
+          def copy_price
+            self.cost_price = 10
+            self.price = 20
+          end
+        end
       end
 
-      it "does not create a tax adjustment" do
-        order.contents.add(variant)
-        line_item = order.find_line_item_by_variant(variant)
-        expect(line_item.adjustments.tax.count).to eq(0)
+      after(:context) do
+        Spree::LineItem.class_eval do
+          remove_method :copy_price
+        end
       end
-    end
-  end
 
-  # Test for #3391
-  context '#copy_price' do
-    it "copies over a variant's prices" do
-      line_item.price = nil
-      line_item.cost_price = nil
-      line_item.currency = nil
-      line_item.copy_price
-      variant = line_item.variant
-      expect(line_item.price).to eq(variant.price)
-      expect(line_item.cost_price).to eq(variant.cost_price)
-      expect(line_item.currency).to eq(variant.currency)
-    end
-  end
+      it 'should display a deprecation warning' do
+        expect(Spree::Deprecation).to receive(:warn)
+        Spree::LineItem.new(variant: variant, order: order)
+      end
 
-  # Test for #3481
-  context '#copy_tax_category' do
-    it "copies over a variant's tax category" do
-      line_item.tax_category = nil
-      line_item.copy_tax_category
-      expect(line_item.tax_category).to eq(line_item.variant.tax_category)
+      it 'should run the user-defined copy_price method' do
+        expect_any_instance_of(Spree::LineItem).to receive(:copy_price).and_call_original
+        Spree::Deprecation.silence do
+          Spree::LineItem.new(variant: variant, order: order)
+        end
+      end
     end
   end
 
@@ -123,13 +104,8 @@ describe Spree::LineItem, :type => :model do
 
   describe "#discounted_money" do
     it "should return a money object with the discounted amount" do
+      expect(line_item.discounted_amount).to eq(10.00)
       expect(line_item.discounted_money.to_s).to eq "$10.00"
-    end
-  end
-
-  describe '.currency' do
-    it 'returns the globally configured currency' do
-      line_item.currency == 'USD'
     end
   end
 
@@ -151,49 +127,95 @@ describe Spree::LineItem, :type => :model do
     end
   end
 
-  context "currency same as order.currency" do
-    it "is a valid line item" do
-      line_item = order.line_items.first
-      line_item.currency = order.currency
-      line_item.valid?
+  context 'setting a line item price' do
+    let(:store) { create(:store, default: true) }
+    let(:order) { Spree::Order.new(currency: "RUB", store: store) }
+    let(:variant) { Spree::Variant.new(product: Spree::Product.new) }
+    let(:line_item) { Spree::LineItem.new(order: order, variant: variant) }
 
-      expect(line_item.error_on(:currency).size).to eq(0)
+    before { expect(variant).to receive(:price_for).at_least(:once).and_return(price) }
+
+    context "when a price exists in order currency" do
+      let(:price) { Spree::Money.new(99.00, currency: "RUB") }
+
+      it "is a valid line item" do
+        expect(line_item.valid?).to be_truthy
+        expect(line_item.error_on(:price).size).to eq(0)
+      end
     end
-  end
 
-  context "currency different than order.currency" do
-    it "is not a valid line item" do
-      line_item = order.line_items.first
-      line_item.currency = "no currency"
-      line_item.valid?
+    context "when a price does not exist in order currency" do
+      let(:price) { nil }
 
-      expect(line_item.error_on(:currency).size).to eq(1)
+      it "is not a valid line item" do
+        expect(line_item.valid?).to be_falsey
+        expect(line_item.error_on(:price).size).to eq(1)
+      end
     end
   end
 
   describe "#options=" do
-    it "can handle updating a blank line item with no order" do
-      line_item.options = { price: 123 }
-    end
+    let(:options) { { price: 123, quantity: 5 } }
 
     it "updates the data provided in the options" do
-      line_item.options = { price: 123 }
+      line_item.options = options
+
       expect(line_item.price).to eq 123
+      expect(line_item.quantity).to eq 5
     end
 
-    it "updates the price based on the options provided" do
-      expect(line_item).to receive(:gift_wrap=).with(true)
-      expect(line_item.variant).to receive(:gift_wrap_price_modifier_amount_in).with("USD", true).and_return 1.99
-      line_item.options = { gift_wrap: true }
-      expect(line_item.price).to eq 21.98
+    context "when price is not provided" do
+      let(:options) { { quantity: 5 } }
+
+      it "sets price anyway, retrieving it from line item options" do
+        expect(line_item.variant)
+          .to receive(:price_for)
+          .and_return(Spree::Money.new(123, currency: "USD"))
+
+        line_item.options = options
+
+        expect(line_item.price).to eq 123
+        expect(line_item.quantity).to eq 5
+      end
     end
   end
 
-  describe "precision of pre_tax_amount" do
-    let!(:line_item) { create :line_item, pre_tax_amount: 4.2051 }
+  describe 'money_price=' do
+    let(:currency) { "USD" }
+    let(:new_price) { Spree::Money.new(99.00, currency: currency) }
 
-    it "keeps four digits of precision even when reloading" do
-      expect(line_item.reload.pre_tax_amount).to eq(4.2051)
+    it 'assigns a new price' do
+      line_item.money_price = new_price
+      expect(line_item.price).to eq(new_price.cents / 100.0)
+    end
+
+    context 'when the new price is nil' do
+      let(:new_price) { nil }
+
+      it 'makes the line item price empty' do
+        line_item.money_price = new_price
+        expect(line_item.price).to be_nil
+      end
+    end
+
+    context 'when the price has a currency different from the order currency' do
+      let(:currency) { "RUB" }
+
+      it 'raises an exception' do
+        expect {
+          line_item.money_price = new_price
+        }.to raise_exception Spree::LineItem::CurrencyMismatch
+      end
+    end
+  end
+
+  describe "#pricing_options" do
+    subject { line_item.pricing_options }
+
+    it { is_expected.to be_a(Spree::Config.pricing_options_class) }
+
+    it "holds the order currency" do
+      expect(subject.currency).to eq("USD")
     end
   end
 end

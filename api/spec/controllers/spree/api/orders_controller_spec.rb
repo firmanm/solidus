@@ -2,23 +2,25 @@ require 'spec_helper'
 require 'spree/testing_support/bar_ability'
 
 module Spree
-  describe Api::OrdersController, :type => :controller do
+  describe Api::OrdersController, type: :controller do
     render_views
     let!(:order) { create(:order) }
     let(:variant) { create(:variant) }
     let(:line_item) { create(:line_item) }
 
-    let(:attributes) { [:number, :item_total, :display_total, :total,
-                        :state, :adjustment_total,
-                        :user_id, :created_at, :updated_at,
-                        :completed_at, :payment_total, :shipment_state,
-                        :payment_state, :email, :special_instructions,
-                        :total_quantity, :display_item_total, :currency] }
+    let(:attributes) {
+      [:number, :item_total, :display_total, :total,
+       :state, :adjustment_total,
+       :user_id, :created_at, :updated_at,
+       :completed_at, :payment_total, :shipment_state,
+       :payment_state, :email, :special_instructions,
+       :total_quantity, :display_item_total, :currency]
+    }
 
-    let(:address_params) { { :country_id => Country.first.id, :state_id => State.first.id } }
+    let(:address_params) { { country_id: Country.first.id, state_id: State.first.id } }
 
     let(:current_api_user) do
-      user = Spree.user_class.new(:email => "spree@example.com")
+      user = Spree.user_class.new(email: "spree@example.com")
       user.generate_spree_api_key!
       user
     end
@@ -29,46 +31,36 @@ module Spree
 
     describe "POST create" do
       let(:target_user) { create :user }
-      let(:date_override) { 3.days.ago }
-
-      before do
-        allow_any_instance_of(Spree::Ability).to receive(:can?).
-          and_return(true)
-
-        allow_any_instance_of(Spree::Ability).to receive(:can?).
-          with(:admin, Spree::Order).
-          and_return(can_admin)
-
-        allow(Spree.user_class).to receive(:find).
-          with(target_user.id).
-          and_return(target_user)
-      end
+      let(:date_override) { Time.parse('2015-01-01') }
 
       subject { api_post :create, order: { user_id: target_user.id, created_at: date_override, email: target_user.email } }
 
       context "when the current user cannot administrate the order" do
-        let(:can_admin) { false }
+        stub_authorization! do |_|
+          can :create, Spree::Order
+        end
 
         it "does not include unpermitted params, or allow overriding the user", focus: true do
-          expect(Spree::Core::Importer::Order).to receive(:import).
-            once.
-            with(current_api_user, { "email" => target_user.email }).
-            and_call_original
           subject
+          order = Spree::Order.last
+          expect(order.user).to eq current_api_user
+          expect(order.email).to eq target_user.email
         end
 
         it { is_expected.to be_success }
       end
 
       context "when the current user can administrate the order" do
-        let(:can_admin) { true }
+        stub_authorization! do |_|
+          can [:admin, :create], Spree::Order
+        end
 
         it "it permits all params and allows overriding the user" do
-          expect(Spree::Core::Importer::Order).to receive(:import).
-            once.
-            with(target_user, { "user_id" => target_user.id, "created_at" => date_override, "email" => target_user.email}).
-            and_call_original
           subject
+          order = Spree::Order.last
+          expect(order.user).to eq target_user
+          expect(order.email).to eq target_user.email
+          expect(order.created_at).to eq date_override
         end
 
         it { is_expected.to be_success }
@@ -81,57 +73,46 @@ module Spree
       let(:can_admin) { false }
       subject { api_put :update, id: order.to_param, order: order_params }
 
-      before do
-        allow_any_instance_of(Spree::Ability).to receive(:can?).
-          and_return(true)
-
-        allow(Spree::Order).to receive(:find_by!).
-          with(number: order.number).
-          and_return(order)
-
-        allow(Spree.user_class).to receive(:find).
-          with(user.id).
-          and_return(user)
-
-        allow_any_instance_of(Spree::Ability).to receive(:can?).
-          with(:admin, Spree::Order).
-          and_return(can_admin)
-      end
-
-      it "updates the cart contents" do
-        expect(order.contents).to receive(:update_cart).
-          once.
-          with({"email" => "foo@foobar.com"})
-        subject
-      end
-
-      it { is_expected.to be_success }
-
-      context "when the user can administer the order" do
-        let(:can_admin) { true }
-
-        it "will associate users" do
-          expect(order).to receive(:associate_user!).
-            once.
-            with(user)
-
-          subject
-        end
-
-        it "updates the otherwise forbidden attributes" do
-          expect{subject}.to change{order.reload.number}.
-            to("anothernumber")
-        end
-      end
-
       context "when the user cannot administer the order" do
+        stub_authorization! do |_|
+          can [:update], Spree::Order
+        end
+
+        it "updates the user's email" do
+          expect {
+            subject
+          }.to change { order.reload.email }.to("foo@foobar.com")
+        end
+
+        it { is_expected.to be_success }
+
         it "does not associate users" do
-          expect(order).to_not receive(:associate_user!)
-          subject
+          expect {
+            subject
+          }.not_to change { order.reload.user }
         end
 
         it "does not change forbidden attributes" do
-          expect{subject}.to_not change{order.reload.number}
+          expect {
+            subject
+          }.to_not change{ order.reload.number }
+        end
+      end
+
+      context "when the user can administer the order" do
+        stub_authorization! do |_|
+          can [:admin, :update], Spree::Order
+        end
+
+        it "will associate users" do
+          expect {
+            subject
+          }.to change { order.reload.user }.to(user)
+        end
+
+        it "updates the otherwise forbidden attributes" do
+          expect{ subject }.to change{ order.reload.number }.
+            to("anothernumber")
         end
       end
     end
@@ -178,20 +159,20 @@ module Spree
 
       it "can filter the returned results" do
         request.env['SERVER_NAME'] = store.url
-        api_get :mine, q: {completed_at_not_null: 1}
+        api_get :mine, q: { completed_at_not_null: 1 }
 
         expect(response.status).to eq(200)
         expect(json_response["orders"].length).to eq(0)
       end
 
       it "returns orders in reverse chronological order by completed_at" do
-        order.update_columns completed_at: Time.current
+        order.update_columns completed_at: Time.current, created_at: 3.days.ago
 
-        order2 = Order.create user: order.user, completed_at: Time.current - 1.day, store: store
+        order2 = Order.create user: order.user, completed_at: Time.current - 1.day, created_at: 2.day.ago, store: store
         expect(order2.created_at).to be > order.created_at
-        order3 = Order.create user: order.user, completed_at: nil, store: store
+        order3 = Order.create user: order.user, completed_at: nil, created_at: 1.day.ago, store: store
         expect(order3.created_at).to be > order2.created_at
-        order4 = Order.create user: order.user, completed_at: nil, store: store
+        order4 = Order.create user: order.user, completed_at: nil, created_at: 0.days.ago, store: store
         expect(order4.created_at).to be > order3.created_at
 
         request.env['SERVER_NAME'] = store.url
@@ -217,8 +198,8 @@ module Spree
     end
 
     it "can view their own order" do
-      allow_any_instance_of(Order).to receive_messages :user => current_api_user
-      api_get :show, :id => order.to_param
+      allow_any_instance_of(Order).to receive_messages user: current_api_user
+      api_get :show, id: order.to_param
       expect(response.status).to eq(200)
       expect(json_response).to have_attributes(attributes)
       expect(json_response["adjustments"]).to be_empty
@@ -231,7 +212,7 @@ module Spree
       subject { api_get :show, id: order.to_param }
 
       before do
-        allow_any_instance_of(Order).to receive_messages :user => current_api_user
+        allow_any_instance_of(Order).to receive_messages user: current_api_user
       end
 
       context 'when inventory information is present' do
@@ -278,33 +259,33 @@ module Spree
     end
 
     it "orders contain the basic checkout steps" do
-      allow_any_instance_of(Order).to receive_messages :user => current_api_user
-      api_get :show, :id => order.to_param
+      allow_any_instance_of(Order).to receive_messages user: current_api_user
+      api_get :show, id: order.to_param
       expect(response.status).to eq(200)
       expect(json_response["checkout_steps"]).to eq(%w[address delivery confirm complete])
     end
 
-    # Regression test for #1992
+    # Regression test for https://github.com/spree/spree/issues/1992
     it "can view an order not in a standard state" do
-      allow_any_instance_of(Order).to receive_messages :user => current_api_user
+      allow_any_instance_of(Order).to receive_messages user: current_api_user
       order.update_column(:state, 'shipped')
-      api_get :show, :id => order.to_param
+      api_get :show, id: order.to_param
     end
 
     it "can not view someone else's order" do
-      allow_any_instance_of(Order).to receive_messages :user => stub_model(Spree::LegacyUser)
-      api_get :show, :id => order.to_param
+      allow_any_instance_of(Order).to receive_messages user: stub_model(Spree::LegacyUser)
+      api_get :show, id: order.to_param
       assert_unauthorized!
     end
 
     it "can view an order if the token is known" do
-      api_get :show, :id => order.to_param, :order_token => order.guest_token
+      api_get :show, id: order.to_param, order_token: order.guest_token
       expect(response.status).to eq(200)
     end
 
     it "can view an order if the token is passed in header" do
       request.headers["X-Spree-Order-Token"] = order.guest_token
-      api_get :show, :id => order.to_param
+      api_get :show, id: order.to_param
       expect(response.status).to eq(200)
     end
 
@@ -315,7 +296,7 @@ module Spree
       it "can view an order" do
         user = build(:user, spree_roles: [Spree::Role.new(name: 'bar')])
         allow(Spree.user_class).to receive_messages find_by: user
-        api_get :show, :id => order.to_param
+        api_get :show, id: order.to_param
         expect(response.status).to eq(200)
       end
     end
@@ -323,12 +304,12 @@ module Spree
     it "cannot cancel an order that doesn't belong to them" do
       order.update_attribute(:completed_at, Time.current)
       order.update_attribute(:shipment_state, "ready")
-      api_put :cancel, :id => order.to_param
+      api_put :cancel, id: order.to_param
       assert_unauthorized!
     end
 
     it "can create an order" do
-      api_post :create, :order => { :line_items => { "0" => { :variant_id => variant.to_param, :quantity => 5 } } }
+      api_post :create, order: { line_items: { "0" => { variant_id: variant.to_param, quantity: 5 } } }
       expect(response.status).to eq(201)
 
       order = Order.last
@@ -345,23 +326,23 @@ module Spree
     end
 
     it "assigns email when creating a new order" do
-      api_post :create, :order => { :email => "guest@spreecommerce.com" }
+      api_post :create, order: { email: "guest@spreecommerce.com" }
       expect(json_response['email']).not_to eq controller.current_api_user
       expect(json_response['email']).to eq "guest@spreecommerce.com"
     end
 
-    # Regression test for #3404
+    # Regression test for https://github.com/spree/spree/issues/3404
     it "can specify additional parameters for a line item" do
       expect(Order).to receive(:create!).and_return(order = Spree::Order.new)
       allow(order).to receive(:associate_user!)
       allow(order).to receive_message_chain(:contents, :add).and_return(line_item = double('LineItem'))
-      expect(line_item).to receive(:update_attributes!).with("special" => true)
+      expect(line_item).to receive(:update_attributes!).with(hash_including("special" => "foo"))
 
       allow(controller).to receive_messages(permitted_line_item_attributes: [:id, :variant_id, :quantity, :special])
-      api_post :create, :order => {
-        :line_items => {
+      api_post :create, order: {
+        line_items: {
           "0" => {
-            :variant_id => variant.to_param, :quantity => 5, :special => true
+            variant_id: variant.to_param, quantity: 5, special: "foo"
           }
         }
       }
@@ -369,10 +350,10 @@ module Spree
     end
 
     it "cannot arbitrarily set the line items price" do
-      api_post :create, :order => {
-        :line_items => {
+      api_post :create, order: {
+        line_items: {
           "0" => {
-            :price => 33.0, :variant_id => variant.to_param, :quantity => 5
+            price: 33.0, variant_id: variant.to_param, quantity: 5
           }
         }
       }
@@ -385,7 +366,7 @@ module Spree
       let!(:current_api_user) { create :admin_user }
 
       it "is able to set any default unpermitted attribute" do
-        api_post :create, :order => { number: "WOW" }
+        api_post :create, order: { number: "WOW" }
         expect(response.status).to eq 201
         expect(json_response['number']).to eq "WOW"
       end
@@ -398,26 +379,29 @@ module Spree
     end
 
     context "working with an order" do
-
       let(:variant) { create(:variant) }
       let!(:line_item) { order.contents.add(variant, 1) }
       let!(:payment_method) { create(:check_payment_method) }
 
-      let(:address_params) { { :country_id => country.id } }
-      let(:billing_address) { { :firstname => "Tiago", :lastname => "Motta", :address1 => "Av Paulista",
-                                :city => "Sao Paulo", :zipcode => "01310-300", :phone => "12345678",
-                                :country_id => country.id} }
-      let(:shipping_address) { { :firstname => "Tiago", :lastname => "Motta", :address1 => "Av Paulista",
-                                 :city => "Sao Paulo", :zipcode => "01310-300", :phone => "12345678",
-                                 :country_id => country.id} }
-      let(:country) { create(:country, {name: "Brazil", iso_name: "BRAZIL", iso: "BR", iso3: "BRA", numcode: 76 })}
+      let(:address_params) { { country_id: country.id } }
+      let(:billing_address) {
+        { firstname: "Tiago", lastname: "Motta", address1: "Av Paulista",
+                                city: "Sao Paulo", zipcode: "01310-300", phone: "12345678",
+                                country_id: country.id }
+      }
+      let(:shipping_address) {
+        { firstname: "Tiago", lastname: "Motta", address1: "Av Paulista",
+                                 city: "Sao Paulo", zipcode: "01310-300", phone: "12345678",
+                                 country_id: country.id }
+      }
+      let(:country) { create(:country, { name: "Brazil", iso_name: "BRAZIL", iso: "BR", iso3: "BRA", numcode: 76 }) }
 
       before { allow_any_instance_of(Order).to receive_messages user: current_api_user }
 
       it "updates quantities of existing line items" do
-        api_put :update, :id => order.to_param, :order => {
-          :line_items => {
-            "0" => { :id => line_item.id, :quantity => 10 }
+        api_put :update, id: order.to_param, order: {
+          line_items: {
+            "0" => { id: line_item.id, quantity: 10 }
           }
         }
 
@@ -428,10 +412,10 @@ module Spree
 
       it "adds an extra line item" do
         variant2 = create(:variant)
-        api_put :update, :id => order.to_param, :order => {
-          :line_items => {
-            "0" => { :id => line_item.id, :quantity => 10 },
-            "1" => { :variant_id => variant2.id, :quantity => 1}
+        api_put :update, id: order.to_param, order: {
+          line_items: {
+            "0" => { id: line_item.id, quantity: 10 },
+            "1" => { variant_id: variant2.id, quantity: 1 }
           }
         }
 
@@ -443,9 +427,9 @@ module Spree
       end
 
       it "cannot change the price of an existing line item" do
-        api_put :update, :id => order.to_param, :order => {
-          :line_items => {
-            0 => { :id => line_item.id, :price => 0 }
+        api_put :update, id: order.to_param, order: {
+          line_items: {
+            0 => { id: line_item.id, price: 0 }
           }
         }
 
@@ -456,7 +440,7 @@ module Spree
       end
 
       it "can add billing address" do
-        api_put :update, :id => order.to_param, :order => { :bill_address_attributes => billing_address }
+        api_put :update, id: order.to_param, order: { bill_address_attributes: billing_address }
 
         expect(order.reload.bill_address).to_not be_nil
       end
@@ -464,7 +448,7 @@ module Spree
       it "receives error message if trying to add billing address with errors" do
         billing_address[:firstname] = ""
 
-        api_put :update, :id => order.to_param, :order => { :bill_address_attributes => billing_address }
+        api_put :update, id: order.to_param, order: { bill_address_attributes: billing_address }
 
         expect(json_response['error']).not_to be_nil
         expect(json_response['errors']).not_to be_nil
@@ -475,7 +459,7 @@ module Spree
         order.update_attributes!(ship_address_id: nil)
 
         expect {
-          api_put :update, :id => order.to_param, :order => { :ship_address_attributes => shipping_address }
+          api_put :update, id: order.to_param, order: { ship_address_attributes: shipping_address }
         }.to change { order.reload.ship_address }.from(nil)
       end
 
@@ -484,7 +468,7 @@ module Spree
 
         shipping_address[:firstname] = ""
 
-        api_put :update, :id => order.to_param, :order => { :ship_address_attributes => shipping_address }
+        api_put :update, id: order.to_param, order: { ship_address_attributes: shipping_address }
 
         expect(json_response['error']).not_to be_nil
         expect(json_response['errors']).not_to be_nil
@@ -494,7 +478,7 @@ module Spree
       it "cannot set the user_id for the order" do
         user = Spree.user_class.create
         original_id = order.user_id
-        api_post :update, :id => order.to_param, :order => { user_id: user.id }
+        api_post :update, id: order.to_param, order: { user_id: user.id }
         expect(response.status).to eq 200
         expect(json_response["user_id"]).to eq(original_id)
       end
@@ -503,10 +487,9 @@ module Spree
         before { order.create_proposed_shipments }
 
         it "clears out all existing shipments on line item udpate" do
-          previous_shipments = order.shipments
-          api_put :update, :id => order.to_param, :order => {
-            :line_items => {
-              0 => { :id => line_item.id, :quantity => 10 }
+          api_put :update, id: order.to_param, order: {
+            line_items: {
+              0 => { id: line_item.id, quantity: 10 }
             }
           }
           expect(order.reload.shipments).to be_empty
@@ -518,7 +501,7 @@ module Spree
 
         it "can empty an order" do
           create(:adjustment, order: order, adjustable: order)
-          api_put :empty, :id => order.to_param
+          api_put :empty, id: order.to_param
           expect(response.status).to eq(204)
           order.reload
           expect(order.line_items).to be_empty
@@ -526,21 +509,21 @@ module Spree
         end
 
         it "can list its line items with images" do
-          order.line_items.first.variant.images.create!(:attachment => image("thinking-cat.jpg"))
+          order.line_items.first.variant.images.create!(attachment: image("thinking-cat.jpg"))
 
-          api_get :show, :id => order.to_param
+          api_get :show, id: order.to_param
 
           expect(json_response['line_items'].first['variant']).to have_attributes([:images])
         end
 
         it "lists variants product id" do
-          api_get :show, :id => order.to_param
+          api_get :show, id: order.to_param
 
           expect(json_response['line_items'].first['variant']).to have_attributes([:product_id])
         end
 
         it "includes the tax_total in the response" do
-          api_get :show, :id => order.to_param
+          api_get :show, id: order.to_param
 
           expect(json_response['included_tax_total']).to eq('0.0')
           expect(json_response['additional_tax_total']).to eq('0.0')
@@ -550,11 +533,11 @@ module Spree
 
         it "lists line item adjustments" do
           adjustment = create(:adjustment,
-            :label => "10% off!",
-            :order => order,
-            :adjustable => order.line_items.first)
+            label: "10% off!",
+            order: order,
+            adjustable: order.line_items.first)
           adjustment.update_column(:amount, 5)
-          api_get :show, :id => order.to_param
+          api_get :show, id: order.to_param
 
           adjustment = json_response['line_items'].first['adjustments'].first
           expect(adjustment['label']).to eq("10% off!")
@@ -563,7 +546,7 @@ module Spree
 
         it "lists payments source without gateway info" do
           order.payments.push payment = create(:payment)
-          api_get :show, :id => order.to_param
+          api_get :show, id: order.to_param
 
           source = json_response[:payments].first[:source]
           expect(source[:name]).to eq payment.source.name
@@ -571,8 +554,8 @@ module Spree
           expect(source[:last_digits]).to eq payment.source.last_digits
           expect(source[:month]).to eq payment.source.month
           expect(source[:year]).to eq payment.source.year
-          expect(source.has_key?(:gateway_customer_profile_id)).to be false
-          expect(source.has_key?(:gateway_payment_profile_id)).to be false
+          expect(source.key?(:gateway_customer_profile_id)).to be false
+          expect(source.key?(:gateway_payment_profile_id)).to be false
         end
 
         context "when in delivery" do
@@ -597,12 +580,12 @@ module Spree
           end
 
           it "returns available shipments for an order" do
-            api_get :show, :id => order.to_param
+            api_get :show, id: order.to_param
             expect(response.status).to eq(200)
             expect(json_response["shipments"]).not_to be_empty
             shipment = json_response["shipments"][0]
             # Test for correct shipping method attributes
-            # Regression test for #3206
+            # Regression test for https://github.com/spree/spree/issues/3206
             expect(shipment["shipping_methods"]).not_to be_nil
             json_shipping_method = shipment["shipping_methods"][0]
             expect(json_shipping_method["id"]).to eq(shipping_method.id)
@@ -612,7 +595,7 @@ module Spree
             expect(json_shipping_method["shipping_categories"]).not_to be_empty
 
             # Test for correct shipping rates attributes
-            # Regression test for #3206
+            # Regression test for https://github.com/spree/spree/issues/3206
             expect(shipment["shipping_rates"]).not_to be_nil
             shipping_rate = shipment["shipping_rates"][0]
             expect(shipping_rate["name"]).to eq(json_shipping_method["name"])
@@ -660,7 +643,7 @@ module Spree
 
       it "lists payments source with gateway info" do
         order.payments.push payment = create(:payment)
-        api_get :show, :id => order.to_param
+        api_get :show, id: order.to_param
 
         source = json_response[:payments].first[:source]
         expect(source[:name]).to eq payment.source.name
@@ -683,9 +666,9 @@ module Spree
           expect(json_response["pages"]).to eq(1)
         end
 
-        # Test for #1763
+        # Test for https://github.com/spree/spree/issues/1763
         it "can control the page size through a parameter" do
-          api_get :index, :per_page => 1
+          api_get :index, per_page: 1
           expect(json_response["orders"].count).to eq(1)
           expect(json_response["orders"].first).to have_attributes(attributes)
           expect(json_response["count"]).to eq(1)
@@ -703,7 +686,7 @@ module Spree
         let(:expected_result) { Spree::Order.last }
 
         it "can query the results through a parameter" do
-          api_get :index, :q => { :email_cont => 'spree' }
+          api_get :index, q: { email_cont: 'spree' }
           expect(json_response["orders"].count).to eq(1)
           expect(json_response["orders"].first).to have_attributes(attributes)
           expect(json_response["orders"].first["email"]).to eq(expected_result.email)
@@ -717,15 +700,14 @@ module Spree
         it "can create an order without any parameters" do
           api_post :create
           expect(response.status).to eq(201)
-          order = Order.last
           expect(json_response["state"]).to eq("cart")
         end
 
         it "can arbitrarily set the line items price" do
-          api_post :create, :order => {
-            :line_items => {
+          api_post :create, order: {
+            line_items: {
               "0" => {
-                :price => 33.0, :variant_id => variant.to_param, :quantity => 5
+                price: 33.0, variant_id: variant.to_param, quantity: 5
               }
             }
           }
@@ -735,7 +717,7 @@ module Spree
 
         it "can set the user_id for the order" do
           user = Spree.user_class.create
-          api_post :create, :order => { user_id: user.id }
+          api_post :create, order: { user_id: user.id }
           expect(response.status).to eq 201
           expect(json_response["user_id"]).to eq(user.id)
         end
@@ -744,7 +726,7 @@ module Spree
       context "updating" do
         it "can set the user_id for the order" do
           user = Spree.user_class.create
-          api_post :update, :id => order.number, :order => { user_id: user.id }
+          api_post :update, id: order.number, order: { user_id: user.id }
           expect(response.status).to eq 200
           expect(json_response["user_id"]).to eq(user.id)
         end
@@ -761,8 +743,9 @@ module Spree
         end
 
         specify do
-          api_put :cancel, :id => order.to_param
+          api_put :cancel, id: order.to_param
           expect(json_response["state"]).to eq("canceled")
+          expect(json_response["canceler_id"]).to eq(current_api_user.id)
         end
       end
     end
@@ -772,7 +755,7 @@ module Spree
       let(:promo_code) { promo.codes.first }
 
       before do
-        allow_any_instance_of(Order).to receive_messages :user => current_api_user
+        allow_any_instance_of(Order).to receive_messages user: current_api_user
       end
 
       context 'when successful' do
@@ -787,7 +770,7 @@ module Spree
             "success" => Spree.t(:coupon_code_applied),
             "error" => nil,
             "successful" => true,
-            "status_code" => "coupon_code_applied",
+            "status_code" => "coupon_code_applied"
           })
         end
       end
@@ -804,7 +787,7 @@ module Spree
             "success" => nil,
             "error" => Spree.t(:coupon_code_unknown_error),
             "successful" => false,
-            "status_code" => "coupon_code_unknown_error",
+            "status_code" => "coupon_code_unknown_error"
           })
         end
       end

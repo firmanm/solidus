@@ -7,17 +7,19 @@
   }
 
   > tbody {
-    > tr {
-      > td {
+    > tr.stock-item-edit-row {
+      td {
+        background-color: $color-tbl-even;
+        border-left: none;
+      }
+      &:nth-child(even) td {
+        /* An nth-even child is actually an odd row */
         background-color: $color-tbl-odd;
       }
-      &.even td {
-        background-color: $color-tbl-even;
-      }
-      &:first-child {
-        td {
-          border-top: none;
-        }
+    }
+    > tr {
+      &:first-child td {
+        border-top: none;
       }
     }
   }
@@ -35,6 +37,12 @@
     .select2-container.error {
       border-radius: 4px;
       border: 1px solid $color-error;
+    }
+  }
+
+  tr:hover {
+    .stock-variant-field-table td {
+      background-color: transparent;
     }
   }
 }

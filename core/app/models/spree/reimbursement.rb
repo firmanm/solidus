@@ -38,7 +38,7 @@ module Spree
     #   Refund.total_amount_reimbursed_for(reimbursement)
     # See the `reimbursement_generator` property regarding the generation of custom reimbursements.
     class_attribute :reimbursement_models
-    self.reimbursement_models = [Refund, Reimbursement::Credit]
+    self.reimbursement_models = [Spree::Refund, Spree::Reimbursement::Credit]
 
     # The reimbursement_performer property should be set to an object that responds to the following methods:
     # - #perform
@@ -57,7 +57,6 @@ module Spree
     self.reimbursement_failure_hooks = []
 
     state_machine :reimbursement_status, initial: :pending do
-
       event :errored do
         transition to: :errored, from: [:pending, :errored]
       end
@@ -65,7 +64,6 @@ module Spree
       event :reimbursed do
         transition to: :reimbursed, from: [:pending, :errored]
       end
-
     end
 
     class << self
@@ -73,7 +71,7 @@ module Spree
         order = customer_return.order
         order.reimbursements.build({
           customer_return: customer_return,
-          return_items: customer_return.return_items.accepted.not_reimbursed,
+          return_items: customer_return.return_items.accepted.not_reimbursed
         })
       end
     end
@@ -150,7 +148,7 @@ module Spree
 
     def generate_number
       self.number ||= loop do
-        random = "RI#{Array.new(9){rand(9)}.join}"
+        random = "RI#{Array.new(9){ rand(9) }.join}"
         break random unless self.class.exists?(number: random)
       end
     end
@@ -162,7 +160,7 @@ module Spree
     end
 
     def send_reimbursement_email
-      Spree::ReimbursementMailer.reimbursement_email(self.id).deliver_later
+      Spree::ReimbursementMailer.reimbursement_email(id).deliver_later
     end
 
     # If there are multiple different reimbursement types for a single

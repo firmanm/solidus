@@ -12,7 +12,7 @@ describe Spree::UnitCancel do
 
       adjustment = Spree::Adjustment.last
       expect(adjustment.adjustable).to eq inventory_unit.line_item
-      expect(adjustment.amount).to eq -10.0
+      expect(adjustment.amount).to eq(-10.0)
       expect(adjustment.order).to eq inventory_unit.order
       expect(adjustment.label).to eq "Cancellation - Short Ship"
       expect(adjustment).to be_eligible
@@ -36,7 +36,7 @@ describe Spree::UnitCancel do
 
     context "all inventory on the line item are not canceled" do
       it "divides the line item total by the inventory units size" do
-        expect(subject).to eq -5.0
+        expect(subject).to eq(-5.0)
       end
     end
 
@@ -44,7 +44,7 @@ describe Spree::UnitCancel do
       before { inventory_unit2.cancel! }
 
       it "divides the line item total by the uncanceled units size" do
-        expect(subject).to eq -10.0
+        expect(subject).to eq(-10.0)
       end
     end
 
@@ -68,11 +68,7 @@ describe Spree::UnitCancel do
       end
 
       before do
-        @old_expedited_exchanges_value = Spree::Config[:expedited_exchanges]
         Spree::Config[:expedited_exchanges] = true
-      end
-      after do
-        Spree::Config[:expedited_exchanges] = @old_expedited_exchanges_value
       end
 
       # This sets up an order with one shipped inventory unit, one unshipped
@@ -95,7 +91,7 @@ describe Spree::UnitCancel do
           inventory_units: [@shipped_inventory_unit],
           stock_location: @shipment.stock_location,
           address: order.ship_address,
-          shipping_method: @shipment.shipping_method,
+          shipping_method: @shipment.shipping_method
         )
 
         # Create an expedited exchange for the shipped inventory unit.
@@ -107,9 +103,9 @@ describe Spree::UnitCancel do
           return_items: [
             Spree::ReturnItem.new(
               inventory_unit: @shipped_inventory_unit,
-              exchange_variant: exchange_variant,
-            ),
-          ],
+              exchange_variant: exchange_variant
+            )
+          ]
         )
         @exchange_inventory_unit = order.inventory_units.reload[2]
       end
@@ -122,7 +118,7 @@ describe Spree::UnitCancel do
         let(:unit_cancel) do
           Spree::UnitCancel.create!(
             inventory_unit: @unshipped_inventory_unit,
-            reason: Spree::UnitCancel::SHORT_SHIP,
+            reason: Spree::UnitCancel::SHORT_SHIP
           )
         end
 
@@ -137,7 +133,7 @@ describe Spree::UnitCancel do
         let(:unit_cancel) do
           Spree::UnitCancel.create!(
             inventory_unit: @exchange_inventory_unit,
-            reason: Spree::UnitCancel::SHORT_SHIP,
+            reason: Spree::UnitCancel::SHORT_SHIP
           )
         end
 
@@ -145,5 +141,4 @@ describe Spree::UnitCancel do
       end
     end
   end
-
 end

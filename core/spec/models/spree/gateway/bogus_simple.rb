@@ -1,10 +1,9 @@
 require 'spec_helper'
 
-describe Spree::Gateway::BogusSimple, :type => :model do
-
+describe Spree::Gateway::BogusSimple, type: :model do
   subject { Spree::Gateway::BogusSimple.new }
 
-  # regression test for #3824
+  # regression test for https://github.com/spree/spree/issues/3824
   describe "#capture" do
     it "returns success with the right response code" do
       response = subject.capture(123, '12345', {})
@@ -16,5 +15,4 @@ describe Spree::Gateway::BogusSimple, :type => :model do
       expect(response.message).to include("failure")
     end
   end
-
 end

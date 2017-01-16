@@ -232,7 +232,7 @@ describe Spree::TransferItem do
     context "scopes" do
       let(:partially_received) { stock_transfer.transfer_items.first }
       let(:fully_received) { stock_transfer.transfer_items.last }
-      let(:variant) { create(:variant)}
+      let(:variant) { create(:variant) }
 
       before do
         fully_received.update_attributes(expected_quantity: 1, received_quantity: 1)
@@ -258,6 +258,17 @@ describe Spree::TransferItem do
         it 'returns only items where received quantity is less that expected' do
           expect(Spree::TransferItem.partially_received).to eq [partially_received]
         end
+      end
+    end
+  end
+
+  describe "variant association" do
+    context "variant has been soft-deleted" do
+      before do
+        subject.variant.destroy
+      end
+      it "still returns the variant" do
+        expect(subject.variant).not_to be_nil
       end
     end
   end

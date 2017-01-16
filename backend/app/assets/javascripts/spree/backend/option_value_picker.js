@@ -6,12 +6,17 @@ $.fn.optionValueAutocomplete = function (options) {
   var multiple = typeof(options['multiple']) !== 'undefined' ? options['multiple'] : true;
   var productSelect = options['productSelect'];
 
+  function formatOptionValue(option_value) {
+    return Select2.util.escapeMarkup(option_value.name);
+  }
+
   this.select2({
     minimumInputLength: 3,
     multiple: multiple,
     initSelection: function (element, callback) {
       $.get(Spree.routes.option_value_search, {
-        ids: element.val().split(',')
+        ids: element.val().split(','),
+        token: Spree.api_key
       }, function (data) {
         callback(multiple ? data : data[0]);
       });
@@ -33,11 +38,7 @@ $.fn.optionValueAutocomplete = function (options) {
         return { results: data };
       }
     },
-    formatResult: function (option_value) {
-      return option_value.name;
-    },
-    formatSelection: function (option_value) {
-      return option_value.name;
-    }
+    formatResult: formatOptionValue,
+    formatSelection: formatOptionValue
   });
 };
