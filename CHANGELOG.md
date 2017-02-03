@@ -1,14 +1,27 @@
 ## Solidus 2.2.0 (master, unreleased)
 
 *   Promotion and Shipping calculators can be created or have their type
-    changed without saving and reloading the page. [#1618](https://github.com/solidusio/solidus/pull/1618)
+    changed without saving and reloading the page.
+    [#1618](https://github.com/solidusio/solidus/pull/1618)
 
-*   Product slugs no longer have a minimum length validation to match the Product name validation.
+*   Product slugs no longer have a minimum length validation to match the
+    Product name validation.
     [#1616](https://github.com/solidusio/solidus/pull/1616)
 
 *   Changed the promotion field in the admin order search to only find orders
     which used the specified promotion code, instead of any code on an applied
     promotion. [#1662](https://github.com/solidusio/solidus/pull/1662)
+
+*   `Spree::Money` now includes `Comparable` and the `<=>` operator for
+    comparisons. A comparison will fail if the two objects do not use the same
+    currency. [#1682](https://github.com/solidusio/solidus/pull/1682)
+
+*   The "Stores" section of Settings in the admin now supports creating and
+    editing multiple stores.
+
+*   Deprecations
+
+    * `cache_key_for_taxons` helper has been deprecated in favour of `cache [I18n.locale, @taxons]`
 
 ## Solidus 2.1.0 (unreleased)
 
@@ -83,7 +96,7 @@
     For now `PromotionAction` provides a default remove_from method, with a
     deprecation warning that subclasses should define their own remove_from
     method.
-    
+
     [#1451](https://github.com/solidusio/solidus/pull/1451)
 
 *   Remove `is_default` boolean from `Spree::Price` model
