@@ -1,10 +1,10 @@
-Spree::Gateway::Bogus.create!(
-  {
-    name: "Credit Card",
-    description: "Bogus payment gateway",
-    active: true
-  }
-)
+# Spree::Gateway::Bogus.create!(
+#   {
+#     name: "Credit Card",
+#     description: "Bogus payment gateway",
+#     active: true
+#   }
+# )
 
 Spree::PaymentMethod::Check.create!(
   {
