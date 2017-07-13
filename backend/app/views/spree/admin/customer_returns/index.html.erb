@@ -1,4 +1,4 @@
-<%= render :partial => 'spree/admin/shared/order_tabs', :locals => { :current => 'Customer Returns' } %>
+<%= render partial: 'spree/admin/shared/order_tabs', locals: { current: 'Customer Returns' } %>
 
 <% content_for :page_actions do %>
   <% if can? :create, Spree::CustomerReturn %>
@@ -44,7 +44,7 @@
     </tbody>
   </table>
 <% else %>
-  <div class="col-xs-9 no-objects-found">
+  <div class="col-9 no-objects-found">
     <%= render 'spree/admin/shared/no_objects_found',
                  resource: Spree::CustomerReturn,
                  new_resource_url: new_object_url %>

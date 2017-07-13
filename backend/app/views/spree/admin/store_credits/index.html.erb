@@ -12,19 +12,21 @@
 <% end %>
 
 <% if @store_credits.any? %>
-  <div id='sc-current-balance'>
-    <strong><%= Spree.t("admin.store_credits.current_balance") %> </strong><%= @user.display_total_available_store_credit %>
-  </div>
+<fieldset id='sc-current-balance'>
+  <legend>
+    <%= Spree.t("admin.store_credits.current_balance") %>
+    <%= @user.display_total_available_store_credit %>
+  </legend>
 
   <table id="sc-table">
     <thead>
-      <th><%= Spree::StoreCredit.human_attribute_name(:amount_credited) %></th>
-      <th><%= Spree::StoreCredit.human_attribute_name(:amount_used) %></th>
-      <th><%= Spree::StoreCredit.human_attribute_name(:amount_authorized) %></th>
-      <th><%= Spree::StoreCredit.human_attribute_name(:category_id) %></th>
-      <th><%= Spree::StoreCredit.human_attribute_name(:created_by_id) %></th>
-      <th><%= Spree::StoreCredit.human_attribute_name(:created_at) %></th>
-      <th><%= Spree::StoreCredit.human_attribute_name(:invalidated_at) %></th>
+      <th class="wrap-text"><%= Spree::StoreCredit.human_attribute_name(:amount_credited) %></th>
+      <th class="wrap-text"><%= Spree::StoreCredit.human_attribute_name(:amount_used) %></th>
+      <th class="wrap-text"><%= Spree::StoreCredit.human_attribute_name(:amount_authorized) %></th>
+      <th class="wrap-text"><%= Spree::StoreCredit.human_attribute_name(:category_id) %></th>
+      <th class="wrap-text"><%= Spree::StoreCredit.human_attribute_name(:created_by_id) %></th>
+      <th class="wrap-text"><%= Spree::StoreCredit.human_attribute_name(:created_at) %></th>
+      <th class="wrap-text"><%= Spree::StoreCredit.human_attribute_name(:invalidated_at) %></th>
       <th data-hook="admin_store_credits_index_header_actions" class="actions"></th>
     <thead>
     <tbody>
@@ -61,9 +63,10 @@
     </tbody>
   </table>
 <% else %>
-  <div class="col-xs-9 no-objects-found">
+  <div class="col-9 no-objects-found">
     <%= render 'spree/admin/shared/no_objects_found',
                  resource: Spree::StoreCredit,
                  new_resource_url: new_object_url %>
   </div>
 <% end %>
+</fieldset>

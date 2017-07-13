@@ -1,10 +1,9 @@
 table {
-  width: 100%;
-  margin-bottom: 15px;
-  border-collapse: separate;
+  // Extend all tables with Bootstrap's default table style
+  @extend .table;
+  border-spacing: 0;
 
   th, td {
-    padding: 7px 5px;
     border-right: 1px solid $color-border;
     border-bottom: 1px solid $color-border;
     vertical-align: middle;
@@ -19,10 +18,10 @@ table {
     }
 
     a {
-      border-bottom: 1px dotted lighten($color-link, 10);
+      border-bottom: 1px dotted lighten($link-color, 10);
 
       &:hover {
-        border-color: lighten($color-link-hover, 10);
+        border-color: lighten($link-hover-color, 10);
       }
     }
 
@@ -38,10 +37,10 @@ table {
       text-align: center;
 
       span.text {
-        font-size: $body-font-size;
+        font-size: $font-size-base;
       }
 
-      [class*='fa-'].no-text {
+      .fa {
         font-size: 120%;
         background-color: very-light($color-3);
         border: 1px solid $color-border;
@@ -64,12 +63,12 @@ table {
       }
 
       button[class*='fa-'] {
-        color: $color-link;
+        color: $link-color;
         padding: 0 !important;
       }
 
       .fa-envelope-alt, .fa-eye-open {
-        color: $color-link;
+        color: $link-color;
         padding-left: 0px;
 
         &:hover {
@@ -78,27 +77,27 @@ table {
         }
       }
       .fa-trash:hover, .fa-void:hover, .fa-failure:hover {
-        background-color: $color-error;
+        background-color: $brand-danger;
         color: $color-1;
       }
       .fa-cancel:hover {
-        background-color: $color-notice;
+        background-color: $brand-warning;
         color: $color-1;
       }
       .fa-edit:hover, .fa-capture:hover, .fa-ok:hover, .fa-plus:hover, .fa-save:hover {
-        background-color: $color-success;
+        background-color: $brand-success;
         color: $color-1;
       }
       .fa-copy:hover {
-        background-color: $color-notice;
+        background-color: $brand-warning;
         color: $color-1;
       }
       .fa-thumbs-up:hover {
-        background-color: $color-success;
+        background-color: $brand-success;
         color: $color-1;
       }
       .fa-thumbs-down:hover {
-        background-color: $color-error;
+        background-color: $brand-danger;
         color: $color-1;
       }
     }
@@ -113,7 +112,6 @@ table {
     }
 
     .handle {
-      @extend [class^="icon-"]:before;
       @extend .fa;
       @extend .fa-bars;
       cursor: move;
@@ -128,15 +126,18 @@ table {
 
   }
 
+  th:not(.wrap-text), td.actions, td.no-wrap, .state {
+    white-space: nowrap;
+  }
+
   thead {
     th {
-      padding: 10px;
       border-top: 1px solid $color-border;
       border-bottom: none;
       background-color: $color-tbl-thead;
       text-align: center;
-      font-size: 90%;
       font-weight: $font-weight-bold;
+      vertical-align: top;
     }
   }
 
@@ -163,8 +164,8 @@ table {
       }
 
       &.deleted td {
-        background-color: very-light($color-error, 6);
-        border-color: very-light($color-error, 15);
+        background-color: very-light($brand-danger, 6);
+        border-color: very-light($brand-danger, 15);
       }
 
       &.ui-sortable-placeholder td {
@@ -196,19 +197,6 @@ table {
 
     &.no-border-top tr:first-child td {
       border-top: none;
-    }
-
-    &.grand-total {
-      td {
-        border-color: $color-2 !important;
-        font-size: 110%;
-        font-weight: $font-weight-bold;
-        background-color: lighten($color-2, 50);
-      }
-      .total {
-        background-color: $color-2;
-        color: $color-1;
-      }
     }
   }
 }

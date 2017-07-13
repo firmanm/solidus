@@ -597,7 +597,8 @@ describe Spree::Promotion, type: :model do
           allow(rule2).to receive_messages(eligible?: true, applicable?: true)
 
           promotion.promotion_rules = [rule1, rule2]
-          allow(promotion.promotion_rules).to receive(:for).and_return(promotion.promotion_rules)
+          allow(promotion).to receive_message_chain(:rules, :none?).and_return(false)
+          allow(promotion).to receive_message_chain(:rules, :for).and_return(promotion.promotion_rules)
         end
         it "returns the eligible rules" do
           expect(promotion.eligible_rules(promotable)).to eq [rule1, rule2]
@@ -615,7 +616,8 @@ describe Spree::Promotion, type: :model do
           allow(rule2).to receive_messages(eligible?: false, applicable?: true, eligibility_errors: errors)
 
           promotion.promotion_rules = [rule1, rule2]
-          allow(promotion.promotion_rules).to receive(:for).and_return(promotion.promotion_rules)
+          allow(promotion).to receive_message_chain(:rules, :none?).and_return(false)
+          allow(promotion).to receive_message_chain(:rules, :for).and_return(promotion.promotion_rules)
         end
         it "returns nil" do
           expect(promotion.eligible_rules(promotable)).to be_nil
@@ -647,7 +649,8 @@ describe Spree::Promotion, type: :model do
           allow(rule).to receive_messages(eligible?: false, applicable?: true, eligibility_errors: errors)
 
           promotion.promotion_rules = [rule]
-          allow(promotion.promotion_rules).to receive(:for).and_return(promotion.promotion_rules)
+          allow(promotion).to receive_message_chain(:rules, :for).and_return(promotion.promotion_rules)
+          allow(promotion).to receive_message_chain(:rules, :none?).and_return(false)
         end
         it "returns nil" do
           expect(promotion.eligible_rules(promotable)).to be_nil
@@ -761,7 +764,7 @@ describe Spree::Promotion, type: :model do
     context 'when the user has used this promo' do
       before do
         promotion.activate(order: order)
-        order.update!
+        order.recalculate
         order.completed_at = Time.current
         order.save!
       end
@@ -814,7 +817,7 @@ describe Spree::Promotion, type: :model do
       expect(order.adjustment_total).to eq 0
 
       promo.activate order: order, promotion_code: promotion_code
-      order.update!
+      order.recalculate
 
       expect(line_item.adjustments.size).to eq(1)
       expect(order.adjustment_total).to eq(-5)

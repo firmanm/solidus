@@ -6,6 +6,12 @@
 * [#solidus.io](http://webchat.freenode.net/?channels=solidus.io) on freenode
 * [solidus-security](https://groups.google.com/forum/#!forum/solidus-security) mailing list
 
+Bundler Issues
+--------------
+
+Having bundler problems? Try downgrading to bundler 1.13.7 or earlier.
+[Gem resolution is seriously broken in bundler versions since 1.14](https://github.com/bundler/bundler/issues/5633).
+
 Summary
 -------
 
@@ -43,7 +49,9 @@ Try out Solidus with one-click on Heroku:
 Getting started
 ---------------
 
-To add solidus, begin with a Rails 5 application. Add the following to your
+Begin by making sure you have [Imagemagick](http://imagemagick.org/script/download.php) installed, which is required for Paperclip. (You can install it using [Homebrew](https://brew.sh) if you're on a Mac.)
+
+To add solidus, begin with a Rails 5 application and a database configured and created. Add the following to your
 Gemfile.
 
 ```ruby

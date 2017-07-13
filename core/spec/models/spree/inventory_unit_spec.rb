@@ -5,6 +5,15 @@ describe Spree::InventoryUnit, type: :model do
   let(:stock_item) { stock_location.stock_items.order(:id).first }
   let(:line_item) { create(:line_item, variant: stock_item.variant) }
 
+  describe ".cancelable" do
+    let!(:pending_unit) { create(:inventory_unit, pending: true) }
+    let!(:non_pending_unit) { create(:inventory_unit, pending: false) }
+
+    subject { described_class.cancelable }
+
+    it { is_expected.to contain_exactly(non_pending_unit) }
+  end
+
   context "#backordered_for_stock_item" do
     let(:order) do
       order = create(:order, state: 'complete', ship_address: create(:ship_address))
@@ -28,7 +37,6 @@ describe Spree::InventoryUnit, type: :model do
       unit = shipment.inventory_units.first
       unit.state = 'backordered'
       unit.variant_id = stock_item.variant.id
-      unit.order_id = order.id
       unit.line_item = line_item
       unit.tap(&:save!)
     end
@@ -50,7 +58,6 @@ describe Spree::InventoryUnit, type: :model do
     it "does not find inventory units that aren't backordered" do
       on_hand_unit = shipment.inventory_units.build
       on_hand_unit.state = 'on_hand'
-      on_hand_unit.order_id = order.id
       on_hand_unit.line_item = line_item
       on_hand_unit.variant = stock_item.variant
       on_hand_unit.save!
@@ -61,7 +68,6 @@ describe Spree::InventoryUnit, type: :model do
     it "does not find inventory units that don't match the stock item's variant" do
       other_variant_unit = shipment.inventory_units.build
       other_variant_unit.state = 'backordered'
-      other_variant_unit.order_id = order.id
       other_variant_unit.line_item = line_item
       other_variant_unit.variant = create(:variant)
       other_variant_unit.save!
@@ -98,7 +104,6 @@ describe Spree::InventoryUnit, type: :model do
         unit = other_shipment.inventory_units.build
         unit.state = 'backordered'
         unit.variant_id = stock_item.variant.id
-        unit.order_id = other_order.id
         unit.line_item = line_item
         unit.tap(&:save!)
       end
@@ -289,11 +294,10 @@ describe Spree::InventoryUnit, type: :model do
       expect { inventory_unit.reload }.not_to raise_error
     end
 
-    it "cannot be destroyed if its shipment is ready" do
+    it "can be destroyed if its shipment is ready" do
       inventory_unit = create(:order_ready_to_ship).inventory_units.first
-      expect(inventory_unit.destroy).to eq false
-      expect(inventory_unit.errors.full_messages.join).to match /Cannot destroy/
-      expect { inventory_unit.reload }.not_to raise_error
+      expect(inventory_unit.destroy).to be_truthy
+      expect { inventory_unit.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
 
     it "cannot be destroyed if its shipment is shipped" do

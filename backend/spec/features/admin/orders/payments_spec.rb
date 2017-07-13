@@ -113,16 +113,6 @@ describe 'Payments', type: :feature do
         end
       end
 
-      it 'allows the amount to be edited by clicking on the amount then saving' do
-        within_row(1) do
-          find('td.amount span').click
-          fill_in('amount', with: '$1.01')
-          click_icon(:save)
-          expect(page).to have_selector('td.amount span', text: '$1.01')
-          expect(payment.reload.amount).to eq(1.01)
-        end
-      end
-
       it 'allows the amount change to be cancelled by clicking on the cancel button' do
         within_row(1) do
           click_icon(:edit)
@@ -195,10 +185,13 @@ describe 'Payments', type: :feature do
 
     context "user existing card" do
       let!(:cc) do
-        create(:credit_card, user_id: order.user_id, payment_method: payment_method, gateway_customer_profile_id: "BGS-RFRE")
+        create(:credit_card, payment_method: payment_method, gateway_customer_profile_id: "BGS-RFRE")
       end
 
-      before { visit spree.admin_order_payments_path(order) }
+      before do
+        order.user.wallet.add(cc)
+        visit spree.admin_order_payments_path(order)
+      end
 
       it "is able to reuse customer payment source" do
         expect(find("#card_#{cc.id}")).to be_checked

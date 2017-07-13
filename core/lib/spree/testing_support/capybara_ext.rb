@@ -20,6 +20,12 @@ module CapybaraExt
   end
 
   def fill_in_quantity(table_column, selector, quantity)
+    Spree::Deprecation.warn <<-WARN.strip_heredoc
+      fill_in_quantity is deprecated. Instead use:
+        within(#{table_column.inspect}) do
+          fill_in #{selector.inspect}, with: #{quantity.inspect}
+        end
+    WARN
     within(table_column) do
       fill_in selector, with: quantity
     end
@@ -100,7 +106,6 @@ module CapybaraExt
   end
 
   def wait_for_ajax
-
     Spree::Deprecation.warn <<-WARN.squish, caller
       wait_for_ajax has been deprecated.
       Please refer to the capybara documentation on how to properly wait for asyncronous behavior:

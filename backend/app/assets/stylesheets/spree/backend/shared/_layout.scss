@@ -14,9 +14,6 @@ body {
 .admin-nav {
   @include position(absolute, 0 null 0 0);
   width: $width-sidebar;
-  img {
-    max-width: 100%;
-  }
   @media print { display: none }
 }
 
@@ -27,7 +24,7 @@ body {
   }
 
   body.new-layout & {
-    @include padding(1rem $grid-gutter-width null);
+    @include padding(1rem map-get($grid-gutter-widths, "xl") null);
   }
 
   &.centered {
@@ -36,27 +33,20 @@ body {
   }
 }
 
-.content {
-  @include make-row();
-}
-
 .content-main {
-  @include make-col();
-  @include make-col-span(12);
+  @include make-col(12);
   overflow-x: hidden; // makes sure that the tabs are able to resize
 
   .has-sidebar & {
-    @include make-col-span(9);
+    @include make-col(9);
   }
 }
 
 .content-sidebar {
-  @include make-col();
-  @include make-col-span(3);
+  @include make-col(3);
 }
 
 #content {
-  background-color: $color-1;
   position: relative;
   z-index: 0;
   padding: 0;

@@ -1,29 +1,216 @@
-## Solidus 2.2.0 (master, unreleased)
+## Solidus 2.3.0 (master, unreleased)
 
-*   Promotion and Shipping calculators can be created or have their type
-    changed without saving and reloading the page.
-    [#1618](https://github.com/solidusio/solidus/pull/1618)
+- Rails 5.1 [\#1895](https://github.com/solidusio/solidus/pull/1895) ([jhawthorn](https://github.com/jhawthorn))
 
-*   Product slugs no longer have a minimum length validation to match the
-    Product name validation.
-    [#1616](https://github.com/solidusio/solidus/pull/1616)
+- The default behaviour for selecting the current store has changed. Stores are now only returned if their url matches the current domain exactly (falling back to the default store) [\#2041](https://github.com/solidusio/solidus/pull/2041) [\#1993](https://github.com/solidusio/solidus/pull/1993) ([jhawthorn](https://github.com/jhawthorn), [kennyadsl](https://github.com/kennyadsl))
 
-*   Changed the promotion field in the admin order search to only find orders
-    which used the specified promotion code, instead of any code on an applied
-    promotion. [#1662](https://github.com/solidusio/solidus/pull/1662)
+- Remove dependency on premailer gem [\#2061](https://github.com/solidusio/solidus/pull/2061) ([cbrunsdon](https://github.com/cbrunsdon))
 
-*   `Spree::Money` now includes `Comparable` and the `<=>` operator for
-    comparisons. A comparison will fail if the two objects do not use the same
-    currency. [#1682](https://github.com/solidusio/solidus/pull/1682)
+- Order#outstanding_balance now uses reimbursements instead of refunds to calculate the amount that should be paid on an order. [#2002](https://github.com/solidusio/solidus/pull/2002) (many contributors :heart:)
 
-*   The "Stores" section of Settings in the admin now supports creating and
-    editing multiple stores.
+- Renamed bogus payment methods [\#2000](https://github.com/solidusio/solidus/pull/2000) ([tvdeyen](https://github.com/tvdeyen))
+  `Spree::Gateway::BogusSimple` and `Spree::Gateway::Bogus` were renamed into `Spree::PaymentMethod::SimpleBogusCreditCard` and `Spree::PaymentMethod::BogusCreditCard`
 
-*   Deprecations
+- Allow refreshing shipping rates for unshipped shipments on completed orders [\#1906](https://github.com/solidusio/solidus/pull/1906) ([mamhoff](https://github.com/mamhoff))
+- Remove line_item_options class attribute from Api::LineItemsController [\#1943](https://github.com/solidusio/solidus/pull/1943)
+- Allow custom separator between a promotion's `base_code` and `suffix` [\#1951](https://github.com/solidusio/solidus/pull/1951) ([ericgross](https://github.com/ericgross))
+- Ignore `adjustment.finalized` on tax adjustments. [\#1936](https://github.com/solidusio/solidus/pull/1936) ([jordan-brough](https://github.com/jordan-brough))
+- Transform the relation between TaxRate and TaxCategory to a Many to Many [\#1851](https://github.com/solidusio/solidus/pull/1851) ([vladstoick](https://github.com/vladstoick))
 
-    * `cache_key_for_taxons` helper has been deprecated in favour of `cache [I18n.locale, @taxons]`
+  This fixes issue [\#1836](https://github.com/solidusio/solidus/issues/1836). By allowing a TaxRate to tax multiple categories, stores don't have to create multiple TaxRates with the same value if a zone doesn't have different tax rates for some tax categories.
 
-## Solidus 2.1.0 (unreleased)
+- Adjustments without a source are now included in `line_item.adjustment_total` [\#1933](https://github.com/solidusio/solidus/pull/1933) ([alexstoick](https://github.com/alexstoick))
+- Always update last\_ip\_address on order [\#1658](https://github.com/solidusio/solidus/pull/1658) ([bbuchalter](https://github.com/bbuchalter))
+- Don't eager load adjustments in current\_order [\#2069](https://github.com/solidusio/solidus/pull/2069) ([jhawthorn](https://github.com/jhawthorn))
+- Avoid running validations in current\_order [\#2068](https://github.com/solidusio/solidus/pull/2068) ([jhawthorn](https://github.com/jhawthorn))
+- Fix Paperclip::Errors::NotIdentifiedByImageMagickError on invalid image [\#2064](https://github.com/solidusio/solidus/pull/2064) ([karlentwistle](https://github.com/karlentwistle))
+- Fix error message on insufficient inventory. [\#2056](https://github.com/solidusio/solidus/pull/2056) ([husam212](https://github.com/husam212))
+- Remove print statements from migrations [\#2048](https://github.com/solidusio/solidus/pull/2048) ([jhawthorn](https://github.com/jhawthorn))
+- Make Address.find\_all\_by\_name\_or\_abbr case-insensitive [\#2043](https://github.com/solidusio/solidus/pull/2043) ([jordan-brough](https://github.com/jordan-brough))
+- Remove redundant methods on Spree::PaymentMethod::StoreCredit [\#2038](https://github.com/solidusio/solidus/pull/2038) ([skukx](https://github.com/skukx))
+- Fix ShippingMethod select for MySQL 5.7 strict [\#2024](https://github.com/solidusio/solidus/pull/2024) ([jhawthorn](https://github.com/jhawthorn))
+- Use a subquery to avoid returning duplicate products from Product.available [\#2021](https://github.com/solidusio/solidus/pull/2021) ([jhawthorn](https://github.com/jhawthorn))
+- Validate presence of product on a Variant [\#2020](https://github.com/solidusio/solidus/pull/2020) ([jhawthorn](https://github.com/jhawthorn))
+- Add some missing data to seeds which was added by migrations [\#1962](https://github.com/solidusio/solidus/pull/1962) ([BravoSimone](https://github.com/BravoSimone))
+- Add validity period for Spree::TaxRate [\#1953](https://github.com/solidusio/solidus/pull/1953) ([mtylty](https://github.com/mtylty))
+- Remove unnecessary shipping rates callback [\#1905](https://github.com/solidusio/solidus/pull/1905) ([mamhoff](https://github.com/mamhoff))
+- Remove fallback first shipping method on shipments [\#1843](https://github.com/solidusio/solidus/pull/1843) ([mamhoff](https://github.com/mamhoff))
+- Add a configurable order number generator [\#1820](https://github.com/solidusio/solidus/pull/1820) ([tvdeyen](https://github.com/tvdeyen))
+- Assign default user addresses in checkout controller [\#1967](https://github.com/solidusio/solidus/pull/1967) ([kennyadsl](https://github.com/kennyadsl))
+- Use user.default_address as a default if bill_address or ship_address is unset [\#1424](https://github.com/solidusio/solidus/pull/1424) ([yeonhoyoon](https://github.com/yeonhoyoon), [peterberkenbosch](https://github.com/peterberkenbosch))
+- Add html templates for shipped_email and inventory_cancellation emails [\#1377](https://github.com/solidusio/solidus/pull/1377) ([DanielePalombo](https://github.com/DanielePalombo))
+- Don't `@extend` compound selectors in sass. Avoids deprecation warnings in sass 3.4.25 [\#2073](https://github.com/solidusio/solidus/pull/2073) ([jhawthorn](https://github.com/jhawthorn))
+
+### Admin
+
+- Configure admin turbolinks [\#1882](https://github.com/solidusio/solidus/pull/1882) ([mtomov](https://github.com/mtomov))
+- Allow users to inline update the variant of an image in admin [\#1580](https://github.com/solidusio/solidus/pull/1580) ([mtomov](https://github.com/mtomov))
+- Fix typo on fieldset tags [\#2005](https://github.com/solidusio/solidus/pull/2005) ([oeN](https://github.com/oeN))
+- Use more specific selector for select2 [\#1997](https://github.com/solidusio/solidus/pull/1997) ([oeN](https://github.com/oeN))
+- Replace select2 with \<select class="custom-select"\> [\#2034](https://github.com/solidusio/solidus/pull/2034) [\#2030](https://github.com/solidusio/solidus/pull/2030) ([jhawthorn](https://github.com/jhawthorn))
+- Fix admin SQL issues with DISTINCT products [\#2025](https://github.com/solidusio/solidus/pull/2025) ([jhawthorn](https://github.com/jhawthorn))
+- Use `@collection` instead of `@collection.present?` in some admin controllers [\#2046](https://github.com/solidusio/solidus/pull/2046) ([jordan-brough](https://github.com/jordan-brough))
+- Admin::ReportsController reusable search params [\#2012](https://github.com/solidusio/solidus/pull/2012) ([oeN](https://github.com/oeN))
+- Do not show broken links in admin product view when product is deleted [\#1988](https://github.com/solidusio/solidus/pull/1988) ([laurawadden](https://github.com/laurawadden))
+- Allow admin to edit variant option values [\#1944](https://github.com/solidusio/solidus/pull/1944) ([dividedharmony](https://github.com/dividedharmony))
+- Do not refresh shipping rates everytime the order is viewed in the admin [\#1798](https://github.com/solidusio/solidus/pull/1798) ([mamhoff](https://github.com/mamhoff))
+- Add form guidelines to the style guide [\#1582](https://github.com/solidusio/solidus/pull/1582) ([Mandily](https://github.com/Mandily))
+- Improve style guide flash messages UX [\#1964](https://github.com/solidusio/solidus/pull/1964) ([mtylty](https://github.com/mtylty))
+- Document tooltips in the style guide [\#1955](https://github.com/solidusio/solidus/pull/1955) ([gus4no](https://github.com/gus4no))
+- Fix path for distributed amount fields partial [\#2023](https://github.com/solidusio/solidus/pull/2023) ([graygilmore](https://github.com/graygilmore))
+- Use `.all` instead of `.where\(nil\)` in Admin::ResourceController [\#2047](https://github.com/solidusio/solidus/pull/2047) ([jordan-brough](https://github.com/jordan-brough))
+- Fix typo on the new promotions form [\#2035](https://github.com/solidusio/solidus/pull/2035) ([swcraig](https://github.com/swcraig))
+
+### Deprecations
+- Renamed `Spree::Gateway` payment method into `Spree::PaymentMethod::CreditCard` [\#2001](https://github.com/solidusio/solidus/pull/2001) ([tvdeyen](https://github.com/tvdeyen))
+- Deprecate `#simple_current_order` [\#1915](https://github.com/solidusio/solidus/pull/1915) ([ericsaupe](https://github.com/ericsaupe))
+- Deprecate `PaymentMethod.providers` in favour of `Rails.application.config.spree.payment_methods` [\#1974](https://github.com/solidusio/solidus/pull/1974) ([tvdeyen](https://github.com/tvdeyen))
+- Deprecate `Spree::Admin::PaymentMethodsController#load_providers` in favour of `load_payment_methods` [\#1974](https://github.com/solidusio/solidus/pull/1974) ([tvdeyen](https://github.com/tvdeyen))
+- Deprecate Shipment\#add\_shipping\_method [\#2018](https://github.com/solidusio/solidus/pull/2018) ([jhawthorn](https://github.com/jhawthorn))
+- Re-add deprecated TaxRate\#tax\_category [\#2013](https://github.com/solidusio/solidus/pull/2013) ([jhawthorn](https://github.com/jhawthorn))
+- Deprecate `Spree::Core::CurrentStore` in favor of `Spree::CurrentStoreSelector`. [\#1993](https://github.com/solidusio/solidus/pull/1993)
+- Deprecate `Spree::Order#assign_default_addresses!` in favor of `Order.new.assign_default_user_addresses`. [\#1954](https://github.com/solidusio/solidus/pull/1954) ([kennyadsl](https://github.com/kennyadsl))
+- Rename `PaymentMethod#method_type` into `partial_name` [\#1978](https://github.com/solidusio/solidus/pull/1978) ([tvdeyen](https://github.com/tvdeyen))
+- Remove ! from assign\_default\_user\_addresses!, deprecating the old method [\#2019](https://github.com/solidusio/solidus/pull/2019) ([jhawthorn](https://github.com/jhawthorn))
+- Emit Spree.url JS deprecation warning in all environments [\#2017](https://github.com/solidusio/solidus/pull/2017) ([jhawthorn](https://github.com/jhawthorn))
+
+
+## Solidus 2.2.1 (2017-05-09)
+
+- Fix migrating CreditCards to WalletPaymentSource [\#1898](https://github.com/solidusio/solidus/pull/1898) ([jhawthorn](https://github.com/jhawthorn))
+- Fix setting the wallet's default payment source to the same value [\#1888](https://github.com/solidusio/solidus/pull/1888) ([ahoernecke](https://github.com/ahoernecke))
+- Fix assigning nil to `default_wallet_payment_source=` [\#1896](https://github.com/solidusio/solidus/pull/1896) ([jhawthorn](https://github.com/jhawthorn))
+
+## Solidus 2.2.0 (2017-05-01)
+
+### Major Changes
+
+- Spree::Wallet and Non credit card payment sources [\#1707](https://github.com/solidusio/solidus/pull/1707) [\#1773](https://github.com/solidusio/solidus/pull/1773) [\#1765](https://github.com/solidusio/solidus/pull/1765) ([chrisradford](https://github.com/chrisradford), [jordan-brough](https://github.com/jordan-brough), [peterberkenbosch](https://github.com/peterberkenbosch))
+
+  This adds support for payment sources other than `CreditCard`, which can be used to better represent other (potentially reusable) payment sources, like PayPal or Bank accounts. Previously sources like this had to implement all behaviour themselves, or try their best to quack like a credit card.
+
+  This adds a `PaymentSource` base class, which `CreditCard` now inherits, and a `Wallet` service class to help manage users' payment sources. A `WalletPaymentSource` join table is used to tie reusable payment sources to users, replacing the existing behaviour of allowing all credit cards with a stored payment profile.
+
+- Add promotion code batch [\#1524](https://github.com/solidusio/solidus/pull/1524) ([vladstoick](https://github.com/vladstoick))
+
+  Prior to Solidus 1.0, each promotion had at most one code. Though we added the functionality to have many codes on one promotion, the UI for creation and management was lacking.
+
+  In Solidus 2.2 we've added `PromotionCodeBatch`, a model to group a batch of promotion codes. This allows additional promotion codes to be generated after the Promotion's initial creation. Promotion codes are also now generated in a background job.
+
+- Admin UI Changes
+
+  The admin UI was once again a focus in this release. We've made many incremental changes we think all users will appreciate. This includes an upgrade to Bootstrap 4.0.0.alpha6, changes to table styles, and a better select style.
+
+  See the "Admin UI" section below for a full list of changes.
+
+
+### Core
+- `Spree::Order#available_payment_methods` returns an `ActiveRecord::Relation` instead of an array [\#1802](https://github.com/solidusio/solidus/pull/1802) ([luukveenis](https://github.com/luukveenis))
+- Product slugs no longer have a minimum length requirement [#1616](https://github.com/solidusio/solidus/pull/1616) ([fschwahn](https://github.com/fschwahn))
+- `Spree::Money` now includes `Comparable` and the `<=>` operator for comparisons. [#1682](https://github.com/solidusio/solidus/pull/1682) ([graygilmore ](https://github.com/graygilmore))
+- Allow destruction of shipments in the "ready" state. [#1784](https://github.com/solidusio/solidus/pull/1784) ([mamhoff](https://github.com/mamhoff))
+- Do not consider pending inventory units cancelable [\#1800](https://github.com/solidusio/solidus/pull/1800) ([mamhoff](https://github.com/mamhoff))
+- Rewrite spree.js in plain JS [\#1754](https://github.com/solidusio/solidus/pull/1754) ([jhawthorn](https://github.com/jhawthorn))
+- Make sensitive params filtering less eager [\#1755](https://github.com/solidusio/solidus/pull/1755) ([kennyadsl](https://github.com/kennyadsl))
+- Use manifest.js to support Sprockets 4 [\#1759](https://github.com/solidusio/solidus/pull/1759) ([jhawthorn](https://github.com/jhawthorn))
+- Update paperclip dependency [\#1749](https://github.com/solidusio/solidus/pull/1749) ([brchristian](https://github.com/brchristian))
+- Update kaminari dependency to 1.x [\#1734](https://github.com/solidusio/solidus/pull/1734) ([jrochkind](https://github.com/jrochkind))
+- Allow twitter\_cldr 4.x [\#1732](https://github.com/solidusio/solidus/pull/1732) ([jrochkind](https://github.com/jrochkind))
+- Added LineItem name to unavailable flash [\#1697](https://github.com/solidusio/solidus/pull/1697) ([ericsaupe](https://github.com/ericsaupe))
+- Don't treat "unreturned exchanges" specially in checkout state machine flow [\#1690](https://github.com/solidusio/solidus/pull/1690) ([jhawthorn](https://github.com/jhawthorn))
+- `set_shipments_cost` is now part of OrderUpdater [\#1689](https://github.com/solidusio/solidus/pull/1689) ([jhawthorn](https://github.com/jhawthorn))
+- Methods other than `update!`, `update_shipment_state`, `update_payment_state` are now private on OrderUpdater [\#1689](https://github.com/solidusio/solidus/pull/1689) ([jhawthorn](https://github.com/jhawthorn))
+
+### Bug Fixes
+
+- `AvailabilityValidator` correctly detects out of stock with multiple shipments from the same stock location. [\#1693](https://github.com/solidusio/solidus/pull/1693) ([jhawthorn](https://github.com/jhawthorn))
+- Fix missing close paren in variantAutocomplete [\#1832](https://github.com/solidusio/solidus/pull/1832) ([jhawthorn](https://github.com/jhawthorn))
+- Set belongs\_to\_required\_by\_default = false [\#1807](https://github.com/solidusio/solidus/pull/1807) ([jhawthorn](https://github.com/jhawthorn))
+- Fix loading transfer shipments [\#1781](https://github.com/solidusio/solidus/pull/1781) ([mamhoff](https://github.com/mamhoff))
+- Fix complete order factory to have non-pending inventory units [\#1787](https://github.com/solidusio/solidus/pull/1787) ([mamhoff](https://github.com/mamhoff))
+- Fix to cart URL for stores not mounted at root [\#1775](https://github.com/solidusio/solidus/pull/1775) ([funwhilelost](https://github.com/funwhilelost))
+- Remove duplicated require in shipment factory [\#1769](https://github.com/solidusio/solidus/pull/1769) ([upinetree](https://github.com/upinetree))
+- Fix an issue where updating a user in the admin without specifying roles in would clear the existing roles.[\#1747](https://github.com/solidusio/solidus/pull/1747) ([tvdeyen](https://github.com/tvdeyen))
+- Fix the 'Send Mailer' checkbox selection [\#1716](https://github.com/solidusio/solidus/pull/1716) ([jhawthorn](https://github.com/jhawthorn))
+- Rearrange AR relation declarations in order.rb in preparation for Rails 5.1 [\#1740](https://github.com/solidusio/solidus/pull/1740) ([jhawthorn](https://github.com/jhawthorn))
+- Fix issue where OrderInventory creates superfluous InventoryUnits [\#1751](https://github.com/solidusio/solidus/pull/1751) ([jhawthorn](https://github.com/jhawthorn))
+- Fix check for `order.guest\_token` presence [\#1705](https://github.com/solidusio/solidus/pull/1705) ([vfonic](https://github.com/vfonic))
+- Fix shipped\_order factory [\#1772](https://github.com/solidusio/solidus/pull/1772) ([tvdeyen](https://github.com/tvdeyen))
+- Don't display inactive payment methods on frontend or backend [\#1801](https://github.com/solidusio/solidus/pull/1801) ([luukveenis](https://github.com/luukveenis))
+- Don't send email if PromotionCodeBatch email is unset [\#1699](https://github.com/solidusio/solidus/pull/1699) ([jhawthorn](https://github.com/jhawthorn))
+
+### Frontend
+- Use `cart_link_path` instead of `cart_link_url` [\#1757](https://github.com/solidusio/solidus/pull/1757) ([bofrede](https://github.com/bofrede))
+- Replace cache\_key\_for\_taxons with cache [\#1688](https://github.com/solidusio/solidus/pull/1688) ([jhawthorn](https://github.com/jhawthorn))
+- Update code styles for /cart [\#1727](https://github.com/solidusio/solidus/pull/1727) ([vfonic](https://github.com/vfonic))
+- Add a frontend views override generator [\#1681](https://github.com/solidusio/solidus/pull/1681) ([tvdeyen](https://github.com/tvdeyen))
+
+### Admin
+
+- Create JS namespaces in centralized file [\#1753](https://github.com/solidusio/solidus/pull/1753) ([jhawthorn](https://github.com/jhawthorn))
+- Replace select2-rails with vendored select2 [\#1774](https://github.com/solidusio/solidus/pull/1774) ([jhawthorn](https://github.com/jhawthorn))
+- Add JS `Spree.formatMoney` helper for currency formatting [\#1745](https://github.com/solidusio/solidus/pull/1745) ([jhawthorn](https://github.com/jhawthorn))
+- Rewrite zones.js.coffee using Backbone.js [\#1766](https://github.com/solidusio/solidus/pull/1766) ([jhawthorn](https://github.com/jhawthorn))
+- Add JS `Spree.t` and `Spree.human_attribute_name` for i18n [\#1730](https://github.com/solidusio/solidus/pull/1730) ([jhawthorn](https://github.com/jhawthorn))
+- Allow editing multiple Stores [\#1282](https://github.com/solidusio/solidus/pull/1282) ([jhawthorn](https://github.com/jhawthorn))
+- Add promotion codes index view [\#1545](https://github.com/solidusio/solidus/pull/1545) ([jhawthorn](https://github.com/jhawthorn))
+- Replace deprecated bourbon mixins with unprefixed CSS [\#1706](https://github.com/solidusio/solidus/pull/1706) ([jhawthorn](https://github.com/jhawthorn))
+- Ensure helper is specified in CustomerReturnsController [\#1771](https://github.com/solidusio/solidus/pull/1771) ([eric1234](https://github.com/eric1234))
+- Ensure helper is specified in VariantsController [\#1714](https://github.com/solidusio/solidus/pull/1714) ([eric1234](https://github.com/eric1234))
+- Remove nonexistant form hint from view [\#1698](https://github.com/solidusio/solidus/pull/1698) ([jhawthorn](https://github.com/jhawthorn))
+- Promotion search now finds orders which used the specific promotion code, of any code on the promotion. [#1662](https://github.com/solidusio/solidus/pull/1662) ([stewart](https://github.com/stewart))
+
+### Admin UI
+
+- Upgrade to Bootstrap 4.0.0.alpha6 [\#1816](https://github.com/solidusio/solidus/pull/1816) ([jhawthorn](https://github.com/jhawthorn))
+- New admin table layout [\#1786](https://github.com/solidusio/solidus/pull/1786) [\#1828](https://github.com/solidusio/solidus/pull/1828) [\#1829](https://github.com/solidusio/solidus/pull/1829) ([tvdeyen](https://github.com/tvdeyen))
+- Add number with currency selector widget [\#1793](https://github.com/solidusio/solidus/pull/1793) [\#1813](https://github.com/solidusio/solidus/pull/1813) ([jhawthorn](https://github.com/jhawthorn))
+- Replace select2 styling [\#1797](https://github.com/solidusio/solidus/pull/1797) ([jhawthorn](https://github.com/jhawthorn))
+- Change admin logo height to match breadcrumbs height [\#1822](https://github.com/solidusio/solidus/pull/1822) ([mtomov](https://github.com/mtomov))
+- Fit admin logo to available space [\#1758](https://github.com/solidusio/solidus/pull/1758) ([brchristian](https://github.com/brchristian))
+- Make form/button styles match bootstrap's [\#1809](https://github.com/solidusio/solidus/pull/1809) ([jhawthorn](https://github.com/jhawthorn))
+- Fix datepicker style [\#1827](https://github.com/solidusio/solidus/pull/1827) ([kennyadsl](https://github.com/kennyadsl))
+- Use bootstrap input-group for date range [\#1817](https://github.com/solidusio/solidus/pull/1817) ([jhawthorn](https://github.com/jhawthorn))
+- Improve page titles in admin [\#1795](https://github.com/solidusio/solidus/pull/1795) ([jhawthorn](https://github.com/jhawthorn))
+- Use an icon as missing image placeholder [\#1760](https://github.com/solidusio/solidus/pull/1760) ([jhawthorn](https://github.com/jhawthorn)) [\#1764](https://github.com/solidusio/solidus/pull/1764) ([jhawthorn](https://github.com/jhawthorn))
+- Convert admin orders table into full width layout [\#1782](https://github.com/solidusio/solidus/pull/1782) ([tvdeyen](https://github.com/tvdeyen))
+- Raise `font-size` [\#1777](https://github.com/solidusio/solidus/pull/1777) ([tvdeyen](https://github.com/tvdeyen))
+- Improve promotions creation form [\#1509](https://github.com/solidusio/solidus/pull/1509) ([jhawthorn](https://github.com/jhawthorn))
+- Remove stock location configuration from admin "cart" page [\#1709](https://github.com/solidusio/solidus/pull/1709) [\#1710](https://github.com/solidusio/solidus/pull/1710) ([jhawthorn](https://github.com/jhawthorn))
+- Update admin cart page dynamically [\#1715](https://github.com/solidusio/solidus/pull/1715) ([jhawthorn](https://github.com/jhawthorn))
+- Fix duplicated Shipments breadcrumb [\#1717](https://github.com/solidusio/solidus/pull/1717) [\#1746](https://github.com/solidusio/solidus/pull/1746) ([jhawthorn](https://github.com/jhawthorn))
+- Don’t set default text highlight colors [\#1738](https://github.com/solidusio/solidus/pull/1738) ([brchristian](https://github.com/brchristian))
+- Convert customer details page to backbone [\#1762](https://github.com/solidusio/solidus/pull/1762) ([jhawthorn](https://github.com/jhawthorn))
+- Remove inline edit from payments dipslay amount [\#1815](https://github.com/solidusio/solidus/pull/1815) ([tvdeyen](https://github.com/tvdeyen))
+- Fix styling of tiered promotions delete icon [\#1810](https://github.com/solidusio/solidus/pull/1810) ([jhawthorn](https://github.com/jhawthorn))
+- Remove `webkit-tap-highlight-color` [\#1792](https://github.com/solidusio/solidus/pull/1792) ([brchristian](https://github.com/brchristian))
+- Promotion and Shipping calculators can be created or changed without reloading the page. [#1618](https://github.com/solidusio/solidus/pull/1618) ([jhawthorn](https://github.com/jhawthorn))
+
+
+### Removals
+
+- Extract expedited exchanges to an extension [\#1691](https://github.com/solidusio/solidus/pull/1691) ([jhawthorn](https://github.com/jhawthorn))
+- Remove spree\_store\_credits column [\#1741](https://github.com/solidusio/solidus/pull/1741) ([jhawthorn](https://github.com/jhawthorn))
+- Remove StockMovements\#new action and view [\#1767](https://github.com/solidusio/solidus/pull/1767) ([jhawthorn](https://github.com/jhawthorn))
+- Remove unused variant\_management.js.coffee [\#1768](https://github.com/solidusio/solidus/pull/1768) ([jhawthorn](https://github.com/jhawthorn))
+- Remove unused payment Javascript [\#1735](https://github.com/solidusio/solidus/pull/1735) ([jhawthorn](https://github.com/jhawthorn))
+- Moved `spree/admin/shared/_translations` partial to `spree/admin/shared/_js_locale_data`.
+
+
+### Deprecations
+
+- Deprecate `Order#has_step?` in favour of `has_checkout_step?` [#1667](https://github.com/solidusio/solidus/pull/1667) ([mamhoff](https://github.com/mamhoff))
+- Deprecate `Order#set_shipments_cost`, which is now done in `Order#update!` [\#1689](https://github.com/solidusio/solidus/pull/1689) ([jhawthorn](https://github.com/jhawthorn))
+- Deprecate `user.default_credit_card`, `user.payment_sources` for `user.wallet.default_wallet_payment_source` and `user.wallet.wallet_payment_sources`
+- Deprecate `CreditCard#default` in favour of `user.wallet.default_wallet_payment_source`
+- Deprecate `cache_key_for_taxons` helper favour of `cache [I18n.locale, @taxons]`
+- Deprecate admin sass variables in favour of bootstrap alternatives [\#1780](https://github.com/solidusio/solidus/pull/1780) ([tvdeyen](https://github.com/tvdeyen))
+- Deprecate Address\#empty? [\#1686](https://github.com/solidusio/solidus/pull/1686) ([jhawthorn](https://github.com/jhawthorn))
+- Deprecate `fill_in_quantity` capybara helper [#1710](https://github.com/solidusio/solidus/pull/1710) ([jhawthorn](https://github.com/jhawthorn))
+- Deprecate `wait_for_ajax` capybara helper [#1668](https://github.com/solidusio/solidus/pull/1668) ([cbrunsdon](https://github.com/cbrunsdon))
+
+
+## Solidus 2.1.0 (2017-01-17)
 
 *   The OrderUpdater (as used by `order.update!`) now fully updates taxes.
 
@@ -523,6 +710,9 @@
     the exception (an incomplete package would be returned). Now the coordinator
     checks that the package is complete and raises `InsufficientStock` if it is
     incomplete for any reason.
+
+*   Removed `Spree::Zone.global` [#627](https://github.com/solidusio/solidus/pull/627)
+    Use the "GlobalZone" factory instead: `FactoryGirl.create(:global_zone)`
 
 ## Solidus 1.1.0 (2015-11-25)
 

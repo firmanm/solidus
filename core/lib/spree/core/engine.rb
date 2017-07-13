@@ -43,8 +43,8 @@ module Spree
 
       initializer "spree.register.payment_methods", before: :load_config_initializers do |app|
         app.config.spree.payment_methods = %w[
-          Spree::Gateway::Bogus
-          Spree::Gateway::BogusSimple
+          Spree::PaymentMethod::BogusCreditCard
+          Spree::PaymentMethod::SimpleBogusCreditCard
           Spree::PaymentMethod::StoreCredit
           Spree::PaymentMethod::Check
         ]
@@ -67,9 +67,10 @@ module Spree
         ]
 
         app.config.spree.calculators.promotion_actions_create_item_adjustments = %w[
-          Spree::Calculator::PercentOnLineItem
+          Spree::Calculator::DistributedAmount
           Spree::Calculator::FlatRate
           Spree::Calculator::FlexiRate
+          Spree::Calculator::PercentOnLineItem
           Spree::Calculator::TieredPercent
         ]
 
@@ -104,13 +105,14 @@ module Spree
         ]
       end
 
-      # filter sensitive information during logging
+      # Filter sensitive information during logging
       initializer "spree.params.filter", before: :load_config_initializers do |app|
         app.config.filter_parameters += [
-          :password,
-          :password_confirmation,
-          :number,
-          :verification_value]
+          %r{^password$},
+          %r{^password_confirmation$},
+          %r{^number$}, # Credit Card number
+          %r{^verification_value$} # Credit Card verification value
+        ]
       end
 
       initializer "spree.core.checking_migrations", before: :load_config_initializers do |_app|

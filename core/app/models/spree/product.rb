@@ -80,7 +80,7 @@ module Spree
 
     after_initialize :ensure_master
 
-    after_save :run_touch_callbacks, if: :changed?
+    after_save :run_touch_callbacks, if: :saved_changes?
     after_touch :touch_taxons
 
     before_validation :normalize_slug, on: :update
@@ -102,6 +102,10 @@ module Spree
 
     self.whitelisted_ransackable_associations = %w[stores variants_including_master master variants]
     self.whitelisted_ransackable_attributes = %w[slug]
+
+    def self.ransackable_scopes(_auth_object = nil)
+      %i(with_deleted with_variant_sku_cont)
+    end
 
     # @return [Boolean] true if there are any variants
     def has_variants?
@@ -339,10 +343,12 @@ module Spree
     # Iterate through this products taxons and taxonomies and touch their timestamps in a batch
     def touch_taxons
       taxons_to_touch = taxons.map(&:self_and_ancestors).flatten.uniq
-      Spree::Taxon.where(id: taxons_to_touch.map(&:id)).update_all(updated_at: Time.current)
+      unless taxons_to_touch.empty?
+        Spree::Taxon.where(id: taxons_to_touch.map(&:id)).update_all(updated_at: Time.current)
 
-      taxonomy_ids_to_touch = taxons_to_touch.map(&:taxonomy_id).flatten.uniq
-      Spree::Taxonomy.where(id: taxonomy_ids_to_touch).update_all(updated_at: Time.current)
+        taxonomy_ids_to_touch = taxons_to_touch.map(&:taxonomy_id).flatten.uniq
+        Spree::Taxonomy.where(id: taxonomy_ids_to_touch).update_all(updated_at: Time.current)
+      end
     end
 
     def remove_taxon(taxon)

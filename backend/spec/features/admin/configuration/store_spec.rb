@@ -14,7 +14,7 @@ describe "Store", type: :feature, js: true do
     visit spree.admin_path
     click_link "Settings"
     within('.admin-nav') do
-      click_link "Store"
+      click_link "Stores"
     end
   end
 
@@ -38,7 +38,7 @@ describe "Store", type: :feature, js: true do
     end
 
     it "should be able to update the default cart tax country" do
-      expect(page).to have_select("Tax Country for Empty Carts", selected: "No taxes on carts without address")
+      expect(page).to have_select('Tax Country for Empty Carts', selected: 'No taxes on carts without address')
 
       select "Germany", from: "Tax Country for Empty Carts"
       click_button "Update"

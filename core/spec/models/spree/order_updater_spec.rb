@@ -16,20 +16,33 @@ module Spree
       context 'with refund' do
         it "updates payment totals" do
           create(:payment_with_refund, order: order, amount: 33.25, refund_amount: 3)
-          Spree::OrderUpdater.new(order).update_payment_total
+          updater.update
           expect(order.payment_total).to eq(30.25)
         end
       end
 
       it "update item total" do
-        updater.update_item_total
-        expect(order.item_total).to eq(20)
+        expect {
+          updater.update
+        }.to change { order.item_total }.to 20
       end
 
       it "update shipment total" do
         create(:shipment, order: order, cost: 10)
-        updater.update_shipment_total
-        expect(order.shipment_total).to eq(10)
+        expect {
+          updater.update
+        }.to change { order.shipment_total }.to 10
+      end
+
+      context 'with a source-less line item adjustment' do
+        let(:line_item) { create(:line_item, order: order, price: 10) }
+        before do
+          create(:adjustment, source: nil, adjustable: line_item, order: order, amount: -5)
+        end
+
+        it "updates the line item total" do
+          expect { updater.update }.to change { line_item.reload.adjustment_total }.from(0).to(-5)
+        end
       end
 
       context 'with order promotion followed by line item addition' do
@@ -60,7 +73,7 @@ module Spree
         create(:adjustment, adjustable: order, order: order, source: nil, amount: 10)
 
         expect {
-          updater.update_adjustment_total
+          updater.update
         }.to change {
           order.adjustment_total
         }.from(0).to(10)
@@ -79,13 +92,13 @@ module Spree
 
           before do
             promotion.activate(order: order)
-            order.update!
+            order.recalculate
             line_item.update!(quantity: 2)
           end
 
           it 'updates the promotion amount' do
             expect {
-              order.update!
+              order.recalculate
             }.to change {
               line_item.promo_total
             }.from(-1).to(-2)
@@ -104,7 +117,7 @@ module Spree
           end
 
           it 'uses the defined promotion chooser' do
-            expect { order.update! }.to raise_error('Custom promotion chooser')
+            expect { order.recalculate }.to raise_error('Custom promotion chooser')
           end
         end
 
@@ -143,7 +156,7 @@ module Spree
                                 label: 'Some other credit')
             line_item.adjustments.each { |a| a.update_column(:eligible, true) }
 
-            order.update!
+            order.recalculate
 
             expect(line_item.adjustments.promotion.eligible.count).to eq(1)
             expect(line_item.adjustments.promotion.eligible.first.label).to eq('Promotion C')
@@ -157,7 +170,7 @@ module Spree
             end
             line_item.adjustments.each { |a| a.update_column(:eligible, true) }
 
-            order.update!
+            order.recalculate
 
             expect(line_item.adjustments.promotion.eligible.count).to eq(1)
             expect(line_item.adjustments.promotion.eligible.first.label).to eq('Promotion B')
@@ -171,7 +184,7 @@ module Spree
             end
             line_item.adjustments.each { |a| a.update_column(:eligible, true) }
 
-            order.update!
+            order.recalculate
 
             expect(line_item.adjustments.promotion.eligible.count).to eq(1)
             expect(line_item.adjustments.promotion.eligible.first.label).to eq('Promotion B')
@@ -199,7 +212,7 @@ module Spree
                   order_promos[promo_sequence[0]].activate order: order
                   order_promos[promo_sequence[1]].activate order: order
 
-                  order.update!
+                  order.recalculate
                   order.reload
                   expect(order.all_adjustments.count).to eq(2), 'Expected two adjustments'
                   expect(order.all_adjustments.eligible.count).to eq(1), 'Expected one elegible adjustment'
@@ -250,7 +263,7 @@ module Spree
 
             # regression for https://github.com/spree/spree/issues/3274
             it 'still makes the previous best eligible adjustment valid' do
-              order.update!
+              order.recalculate
               expect(line_item.adjustments.promotion.eligible.first.label).to eq('Promotion A')
             end
           end
@@ -260,7 +273,7 @@ module Spree
             create_adjustment('Promotion B', -200)
             create_adjustment('Promotion C', -200)
 
-            order.update!
+            order.recalculate
 
             expect(line_item.adjustments.promotion.eligible.count).to eq(1)
             expect(line_item.adjustments.promotion.eligible.first.amount.to_i).to eq(-200)
@@ -271,7 +284,7 @@ module Spree
       describe 'tax recalculation' do
         let!(:ship_address) { create(:address) }
         let!(:tax_zone) { create(:global_zone) } # will include the above address
-        let!(:tax_rate) { create(:tax_rate, zone: tax_zone, tax_category: tax_category) }
+        let!(:tax_rate) { create(:tax_rate, zone: tax_zone, tax_categories: [tax_category]) }
 
         let(:order) do
           create(
@@ -292,27 +305,29 @@ module Spree
 
           it 'updates the promotion amount' do
             expect {
-              order.update!
+              order.recalculate
             }.to change {
               line_item.additional_tax_total
             }.from(1).to(2)
           end
         end
 
-        context 'with a custom tax_adjuster_class' do
-          let(:custom_adjuster_class) { double }
-          let(:custom_adjuster_instance) { double }
+        context 'with a custom tax_calculator_class' do
+          let(:custom_calculator_class) { double }
+          let(:custom_calculator_instance) { double }
 
           before do
             order # generate this first so we can expect it
-            Spree::Config.tax_adjuster_class = custom_adjuster_class
+            Spree::Config.tax_calculator_class = custom_calculator_class
           end
 
           it 'uses the configured class' do
-            expect(custom_adjuster_class).to receive(:new).with(order).at_least(:once).and_return(custom_adjuster_instance)
-            expect(custom_adjuster_instance).to receive(:adjust!).at_least(:once)
+            expect(custom_calculator_class).to receive(:new).with(order).at_least(:once).and_return(custom_calculator_instance)
+            expect(custom_calculator_instance).to receive(:calculate).at_least(:once).and_return(
+              Spree::Tax::OrderTax.new(order_id: order.id, line_item_taxes: [], shipment_taxes: [])
+            )
 
-            order.update!
+            order.recalculate
           end
         end
       end
@@ -450,20 +465,6 @@ module Spree
       end
     end
 
-    it "state change" do
-      order.shipment_state = 'shipped'
-      state_changes = double
-      allow(order).to receive_messages state_changes: state_changes
-      expect(state_changes).to receive(:create).with(
-        previous_state: nil,
-        next_state: 'shipped',
-        name: 'shipment',
-        user_id: nil
-      )
-
-      order.state_changed('shipment')
-    end
-
     context "completed order" do
       before { allow(order).to receive_messages completed?: true }
 
@@ -483,17 +484,12 @@ module Spree
 
         it "updates each shipment" do
           expect(shipment).to receive(:update!)
-          updater.update_shipments
-        end
-
-        it "refreshes shipment rates" do
-          expect(shipment).to receive(:refresh_rates)
-          updater.update_shipments
+          updater.update
         end
 
         it "updates the shipment amount" do
           expect(shipment).to receive(:update_amounts)
-          updater.update_shipments
+          updater.update
         end
       end
     end
@@ -539,7 +535,7 @@ module Spree
         expect(line_item.promo_total).to eq(0)
         expect(order.promo_total).to eq(0)
 
-        order.update!
+        order.recalculate
 
         expect(line_item.promo_total).to eq(-1)
         expect(order.promo_total).to eq(-1)
@@ -552,7 +548,7 @@ module Spree
       it "updates the totals" do
         line_item.update!(adjustment_total: 100)
         expect {
-          order.update!
+          order.recalculate
         }.to change { line_item.reload.adjustment_total }.from(100).to(0)
       end
     end

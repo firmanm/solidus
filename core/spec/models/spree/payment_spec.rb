@@ -6,7 +6,7 @@ describe Spree::Payment, type: :model do
   let(:refund_reason) { create(:refund_reason) }
 
   let(:gateway) do
-    gateway = Spree::Gateway::Bogus.new(active: true, name: 'Bogus gateway')
+    gateway = Spree::PaymentMethod::BogusCreditCard.new(active: true, name: 'Bogus gateway')
     allow(gateway).to receive_messages source_required: true
     gateway
   end
@@ -17,12 +17,12 @@ describe Spree::Payment, type: :model do
   let(:card) { create :credit_card }
 
   let(:payment) do
-    payment = Spree::Payment.new
-    payment.source = card
-    payment.order = order
-    payment.payment_method = gateway
-    payment.amount = 5
-    payment
+    Spree::Payment.create! do |payment|
+      payment.source = card
+      payment.order = order
+      payment.payment_method = gateway
+      payment.amount = 5
+    end
   end
 
   let(:amount_in_cents) { (payment.amount * 100).round }
@@ -37,11 +37,6 @@ describe Spree::Payment, type: :model do
 
   let(:failed_response) do
     ActiveMerchant::Billing::Response.new(false, '', {}, {})
-  end
-
-  before(:each) do
-    # So it doesn't create log entries every time a processing method is called
-    allow(payment.log_entries).to receive(:create!)
   end
 
   context '.risky' do
@@ -214,7 +209,7 @@ describe Spree::Payment, type: :model do
       # Regression test for https://github.com/spree/spree/issues/4598
       it "should allow payments with a gateway_customer_profile_id" do
         payment.source.update!(gateway_customer_profile_id: "customer_1", brand: 'visa')
-        expect(payment.payment_method.provider_class).to receive(:supports?).with('visa').and_return(false)
+        expect(payment.payment_method.gateway_class).to receive(:supports?).with('visa').and_return(false)
         expect(payment).to receive(:started_processing!)
         payment.process!
       end
@@ -222,7 +217,7 @@ describe Spree::Payment, type: :model do
       # Another regression test for https://github.com/spree/spree/issues/4598
       it "should allow payments with a gateway_payment_profile_id" do
         payment.source.update!(gateway_payment_profile_id: "customer_1", brand: 'visa')
-        expect(payment.payment_method.provider_class).to receive(:supports?).with('visa').and_return(false)
+        expect(payment.payment_method.gateway_class).to receive(:supports?).with('visa').and_return(false)
         expect(payment).to receive(:started_processing!)
         payment.process!
       end
@@ -246,8 +241,9 @@ describe Spree::Payment, type: :model do
 
       it "should log the response" do
         payment.save!
-        expect(payment.log_entries).to receive(:create!).with(details: anything)
-        payment.authorize!
+        expect {
+          payment.authorize!
+        }.to change { payment.log_entries.count }.by(1)
       end
 
       describe 'billing_address option' do
@@ -355,8 +351,9 @@ describe Spree::Payment, type: :model do
 
       it "should log the response" do
         payment.save!
-        expect(payment.log_entries).to receive(:create!).with(details: anything)
-        payment.purchase!
+        expect {
+          payment.purchase!
+        }.to change { payment.log_entries.count }.by(1)
       end
 
       context "if successful" do
@@ -532,8 +529,9 @@ describe Spree::Payment, type: :model do
       end
 
       it "should log the response" do
-        expect(payment.log_entries).to receive(:create!).with(details: anything)
-        payment.void_transaction!
+        expect {
+          payment.void_transaction!
+        }.to change { payment.log_entries.count }.by(1)
       end
 
       context "if successful" do
@@ -688,6 +686,8 @@ describe Spree::Payment, type: :model do
         let(:attributes) { attributes_for(:credit_card) }
 
         it "should not try to create profiles on old failed payment attempts" do
+          order.payments.destroy_all
+
           allow_any_instance_of(Spree::Payment).to receive(:payment_method) { gateway }
 
           Spree::PaymentCreate.new(order, {
@@ -806,11 +806,12 @@ describe Spree::Payment, type: :model do
       let(:order) { create(:order, user: user) }
       let(:user) { create(:user) }
       let!(:credit_card) { create(:credit_card, user_id: order.user_id) }
+      let!(:wallet_payment_source) { user.wallet.add(credit_card) }
 
       let(:params) do
         {
           source_attributes: {
-            existing_card_id: credit_card.id,
+            wallet_payment_source_id: wallet_payment_source.id,
             verification_value: '321'
           }
         }
@@ -847,14 +848,21 @@ describe Spree::Payment, type: :model do
 
         context 'the credit card belongs to a different user' do
           let(:other_user) { create(:user) }
-          before { credit_card.update!(user_id: other_user.id) }
+          before do
+            credit_card.update!(user_id: other_user.id)
+            user.wallet.remove(credit_card)
+            other_user.wallet.add(credit_card)
+          end
           it 'errors' do
             expect { subject }.to raise_error(ActiveRecord::RecordNotFound)
           end
         end
 
         context 'the credit card has no user' do
-          before { credit_card.update!(user_id: nil) }
+          before do
+            credit_card.update!(user_id: nil)
+            user.wallet.remove(credit_card)
+          end
           it 'errors' do
             expect { subject }.to raise_error(ActiveRecord::RecordNotFound)
           end

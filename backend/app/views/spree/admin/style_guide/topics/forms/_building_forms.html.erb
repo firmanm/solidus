@@ -1,27 +1,30 @@
+<p>This content is related to the current Solidus layout and it's forms, and does not apply to building pages with Bootstrap. The "Building Forms" section will be removed once all new Bootstrap layouts have been implemented in Solidus core.</p>
 <%- snippet = capture do %>
   <form id="table-filter">
     <fieldset>
       <legend align="center">Search</legend>
       <div class="row">
-        <div class="field-block col-xs-3">
+        <div class="field-block col-3">
           <div class="field">
             <label for="q_number_cont" class="required">Text Field</label>
             <input class="required" type="text">
           </div>
         </div>
 
-        <div class="field-block col-xs-3">
+        <div class="field-block col-3">
           <div class="date-range-filter field">
             <label for="q_created_at_gt">Date Range</label>
-            <div class="date-range-fields">
-              <input class="datepicker" placeholder="Date">
-              <span class="range-divider"><i class="fa fa-arrow-right"></i></span>
-              <input class="datepicker" placeholder="Picker">
+            <div class="input-group date-range-fields">
+              <input class="form-control datepicker datepicker-from" placeholder="From">
+              <span class="range-divider input-group-addon">
+                <i class="fa fa-arrow-right"></i>
+              </span>
+              <input class="form-control datepicker datepicker-to" placeholder="To">
             </div>
           </div>
         </div>
 
-        <div class="col-xs-3">
+        <div class="col-3">
           <div class="field checkbox">
             <label>Select Box
               <select>
@@ -31,13 +34,14 @@
           </div>
 
           <div class="field">
-            <select class="select2">
-              <option>Select 2</option>
+            <select class="custom-select">
+              <option>Option A</option>
+              <option>Option B</option>
             </select>
           </div>
         </div>
 
-        <div class="col-xs-3">
+        <div class="col-3">
           <div class="field checkbox">
             <label>
               <input type="checkbox" checked="checked">
@@ -73,9 +77,3 @@
 <div class="style-guide-code">
   <pre><code class="language-html"><%= escape_once snippet %></code></pre>
 </div>
-
-<script>
-$(function(){
-  $('.select2').select2();
-});
-</script>

@@ -1,4 +1,4 @@
-class Spree::StoreCredit < Spree::Base
+class Spree::StoreCredit < Spree::PaymentSource
   acts_as_paranoid
 
   VOID_ACTION       = 'void'
@@ -239,7 +239,7 @@ class Spree::StoreCredit < Spree::Base
   end
 
   def store_event
-    return unless amount_changed? || amount_used_changed? || amount_authorized_changed? || [ELIGIBLE_ACTION, INVALIDATE_ACTION].include?(action)
+    return unless saved_change_to_amount? || saved_change_to_amount_used? || saved_change_to_amount_authorized? || [ELIGIBLE_ACTION, INVALIDATE_ACTION].include?(action)
 
     event = if action
       store_credit_events.build(action: action)
@@ -285,7 +285,7 @@ class Spree::StoreCredit < Spree::Base
   def associate_credit_type
     unless type_id
       credit_type_name = category.try(:non_expiring?) ? Spree.t("store_credit.non_expiring") : Spree.t("store_credit.expiring")
-      self.credit_type = Spree::StoreCreditType.find_by_name(credit_type_name)
+      self.credit_type = Spree::StoreCreditType.find_by(name: credit_type_name)
     end
   end
 end

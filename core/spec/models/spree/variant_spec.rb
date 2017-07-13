@@ -17,6 +17,12 @@ describe Spree::Variant, type: :model do
       variant.price = 0
       expect(variant).to be_valid
     end
+
+    it "should require a product" do
+      expect(variant).to be_valid
+      variant.product = nil
+      expect(variant).to be_invalid
+    end
   end
 
   context "after create" do
@@ -63,8 +69,8 @@ describe Spree::Variant, type: :model do
 
       let(:tax_category) { create(:tax_category) }
 
-      let!(:high_vat) { create(:tax_rate, included_in_price: true, amount: 0.25, zone: high_vat_zone, tax_category: tax_category) }
-      let!(:low_vat) { create(:tax_rate, included_in_price: true, amount: 0.15, zone: low_vat_zone, tax_category: tax_category) }
+      let!(:high_vat) { create(:tax_rate, included_in_price: true, amount: 0.25, zone: high_vat_zone, tax_categories: [tax_category]) }
+      let!(:low_vat) { create(:tax_rate, included_in_price: true, amount: 0.15, zone: low_vat_zone, tax_categories: [tax_category]) }
 
       let(:product) { build(:product, tax_category: tax_category) }
 

@@ -36,7 +36,7 @@ require 'spree/api/testing_support/caching'
 require 'spree/api/testing_support/helpers'
 require 'spree/api/testing_support/setup'
 
-ActiveJob::Base.queue_adapter = :inline
+ActiveJob::Base.queue_adapter = :test
 
 RSpec.configure do |config|
   config.backtrace_exclusion_patterns = [/gems\/activesupport/, /gems\/actionpack/, /gems\/rspec/]
@@ -50,6 +50,8 @@ RSpec.configure do |config|
   end
 
   config.include FactoryGirl::Syntax::Methods
+  config.include Spree::Api::TestingSupport::Helpers, type: :request
+  config.extend Spree::Api::TestingSupport::Setup, type: :request
   config.include Spree::Api::TestingSupport::Helpers, type: :controller
   config.extend Spree::Api::TestingSupport::Setup, type: :controller
   config.include Spree::TestingSupport::Preferences
@@ -64,6 +66,7 @@ RSpec.configure do |config|
     Spree::Api::Config[:requires_authentication] = true
   end
 
+  config.include ActiveJob::TestHelper
   config.include VersionCake::TestHelpers, type: :controller
   config.before(:each, type: :controller) do
     set_request_version('', 1)

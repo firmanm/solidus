@@ -5,9 +5,9 @@
 
 <%= render 'spree/admin/users/sidebar' %>
 <%= render 'spree/admin/users/tabs', current: :items %>
-<%= render :partial => 'spree/admin/users/user_page_actions' %>
+<%= render partial: 'spree/admin/users/user_page_actions' %>
 
-<fieldset data-hook="admin_user_items_purchased" class="col-xs-9">
+<fieldset data-hook="admin_user_items_purchased">
   <legend><%= Spree.t(:"admin.user.items_purchased") %></legend>
 
   <%= paginate @orders, theme: "solidus_admin" %>
@@ -26,13 +26,13 @@
       </colgroup>
 
       <thead>
-        <th><%= sort_link @search, :completed_at, Spree::Order.human_attribute_name(:completed_at), {}, {:title => 'orders_completed_at_title'} %></th>
+        <th><%= sort_link @search, :completed_at, Spree::Order.human_attribute_name(:completed_at), {}, {title: 'orders_completed_at_title'} %></th>
         <th colspan=2><%= Spree::LineItem.human_attribute_name(:description) %></th>
         <th><%= Spree::LineItem.human_attribute_name(:price) %></th>
         <th><%= Spree::LineItem.human_attribute_name(:quantity) %></th>
         <th><%= Spree::Order.human_attribute_name(:total) %></th>
-        <th><%= sort_link @search, :state, Spree::Order.human_attribute_name(:state), {}, {:title => 'orders_state_title'} %></th>
-        <th><%= sort_link @search, :number, Spree.t(:order_num, :scope => 'admin.user'), {}, {:title => 'orders_number_title'} %></th>
+        <th><%= sort_link @search, :state, Spree::Order.human_attribute_name(:state), {}, {title: 'orders_state_title'} %></th>
+        <th><%= sort_link @search, :number, Spree.t(:order_num, scope: 'admin.user'), {}, {title: 'orders_number_title'} %></th>
       </thead>
 
       <tbody>
@@ -41,7 +41,7 @@
             <tr class="stock-item" data-item-quantity="<%= item.quantity %>">
               <td class="align-center order-completed-at"><%= l(order.completed_at.to_date) if order.completed_at %></td>
               <td class="item-image">
-                <%= image_tag item.variant.display_image.attachment(:mini) %>
+                <%= render 'spree/admin/shared/image', image: item.variant.display_image, size: :mini %>
               </td>
               <td class="item-name">
                 <%= item.product.name %><br><%= "(" + variant_options(item.variant) + ")" unless item.variant.option_values.empty? %>
@@ -73,7 +73,7 @@
         <% end %>
     </table>
   <% else %>
-    <div class="col-xs-9 no-objects-found">
+    <div class="col-9 no-objects-found">
       <%= render 'spree/admin/shared/no_objects_found',
                    resource: Spree::Order,
                    new_resource_url: spree.new_admin_order_path %>

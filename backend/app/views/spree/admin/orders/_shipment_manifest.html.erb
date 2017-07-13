@@ -4,7 +4,7 @@
       data-variant-id="<%= item.variant.id %>"
       >
     <td class="item-image">
-      <%= image_tag item.variant.display_image.attachment(:mini) %>
+      <%= render 'spree/admin/shared/image', image: item.variant.display_image, size: :mini %>
     </td>
     <td class="item-name">
       <%= item.variant.product.name %><br><%= "(" + variant_options(item.variant) + ")" unless item.variant.option_values.empty? %>
@@ -22,8 +22,8 @@
 
     <td class="cart-item-delete actions" data-hook="cart_item_delete">
       <% if can? :update, item %>
-        <%= link_to '', '#', :class => 'split-item icon_link fa fa-arrows-h no-text with-tip', :data => {:action => 'split', 'variant-id' => item.variant.id}, :title => Spree.t('actions.split') %>
-        <%= link_to '', '#', :class => 'delete-item fa fa-trash no-text with-tip', :data => { 'variant-id' => item.variant.id}, :title => Spree.t('actions.delete') %>
+        <%= link_to '', '#', class: 'split-item icon_link fa fa-arrows-h no-text with-tip', data: {action: 'split', 'variant-id' => item.variant.id}, title: Spree.t('actions.split') %>
+        <%= link_to '', '#', class: 'delete-item fa fa-trash no-text with-tip', data: { 'variant-id' => item.variant.id}, title: Spree.t('actions.delete') %>
       <% end %>
     </td>
   </tr>

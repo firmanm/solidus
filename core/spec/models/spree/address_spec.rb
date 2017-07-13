@@ -21,7 +21,7 @@ describe Spree::Address, type: :model do
     let(:address) { build(:address, country: country) }
 
     before do
-      allow(country.states).to receive_messages find_all_by_name_or_abbr: [state]
+      allow(country.states).to receive_messages with_name_or_abbr: [state]
     end
 
     context 'address does not require state' do
@@ -151,10 +151,10 @@ describe Spree::Address, type: :model do
     context "zipcode not required" do
       before { allow(address).to receive_messages require_zipcode?: false }
 
-      it "shows no errors when phone is blank" do
+      it "shows no errors when zipcode is blank" do
         address.zipcode = ""
         address.valid?
-        expect(address.errors[:zipcode].size).to eq 0
+        expect(address.errors[:zipcode]).to be_blank
       end
     end
   end

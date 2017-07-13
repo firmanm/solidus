@@ -95,6 +95,7 @@ module Spree
     def add_shipping_method(shipping_method, selected = false)
       shipping_rates.create(shipping_method: shipping_method, selected: selected, cost: cost)
     end
+    deprecate :add_shipping_method, deprecator: Spree::Deprecation
 
     def after_cancel
       manifest.each { |item| manifest_restock(item) }
@@ -171,7 +172,7 @@ module Spree
     end
 
     def refresh_rates
-      return shipping_rates if shipped? || order.completed?
+      return shipping_rates if shipped?
       return [] unless can_get_rates?
 
       # StockEstimator.new assigment below will replace the current shipping_method
@@ -235,11 +236,10 @@ module Spree
       end
     end
 
-    def set_up_inventory(state, variant, order, line_item)
+    def set_up_inventory(state, variant, _order, line_item)
       inventory_units.create(
         state: state,
         variant_id: variant.id,
-        order_id: order.id,
         line_item_id: line_item.id
       )
     end
@@ -250,7 +250,7 @@ module Spree
     end
 
     def shipping_method
-      selected_shipping_rate.try(:shipping_method) || shipping_rates.first.try(:shipping_method)
+      selected_shipping_rate.try(:shipping_method)
     end
 
     # Only one of either included_tax_total or additional_tax_total is set
@@ -296,9 +296,9 @@ module Spree
       if update_attributes params
         if params.key? :selected_shipping_rate_id
           # Changing the selected Shipping Rate won't update the cost (for now)
-          # so we persist the Shipment#cost before running `order.update!`
+          # so we persist the Shipment#cost before running `order.recalculate`
           update_amounts
-          order.update!
+          order.recalculate
         end
 
         true
@@ -332,6 +332,7 @@ module Spree
         order.contents.add(variant, quantity, { shipment: new_shipment })
 
         refresh_rates
+        new_shipment.refresh_rates
         save!
         new_shipment.save!
       end
@@ -391,7 +392,7 @@ module Spree
     end
 
     def ensure_can_destroy
-      unless pending?
+      if shipped? || canceled?
         errors.add(:state, :cannot_destroy, state: state)
         throw :abort
       end

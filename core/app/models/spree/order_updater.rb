@@ -17,6 +17,7 @@ module Spree
     def update
       @order.transaction do
         update_item_count
+        update_shipment_amounts
         update_totals
         if order.completed?
           update_payment_state
@@ -30,6 +31,73 @@ module Spree
 
     def run_hooks
       update_hooks.each { |hook| order.send hook }
+    end
+
+    # Updates the +shipment_state+ attribute according to the following logic:
+    #
+    # shipped   when all Shipments are in the "shipped" state
+    # partial   when at least one Shipment has a state of "shipped" and there is another Shipment with a state other than "shipped"
+    #           or there are InventoryUnits associated with the order that have a state of "sold" but are not associated with a Shipment.
+    # ready     when all Shipments are in the "ready" state
+    # backorder when there is backordered inventory associated with an order
+    # pending   when all Shipments are in the "pending" state
+    #
+    # The +shipment_state+ value helps with reporting, etc. since it provides a quick and easy way to locate Orders needing attention.
+    def update_shipment_state
+      log_state_change('shipment') do
+        order.shipment_state = determine_shipment_state
+      end
+
+      order.shipment_state
+    end
+
+    # Updates the +payment_state+ attribute according to the following logic:
+    #
+    # paid          when +payment_total+ is equal to +total+
+    # balance_due   when +payment_total+ is less than +total+
+    # credit_owed   when +payment_total+ is greater than +total+
+    # failed        when most recent payment is in the failed state
+    #
+    # The +payment_state+ value helps with reporting, etc. since it provides a quick and easy way to locate Orders needing attention.
+    def update_payment_state
+      log_state_change('payment') do
+        order.payment_state = determine_payment_state
+      end
+
+      order.payment_state
+    end
+
+    private
+
+    def determine_payment_state
+      if payments.present? && payments.valid.empty? && order.outstanding_balance != 0
+        'failed'
+      elsif order.state == 'canceled' && order.payment_total.zero?
+        'void'
+      elsif order.outstanding_balance > 0
+        'balance_due'
+      elsif order.outstanding_balance < 0
+        'credit_owed'
+      else
+        # outstanding_balance == 0
+        'paid'
+      end
+    end
+
+    def determine_shipment_state
+      if order.backordered?
+        'backorder'
+      else
+        # get all the shipment states for this order
+        shipment_states = shipments.states
+        if shipment_states.size > 1
+          # multiple shiment states means it's most likely partially shipped
+          'partial'
+        else
+          # will return nil if no shipments are found
+          shipment_states.first
+        end
+      end
     end
 
     # This will update and select the best promotion adjustment, update tax
@@ -64,13 +132,16 @@ module Spree
       update_adjustment_total
     end
 
+    def update_shipment_amounts
+      shipments.each do |shipment|
+        shipment.update_amounts
+      end
+    end
+
     # give each of the shipments a chance to update themselves
     def update_shipments
       shipments.each do |shipment|
-        next unless shipment.persisted?
         shipment.update!(order)
-        shipment.refresh_rates
-        shipment.update_amounts
       end
     end
 
@@ -114,64 +185,20 @@ module Spree
       order.save!(validate: false)
     end
 
-    # Updates the +shipment_state+ attribute according to the following logic:
-    #
-    # shipped   when all Shipments are in the "shipped" state
-    # partial   when at least one Shipment has a state of "shipped" and there is another Shipment with a state other than "shipped"
-    #           or there are InventoryUnits associated with the order that have a state of "sold" but are not associated with a Shipment.
-    # ready     when all Shipments are in the "ready" state
-    # backorder when there is backordered inventory associated with an order
-    # pending   when all Shipments are in the "pending" state
-    #
-    # The +shipment_state+ value helps with reporting, etc. since it provides a quick and easy way to locate Orders needing attention.
-    def update_shipment_state
-      if order.backordered?
-        order.shipment_state = 'backorder'
-      else
-        # get all the shipment states for this order
-        shipment_states = shipments.states
-        if shipment_states.size > 1
-          # multiple shiment states means it's most likely partially shipped
-          order.shipment_state = 'partial'
-        else
-          # will return nil if no shipments are found
-          order.shipment_state = shipment_states.first
-          # TODO: inventory unit states?
-          # if order.shipment_state && order.inventory_units.where(:shipment_id => nil).exists?
-          #   shipments exist but there are unassigned inventory units
-          #   order.shipment_state = 'partial'
-          # end
-        end
+    def log_state_change(name)
+      state = "#{name}_state"
+      old_state = order.public_send(state)
+      yield
+      new_state = order.public_send(state)
+      if old_state != new_state
+        order.state_changes.new(
+          previous_state: old_state,
+          next_state:     new_state,
+          name:           name,
+          user_id:        order.user_id
+        )
       end
-
-      order.state_changed('shipment')
-      order.shipment_state
     end
-
-    # Updates the +payment_state+ attribute according to the following logic:
-    #
-    # paid          when +payment_total+ is equal to +total+
-    # balance_due   when +payment_total+ is less than +total+
-    # credit_owed   when +payment_total+ is greater than +total+
-    # failed        when most recent payment is in the failed state
-    #
-    # The +payment_state+ value helps with reporting, etc. since it provides a quick and easy way to locate Orders needing attention.
-    def update_payment_state
-      last_state = order.payment_state
-      if payments.present? && payments.valid.size == 0 && order.outstanding_balance != 0
-        order.payment_state = 'failed'
-      elsif order.state == 'canceled' && order.payment_total == 0
-        order.payment_state = 'void'
-      else
-        order.payment_state = 'balance_due' if order.outstanding_balance > 0
-        order.payment_state = 'credit_owed' if order.outstanding_balance < 0
-        order.payment_state = 'paid' if !order.outstanding_balance?
-      end
-      order.state_changed('payment') if last_state != order.payment_state
-      order.payment_state
-    end
-
-    private
 
     def round_money(n)
       (n * 100).round / 100.0
@@ -225,11 +252,10 @@ module Spree
       [*line_items, *shipments].each do |item|
         # The cancellation_total isn't persisted anywhere but is included in
         # the adjustment_total
-        item_cancellation_total = item.adjustments.select(&:cancellation?).sum(&:amount)
-
-        item.adjustment_total = item.promo_total +
-                                item.additional_tax_total +
-                                item_cancellation_total
+        item.adjustment_total = item.adjustments.
+          select(&:eligible?).
+          reject(&:included?).
+          sum(&:amount)
 
         if item.changed?
           item.update_columns(

@@ -130,7 +130,7 @@ describe Spree::Shipment, type: :model do
 
     let!(:ship_address) { create(:address) }
     let!(:tax_zone) { create(:global_zone) } # will include the above address
-    let!(:tax_rate) { create(:tax_rate, amount: 0.1, zone: tax_zone, tax_category: tax_category) }
+    let!(:tax_rate) { create(:tax_rate, amount: 0.1, zone: tax_zone, tax_categories: [tax_category]) }
     let(:tax_category) { create(:tax_category) }
     let(:variant) { create(:variant, tax_category: tax_category) }
 
@@ -247,6 +247,7 @@ describe Spree::Shipment, type: :model do
         end
 
         before do
+          allow(line_item).to receive(:order) { order }
           allow(shipment).to receive(:inventory_units) { inventory_units }
           allow(inventory_units).to receive_message_chain(:includes, :joins).and_return inventory_units
         end
@@ -548,7 +549,7 @@ describe Spree::Shipment, type: :model do
   context "changes shipping rate via general update" do
     let!(:ship_address) { create(:address) }
     let!(:tax_zone) { create(:global_zone) } # will include the above address
-    let!(:tax_rate) { create(:tax_rate, amount: 0.10, zone: tax_zone, tax_category: tax_category) }
+    let!(:tax_rate) { create(:tax_rate, amount: 0.10, zone: tax_zone, tax_categories: [tax_category]) }
     let(:tax_category) { create(:tax_category) }
 
     let(:order) do
@@ -641,7 +642,7 @@ describe Spree::Shipment, type: :model do
     let(:inventory_units) { double }
 
     let(:params) do
-      { variant_id: variant.id, state: 'on_hand', order_id: order.id, line_item_id: line_item.id }
+      { variant_id: variant.id, state: 'on_hand', line_item_id: line_item.id }
     end
 
     before { allow(shipment).to receive_messages inventory_units: inventory_units }
@@ -724,11 +725,10 @@ describe Spree::Shipment, type: :model do
       expect { shipment.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
 
-    it "cannot be destroyed when ready" do
+    it "can be destroyed when ready" do
       shipment = create(:shipment, state: "ready")
-      expect(shipment.destroy).to eq false
-      expect(shipment.errors.full_messages.join).to match /Cannot destroy/
-      expect { shipment.reload }.not_to raise_error
+      expect(shipment.destroy).to be_truthy
+      expect { shipment.reload }.to raise_error(ActiveRecord::RecordNotFound)
     end
 
     it "cannot be destroyed when shipped" do
@@ -753,6 +753,7 @@ describe Spree::Shipment, type: :model do
     before do
       stock_item.set_count_on_hand(10)
       stock_item.update_attributes!(backorderable: false)
+      inventory_unit.update_attributes!(pending: true)
     end
 
     subject { shipment.finalize! }
@@ -797,7 +798,7 @@ describe Spree::Shipment, type: :model do
 
   describe '#selected_shipping_rate_id=' do
     let!(:air_shipping_method) { create(:shipping_method, name: "Air") }
-    let(:new_rate) { shipment.add_shipping_method(air_shipping_method) }
+    let(:new_rate) { shipment.shipping_rates.create!(shipping_method: air_shipping_method) }
 
     context 'when the id exists' do
       it 'sets the new shipping rate as selected' do
@@ -818,6 +819,27 @@ describe Spree::Shipment, type: :model do
         expect {
           shipment.selected_shipping_rate_id = -1
         }.to raise_error(ArgumentError)
+      end
+    end
+  end
+
+  describe "#shipping_method" do
+    let(:shipment) { create(:shipment) }
+
+    subject { shipment.shipping_method }
+
+    context "when no shipping rate is selected" do
+      before do
+        shipment.shipping_rates.update_all(selected: false)
+        shipment.reload
+      end
+
+      it { is_expected.to be_nil }
+    end
+
+    context "when a shipping rate is selected" do
+      it "is expected to be the shipping rate's shipping method" do
+        expect(shipment.shipping_method).to eq(shipment.selected_shipping_rate.shipping_method)
       end
     end
   end

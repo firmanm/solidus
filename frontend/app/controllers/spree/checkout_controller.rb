@@ -62,7 +62,7 @@ module Spree
     end
 
     def transition_forward
-      if @order.confirm?
+      if @order.can_complete?
         @order.complete
       else
         @order.next
@@ -97,7 +97,11 @@ module Spree
       massaged_params = params.deep_dup
 
       move_payment_source_into_payments_attributes(massaged_params)
-      move_existing_card_into_payments_attributes(massaged_params)
+      if massaged_params[:order] && massaged_params[:order][:existing_card].present?
+        Spree::Deprecation.warn("Passing order[:existing_card] is deprecated. Send order[:wallet_payment_source_id] instead.", caller)
+        move_existing_card_into_payments_attributes(massaged_params) # deprecated
+      end
+      move_wallet_payment_source_id_into_payments_attributes(massaged_params)
       set_payment_parameters_amount(massaged_params, @order)
 
       massaged_params
@@ -150,7 +154,8 @@ module Spree
 
     def ensure_sufficient_stock_lines
       if @order.insufficient_stock_lines.present?
-        flash[:error] = Spree.t(:inventory_error_flash_for_insufficient_quantity)
+        out_of_stock_items = @order.insufficient_stock_lines.collect(&:name).to_sentence
+        flash[:error] = Spree.t(:inventory_error_flash_for_insufficient_quantity, names: out_of_stock_items)
         redirect_to spree.cart_path
       end
     end
@@ -166,8 +171,9 @@ module Spree
     end
 
     def before_address
-      # if the user has a default address, a callback takes care of setting
-      # that; but if he doesn't, we need to build an empty one here
+      @order.assign_default_user_addresses
+      # If the user has a default address, the previous method call takes care
+      # of setting that; but if he doesn't, we need to build an empty one here
       default = {country_id: Spree::Country.default.id}
       @order.build_bill_address(default) unless @order.bill_address
       @order.build_ship_address(default) if @order.checkout_steps.include?('delivery') && !@order.ship_address
@@ -189,8 +195,13 @@ module Spree
         end
       end
 
-      if try_spree_current_user && try_spree_current_user.respond_to?(:payment_sources)
-        @payment_sources = try_spree_current_user.payment_sources
+      if try_spree_current_user && try_spree_current_user.respond_to?(:wallet)
+        @wallet_payment_sources = try_spree_current_user.wallet.wallet_payment_sources
+        @default_wallet_payment_source = @wallet_payment_sources.detect(&:default) ||
+                                         @wallet_payment_sources.first
+        # TODO: How can we deprecate this instance variable?  We could try
+        # wrapping it in a delegating object that produces deprecation warnings.
+        @payment_sources = try_spree_current_user.wallet.wallet_payment_sources.map(&:payment_source).select { |ps| ps.is_a?(Spree::CreditCard) }
       end
     end
 

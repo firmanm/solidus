@@ -29,11 +29,15 @@ en:
         code: Code
         name: Name
         state: State
+      spree/calculator/flat_rate:
+        preferred_amount: Amount
       spree/calculator/tiered_flat_rate:
         preferred_base_amount: Base Amount
+        preferred_currency: Currency
         preferred_tiers: Tiers
       spree/calculator/tiered_percent:
         preferred_base_percent: Base Percent
+        preferred_currency: Currency
         preferred_tiers: Tiers
       spree/carton:
         tracking: Tracking
@@ -133,7 +137,7 @@ en:
         display_on: Display
         name: Name
         preference_source: Preference Source
-        type: Provider
+        type: Type
       spree/price:
         currency: Currency
         amount: Price
@@ -166,13 +170,47 @@ en:
         code: Code
         description: Description
         event_name: Event Name
-        expires_at: Expiration
+        expires_at: Expiration date
         name: Name
         path: Path
         per_code_usage_limit: Per Code Usage Limit
         promotion_uses: Promotion Uses
-        starts_at: Starts
+        starts_at: Start date
         usage_limit: Overall Usage Limit
+      spree/promotion/actions/create_adjustment:
+        description: Creates a promotion credit adjustment on the order
+      spree/promotion/actions/create_item_adjustments:
+        description: Creates a promotion credit adjustment on a line item
+      spree/promotion/actions/create_quantity_adjustments:
+        description: Creates an adjustment on a line item based on quantity
+      spree/promotion/actions/free_shipping:
+        description: Makes all shipments for the order free
+      spree/promotion/rules/item_total:
+        description: Order total meets these criteria
+      spree/promotion/rules/first_order:
+        description: Must be the customer's first order
+      spree/promotion/rules/landing_page:
+          description: Customer must have visited the specified page
+      spree/promotion/rules/one_use_per_user:
+        description: Only One Use Per User
+      spree/promotion/rules/option_value:
+        description: Order includes specified product(s) with matching option value(s)
+      spree/promotion/rules/product:
+        description: Order includes specified product(s)
+      spree/promotion/rules/user:
+        description: Available only to the specified users
+      spree/promotion/rules/user_logged_in:
+        description: Available only to logged in users
+      spree/promotion/rules/taxon:
+        description: Order includes products with specified taxon(s)
+      spree/promotion/rules/nth_order:
+        description: Apply a promotion to every nth order a user has completed.
+        form_text: "Apply this promotion on the users Nth order: "
+      spree/promotion/rules/first_repeat_purchase_since:
+        description: Available only to user who have not purchased in a while
+        form_text: "Apply this promotion to users whose last order was more than X days ago: "
+      spree/promotion/rules/user_role:
+        description: Order includes User with specified Role(s)
       spree/promotion_category:
         name: Name
       spree/property:
@@ -311,6 +349,8 @@ en:
         included_in_price: Included In Price
         name: Name
         show_rate_in_label: Show Rate In Label
+        starts_at: Start date
+        expires_at: Expiration date
       spree/taxon:
         description: Description
         icon: Icon
@@ -363,6 +403,9 @@ en:
       spree/calculator/default_tax:
         one: Default Tax
         other: Default Tax
+      spree/calculator/distributed_amount:
+        one: Distributed Amount
+        other: Distributed Amount
       spree/calculator/flat_percent_item_total:
         one: Flat Percent
         other: Flat Percent
@@ -465,6 +508,22 @@ en:
       spree/promotion:
         one: Promotion
         other: Promotions
+      spree/promotion/actions/create_adjustment: Create whole-order adjustment
+      spree/promotion/actions/create_item_adjustments: Create per-line-item adjustment
+      spree/promotion/actions/create_quantity_adjustments: Create per-quantity adjustment
+      spree/promotion/actions/free_shipping: Free shipping
+      spree/promotion/rules/first_order: First order
+      spree/promotion/rules/item_total: Item total
+      spree/promotion/rules/landing_page: Landing Page
+      spree/promotion/rules/one_use_per_user: One Use Per User
+      spree/promotion/rules/option_value: Option Value(s)
+      spree/promotion/rules/product: Product(s)
+      spree/promotion/rules/user: User
+      spree/promotion/rules/user_logged_in: User Logged In
+      spree/promotion/rules/taxon: Taxon(s)
+      spree/promotion/rules/nth_order: Nth Order
+      spree/promotion/rules/first_repeat_purchase_since: First Repeat Purchase Since
+      spree/promotion/rules/user_role: User Role(s)
       spree/promotion_category:
         one: Promotion Category
         other: Promotion Categories
@@ -630,6 +689,10 @@ en:
           attributes:
             user_id:
               default_address_exists: "already has a default address"
+        spree/wallet_payment_source:
+          attributes:
+            payment_source:
+              has_to_be_payment_source_class: "has to be a Spree::PaymentSource"
 
   devise:
     confirmations:
@@ -711,6 +774,7 @@ en:
     add_action_of_type: Add action of type
     add_country: Add Country
     add_coupon_code: Add Coupon Code
+    add_line_item: Add Item
     add_new_header: Add New Header
     add_new_style: Add New Style
     add_one: Add One
@@ -778,6 +842,17 @@ en:
         form:
           starts_at_placeholder: Immediately
           expires_at_placeholder: Never
+          activation: Activation
+          general: General
+        activations_new:
+          auto: Apply to all orders
+          multiple_codes: Multiple promotion codes
+          path: URL Path
+          single_code: Single promotion code
+        activations_edit:
+          auto: All orders will attempt to use this promotion
+          single_code_html: "This promotion uses the promotion code: <code>%{code}</code>"
+          multiple_codes_html: "This promotion uses %{count} promotion codes"
       store_credits:
         add: "Add store credit"
         amount_authorized: "Amount Authorized"
@@ -1193,7 +1268,7 @@ en:
         tax_category: "This determines what kind of taxation is applied to this product.<br/> Default: None"
       spree/promotion:
         starts_at: "This determines when the promotion can be applied to orders. <br/> If no value is specified, the promotion will be immediately available."
-        expires_at: "This determines when the promotion expires. <br/> If no value is specified, the promotion will never expires."
+        expires_at: "This determines when the promotion expires. <br/> If no value is specified, the promotion will never expire."
       spree/store:
         cart_tax_country_iso: "This determines which country is used for taxes on carts (orders which don't yet have an address).<br/> Default: None."
       spree/variant:
@@ -1201,6 +1276,8 @@ en:
         deleted: "Deleted Variant"
         deleted_explanation: "This variant was deleted on %{date}."
         deleted_explanation_with_replacement: "This variant was deleted on %{date}. It has since been replaced by another with the same SKU."
+      spree/tax_rate:
+        validity_period: "This determines the validity period within which the tax rate is valid and will be applied to eligible items. <br /> If no start date value is specified, the tax rate will be immediately available. <br /> If no expiration date value is specified, the tax rate will never expire"
     failed_payment_attempts: Failed Payment Attempts
     failure: Failure
     filename: Filename
@@ -1280,14 +1357,14 @@ en:
     intercept_email_instructions: Override email recipient and replace with this address.
     internal_name: Internal Name
     invalid_exchange_variant: Invalid exchange variant.
-    invalid_payment_provider: Invalid payment provider.
+    invalid_payment_method_type: Invalid payment method type.
     invalid_promotion_action: Invalid promotion action.
     invalid_promotion_rule: Invalid promotion rule.
     invalidate: Invalidate
     inventory: Inventory
     inventory_adjustment: Inventory Adjustment
     inventory_canceled: Inventory canceled
-    inventory_error_flash_for_insufficient_quantity: An item in your cart has become unavailable.
+    inventory_error_flash_for_insufficient_quantity: "%{names} became unavailable."
     inventory_not_available: Inventory not available for %{item}.
     inventory_state: Inventory State
     inventory_states:
@@ -1594,19 +1671,6 @@ en:
     promotion: Promotion
     promotionable: Promotable
     promotion_action: Promotion Action
-    promotion_action_types:
-      create_adjustment:
-        description: Creates a promotion credit adjustment on the order
-        name: Create whole-order adjustment
-      create_item_adjustments:
-        description: Creates a promotion credit adjustment on a line item
-        name: Create per-line-item adjustment
-      create_quantity_adjustments:
-        description: Creates an adjustment on a line item based on quantity
-        name: Create per-quantity adjustment
-      free_shipping:
-        description: Makes all shipments for the order free
-        name: Free shipping
     promotion_actions: Actions
     promotion_code_batch_mailer:
       promotion_code_batch_finished:
@@ -1624,45 +1688,6 @@ en:
         all: Match all of these rules
         any: Match any of these rules
     promotion_rule: Promotion Rule
-    promotion_rule_types:
-      first_order:
-        description: Must be the customer's first order
-        name: First order
-      item_total:
-        description: Order total meets these criteria
-        name: Item total
-      landing_page:
-        description: Customer must have visited the specified page
-        name: Landing Page
-      one_use_per_user:
-        description: Only One Use Per User
-        name: One Use Per User
-      option_value:
-        description: Order includes specified product(s) with matching option value(s)
-        name: Option Value(s)
-      product:
-        description: Order includes specified product(s)
-        name: Product(s)
-      user:
-        description: Available only to the specified users
-        name: User
-      user_logged_in:
-        description: Available only to logged in users
-        name: User Logged In
-      taxon:
-        description: Order includes products with specified taxon(s)
-        name: Taxon(s)
-      nth_order:
-        description: Apply a promotion to every nth order a user has completed.
-        name: Nth Order
-        form_text: "Apply this promotion on the users Nth order: "
-      first_repeat_purchase_since:
-        description: Available only to user who have not purchased in a while
-        name: First Repeat Purchase Since
-        form_text: "Apply this promotion to users whose last order was more than X days ago: "
-      user_role:
-        description: Order includes User with specified Role(s)
-        name: User Role(s)
     promotions: Promotions
     promotion_successfully_created: Promotion has been successfully created!
     promotion_total_changed_before_complete: "One or more of the promotions on your order have become ineligible and were removed. Please check the new order amounts and try again."
@@ -1671,7 +1696,7 @@ en:
     properties: Property Types
     property: Property Type
     provider: Provider
-    provider_settings_warning: If you are changing the provider type, you must save first before you can edit the provider settings
+    payment_method_settings_warning: If you are changing the payment method type, you must save first before you can edit the payment method settings
     qty: Qty
     quantity: Quantity
     quantity_returned: Quantity Returned
@@ -1847,6 +1872,7 @@ en:
     source_location: Source location
     special_instructions: Special Instructions
     split: Split
+    split_failed: Unable to complete split
     spree_gateway_error_flash_for_checkout: There was a problem with your payment information. Please check your information and try again.
     ssl:
       change_protocol: "Please switch to using HTTP (rather than HTTPS) and retry this request."
@@ -2013,6 +2039,7 @@ en:
       is_too_large: is too large -- stock on hand cannot cover requested quantity!
       must_be_int: must be an integer
       must_be_non_negative: must be a non-negative value
+    validity_period: Validity Period
     value: Value
     variant: Variant
     variant_placeholder: Choose a variant

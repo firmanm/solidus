@@ -9,7 +9,12 @@ module Spree
         @promotion = Spree::Promotion.new(permitted_resource_params)
         @promotion.codes.new(value: params[:single_code]) if params[:single_code].present?
 
+        if params[:promotion_code_batch]
+          @promotion_code_batch = @promotion.promotion_code_batches.new(promotion_code_batch_params)
+        end
+
         if @promotion.save
+          @promotion_code_batch.process if @promotion_code_batch
           flash[:success] = Spree.t(:promotion_successfully_created)
           redirect_to location_after_save
         else
@@ -30,7 +35,7 @@ module Spree
       end
 
       def collection
-        return @collection if defined?(@collection)
+        return @collection if @collection
         params[:q] ||= HashWithIndifferentAccess.new
         params[:q][:s] ||= 'id desc'
 
@@ -42,6 +47,10 @@ module Spree
           per(params[:per_page] || Spree::Config[:promotions_per_page])
 
         @collection
+      end
+
+      def promotion_code_batch_params
+        params.require(:promotion_code_batch).permit!
       end
 
       def promotion_includes

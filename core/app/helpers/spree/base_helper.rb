@@ -4,11 +4,11 @@ module Spree
       text = text ? h(text) : Spree.t(:cart)
       css_class = nil
 
-      if simple_current_order.nil? || simple_current_order.item_count.zero?
+      if current_order.nil? || current_order.item_count.zero?
         text = "#{text}: (#{Spree.t(:empty)})"
         css_class = 'empty'
       else
-        text = "#{text}: (#{simple_current_order.item_count})  <span class='amount'>#{simple_current_order.display_total.to_html}</span>"
+        text = "#{text}: (#{current_order.item_count})  <span class='amount'>#{current_order.display_total.to_html}</span>"
         css_class = 'full'
       end
 
@@ -84,7 +84,7 @@ module Spree
       items = crumbs.each_with_index.collect do |crumb, i|
         content_tag(:li, itemprop: 'itemListElement', itemscope: '', itemtype: 'https://schema.org/ListItem') do
           link_to(crumb.last, itemprop: 'item') do
-            content_tag(:span, crumb.first, itemprop: 'name') + tag('meta', { itemprop: 'position', content: (i+1).to_s }, false, false)
+            content_tag(:span, crumb.first, itemprop: 'name') + tag('meta', { itemprop: 'position', content: (i + 1).to_s }, false, false)
           end + (crumb == crumbs.last ? '' : separator)
         end
       end
@@ -147,6 +147,5 @@ module Spree
     def plural_resource_name(resource_class)
       resource_class.model_name.human(count: Spree::I18N_GENERIC_PLURAL)
     end
-
   end
 end

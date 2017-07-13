@@ -19,11 +19,34 @@ describe Spree::OrderContents, type: :model do
     end
 
     context 'given a shipment' do
+      let!(:shipment) { create(:shipment, order: order) }
+
       it "ensure shipment calls update_amounts instead of order calling ensure_updated_shipments" do
-        shipment = create(:shipment)
         expect(subject.order).to_not receive(:ensure_updated_shipments)
         expect(shipment).to receive(:update_amounts)
         subject.add(variant, 1, shipment: shipment)
+      end
+
+      context "with quantity=1" do
+        it "creates correct inventory" do
+          subject.add(variant, 1, shipment: shipment)
+          expect(order.inventory_units.count).to eq(1)
+        end
+      end
+
+      context "with quantity=2" do
+        it "creates correct inventory" do
+          subject.add(variant, 2, shipment: shipment)
+          expect(order.inventory_units.count).to eq(2)
+        end
+      end
+
+      context "called multiple times" do
+        it "creates correct inventory" do
+          subject.add(variant, 1, shipment: shipment)
+          subject.add(variant, 1, shipment: shipment)
+          expect(order.inventory_units.count).to eq(2)
+        end
       end
     end
 
@@ -100,7 +123,7 @@ describe Spree::OrderContents, type: :model do
     describe 'tax calculations' do
       let!(:zone) { create(:global_zone) }
       let!(:tax_rate) do
-        create(:tax_rate, zone: zone, tax_category: variant.tax_category)
+        create(:tax_rate, zone: zone, tax_categories: [variant.tax_category])
       end
 
       context 'when the order has a taxable address' do
@@ -176,6 +199,13 @@ describe Spree::OrderContents, type: :model do
     it 'should remove line_item if quantity matches line_item quantity' do
       subject.add(variant, 1)
       subject.remove(variant, 1)
+
+      expect(order.reload.find_line_item_by_variant(variant)).to be_nil
+    end
+
+    it 'should remove line_item if quantity is greater than line_item quantity' do
+      subject.add(variant, 1)
+      subject.remove(variant, 2)
 
       expect(order.reload.find_line_item_by_variant(variant)).to be_nil
     end

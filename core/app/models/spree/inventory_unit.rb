@@ -7,7 +7,6 @@ module Spree
     CANCELABLE_STATES = ['on_hand', 'backordered', 'shipped']
 
     belongs_to :variant, -> { with_deleted }, class_name: "Spree::Variant", inverse_of: :inventory_units
-    belongs_to :order, class_name: "Spree::Order", inverse_of: :inventory_units
     belongs_to :shipment, class_name: "Spree::Shipment", touch: true, inverse_of: :inventory_units
     belongs_to :return_authorization, class_name: "Spree::ReturnAuthorization", inverse_of: :inventory_units
     belongs_to :carton, class_name: "Spree::Carton", inverse_of: :inventory_units
@@ -16,11 +15,15 @@ module Spree
     has_many :return_items, inverse_of: :inventory_unit, dependent: :destroy
     has_one :original_return_item, class_name: "Spree::ReturnItem", foreign_key: :exchange_inventory_unit_id, dependent: :destroy
     has_one :unit_cancel, class_name: "Spree::UnitCancel"
+    has_one :order, through: :shipment
 
-    validates_presence_of :order, :shipment, :line_item, :variant
+    delegate :order_id, to: :shipment
+
+    validates_presence_of :shipment, :line_item, :variant
 
     before_destroy :ensure_can_destroy
 
+    scope :pending, -> { where pending: true }
     scope :backordered, -> { where state: 'backordered' }
     scope :on_hand, -> { where state: 'on_hand' }
     scope :pre_shipment, -> { where(state: PRE_SHIPMENT_STATES) }
@@ -29,7 +32,7 @@ module Spree
     scope :returned, -> { where state: 'returned' }
     scope :canceled, -> { where(state: 'canceled') }
     scope :not_canceled, -> { where.not(state: 'canceled') }
-    scope :cancelable, -> { where(state: Spree::InventoryUnit::CANCELABLE_STATES) }
+    scope :cancelable, -> { where(state: Spree::InventoryUnit::CANCELABLE_STATES, pending: false) }
     scope :backordered_per_variant, ->(stock_item) do
       includes(:shipment, :order)
         .where("spree_shipments.state != 'canceled'").references(:shipment)
@@ -140,7 +143,7 @@ module Spree
         throw :abort
       end
 
-      unless shipment.pending?
+      if shipment.shipped? || shipment.canceled?
         errors.add(:base, :cannot_destroy_shipment_state, state: shipment.state)
         throw :abort
       end

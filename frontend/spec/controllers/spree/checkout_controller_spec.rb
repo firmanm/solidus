@@ -2,7 +2,7 @@ require 'spec_helper'
 
 describe Spree::CheckoutController, type: :controller do
   let(:token) { 'some_token' }
-  let(:user) { stub_model(Spree::LegacyUser) }
+  let(:user) { create(:user) }
   let(:order) { FactoryGirl.create(:order_with_totals) }
 
   let(:address_params) do
@@ -141,6 +141,13 @@ describe Spree::CheckoutController, type: :controller do
         before do
           order.update_attributes! user: user
           order.update_columns(ship_address_id: create(:address).id, state: "address")
+        end
+
+        context 'landing to address page' do
+          it "tries to associate user addresses to order" do
+            expect(order).to receive(:assign_default_user_addresses)
+            get :edit
+          end
         end
 
         context "with a billing and shipping address" do
@@ -323,39 +330,18 @@ describe Spree::CheckoutController, type: :controller do
           expect(response).to redirect_to(spree.checkout_state_path('address'))
         end
       end
-    end
-
-    context "fails to transition to complete from confirm" do
-      let(:order) do
-        FactoryGirl.create(:order_with_line_items).tap(&:next!)
-      end
-
-      before do
-        allow(controller).to receive_messages current_order: order
-        allow(controller).to receive_messages check_authorization: true
-      end
 
       context "when the country is not a shippable country" do
-        before do
-          order.ship_address.tap do |address|
-            # A different country which is not included in the list of shippable countries
-            australia = create(:country, name: "Australia")
-            # update_columns to get around readonly restriction when testing
-            address.update_columns(country_id: australia.id, state_name: 'Victoria')
-          end
+        let(:foreign_address) { create(:address, country_iso_code: "CA") }
 
-          payment_method = FactoryGirl.create(:simple_credit_card_payment_method)
-          payment = FactoryGirl.create(:payment, payment_method: payment_method)
-          order.payments << payment
+        before do
+          order.update(shipping_address: foreign_address)
         end
 
         it "due to no available shipping rates for any of the shipments" do
-          expect(order.shipments.count).to eq(1)
-          order.shipments.first.shipping_rates.delete_all
-          order.update_attributes(state: 'confirm')
-          put :update, params: { state: order.state, order: {} }
+          put :update, params: { state: "address", order: {} }
           expect(flash[:error]).to eq(Spree.t(:items_cannot_be_shipped))
-          expect(response).to redirect_to(spree.checkout_state_path('confirm'))
+          expect(response).to redirect_to(spree.checkout_state_path('address'))
         end
       end
     end
@@ -390,7 +376,7 @@ describe Spree::CheckoutController, type: :controller do
   context "When last inventory item has been purchased" do
     let(:product) { mock_model(Spree::Product, name: "Amazing Object") }
     let(:variant) { mock_model(Spree::Variant) }
-    let(:line_item) { mock_model Spree::LineItem, insufficient_stock?: true, amount: 0 }
+    let(:line_item) { mock_model Spree::LineItem, insufficient_stock?: true, amount: 0, name: "Amazing Item" }
     let(:order) { create(:order) }
 
     before do
@@ -411,7 +397,7 @@ describe Spree::CheckoutController, type: :controller do
       end
 
       it "should set flash message for no inventory" do
-        expect(flash[:error]).to eq(Spree.t(:inventory_error_flash_for_insufficient_quantity, names: "'#{product.name}'" ))
+        expect(flash[:error]).to eq("Amazing Item became unavailable.")
       end
     end
   end

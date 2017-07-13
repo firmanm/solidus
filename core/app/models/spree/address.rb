@@ -105,11 +105,13 @@ module Spree
       value_attributes == other_address.value_attributes
     end
 
+    # @deprecated Do not use this. Use Address.== instead.
     def same_as?(other_address)
       Spree::Deprecation.warn("Address#same_as? is deprecated. It's equivalent to Address.==", caller)
       self == other_address
     end
 
+    # @deprecated Do not use this. Use Address.== instead.
     def same_as(other_address)
       Spree::Deprecation.warn("Address#same_as is deprecated. It's equivalent to Address.==", caller)
       self == other_address
@@ -191,7 +193,7 @@ module Spree
       # ensure state_name belongs to country without states, or that it matches a predefined state name/abbr
       if state_name.present?
         if country.states.present?
-          states = country.states.find_all_by_name_or_abbr(state_name)
+          states = country.states.with_name_or_abbr(state_name)
 
           if states.size == 1
             self.state = states.first

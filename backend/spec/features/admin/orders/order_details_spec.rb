@@ -9,8 +9,6 @@ describe "Order Details", type: :feature, js: true do
   let!(:tote) { create(:product, name: "Tote", price: 15.00) }
   let(:order) { create(:order, state: 'complete', completed_at: "2011-02-01 12:36:15", number: "R100") }
   let(:state) { create(:state) }
-  # let(:shipment) { create(:shipment, :order => order, :stock_location => stock_location) }
-  let!(:shipping_method) { create(:shipping_method, name: "Default") }
 
   before do
     @shipment1 = order.shipments.create(stock_location_id: stock_location.id)
@@ -45,13 +43,8 @@ describe "Order Details", type: :feature, js: true do
         end
       end
 
-      it "can add an item to a shipment" do
-        select2_search "spree t-shirt", from: Spree.t(:name_or_sku)
-        within("table.stock-levels") do
-          fill_in "quantity_0", with: 2
-        end
-
-        click_button "Add"
+      it "can add an item" do
+        add_line_item "spree t-shirt", quantity: 2
 
         within("#order_total") do
           expect(page).to have_content("$80.00")
@@ -62,13 +55,15 @@ describe "Order Details", type: :feature, js: true do
         expect(page).to have_content("spree t-shirt")
 
         within_row(1) do
-          accept_alert do
+          accept_confirm "Are you sure you want to delete this record?" do
             click_icon :trash
           end
         end
 
-        expect(page).to have_content("Your order is empty") # wait for page refresh
         expect(page).not_to have_content("spree t-shirt")
+
+        # Should have a new item row
+        expect(page).to have_field('quantity')
       end
 
       # Regression test for https://github.com/spree/spree/issues/3862
@@ -77,7 +72,7 @@ describe "Order Details", type: :feature, js: true do
 
         within_row(1) do
           # Click "cancel" on confirmation dialog
-          dismiss_confirm do
+          dismiss_confirm "Are you sure you want to delete this record?" do
             click_icon :trash
           end
         end
@@ -104,18 +99,21 @@ describe "Order Details", type: :feature, js: true do
         within("table.index tr.show-method") do
           click_icon :edit
         end
-        select2 "Default", from: "Shipping Method"
+        select "UPS Ground $100.00", from: "Shipping Method"
         click_icon :check
 
         expect(page).not_to have_css('#selected_shipping_rate_id')
-        expect(page).to have_content("Default")
+        expect(page).to have_content("UPS Ground")
       end
 
-      it "will show the variant sku" do
-        order = create(:completed_order_with_totals)
-        visit spree.edit_admin_order_path(order)
-        sku = order.line_items.first.variant.sku
-        expect(page).to have_content("SKU: #{sku}")
+      context "with a completed order" do
+        let!(:order) { create(:completed_order_with_totals) }
+
+        it "will show the variant sku" do
+          visit spree.edit_admin_order_path(order)
+          sku = order.line_items.first.variant.sku
+          expect(page).to have_content("SKU: #{sku}")
+        end
       end
 
       context "with special_instructions present" do
@@ -134,12 +132,7 @@ describe "Order Details", type: :feature, js: true do
         end
 
         it "adds variant to order just fine" do
-          select2_search tote.name, from: Spree.t(:name_or_sku)
-          within("table.stock-levels") do
-            fill_in "variant_quantity", with: 1
-          end
-
-          click_button 'Add'
+          add_line_item tote.name
 
           within(".line-items") do
             expect(page).to have_content(tote.name)
@@ -154,7 +147,8 @@ describe "Order Details", type: :feature, js: true do
         end
 
         it "doesn't display the out of stock variant in the search results" do
-          select2_search_without_selection product.name, from: ".variant_autocomplete"
+          click_on 'Add Item'
+          select2_search_without_selection product.name, from: ".select-variant"
 
           expect(page).to have_selector('.select2-no-results')
           within(".select2-no-results") do
@@ -223,35 +217,24 @@ describe "Order Details", type: :feature, js: true do
             expect(order.shipments.first.stock_location.id).to eq(stock_location2.id)
           end
 
-          it 'should not split anything if the input quantity is garbage' do
-            expect(order.shipments.first.stock_location.id).to eq(stock_location.id)
-
-            within_row(1) { click_icon 'arrows-h' }
-            complete_split_to(stock_location2, quantity: 'ff')
-
-            accept_alert "undefined"
-
-            expect(order.shipments.count).to eq(1)
-            expect(order.shipments.first.inventory_units_for(product.master).count).to eq(2)
-            expect(order.shipments.first.stock_location.id).to eq(stock_location.id)
-          end
-
           it 'should not allow less than or equal to zero qty' do
             expect(order.shipments.first.stock_location.id).to eq(stock_location.id)
 
             within_row(1) { click_icon 'arrows-h' }
-            complete_split_to(stock_location2, quantity: 0)
 
-            accept_alert "undefined"
+            accept_alert "Unable to complete split" do
+              complete_split_to(stock_location2, quantity: 0)
+            end
 
             expect(order.shipments.count).to eq(1)
             expect(order.shipments.first.inventory_units_for(product.master).count).to eq(2)
             expect(order.shipments.first.stock_location.id).to eq(stock_location.id)
 
             fill_in 'item_quantity', with: -1
-            click_icon :ok
 
-            accept_alert "undefined"
+            accept_alert "Unable to complete split" do
+              click_icon :ok
+            end
 
             expect(order.shipments.count).to eq(1)
             expect(order.shipments.first.inventory_units_for(product.master).count).to eq(2)
@@ -282,7 +265,7 @@ describe "Order Details", type: :feature, js: true do
               within_row(1) { click_icon 'arrows-h' }
               complete_split_to(stock_location2, quantity: 2)
 
-              accept_alert "undefined"
+              accept_alert "Unable to complete split"
 
               expect(order.shipments.count).to eq(1)
               expect(order.shipments.first.inventory_units_for(product.master).count).to eq(2)
@@ -337,7 +320,9 @@ describe "Order Details", type: :feature, js: true do
           expect(page).to have_css('.stock-item', count: 2)
 
           within '[data-hook=admin_shipment_form]', text: @shipment2.number do
-            click_icon :trash
+            accept_confirm "Are you sure you want to delete this record?" do
+              click_icon :trash
+            end
           end
 
           expect(page).to have_css('.stock-item', count: 1)
@@ -378,10 +363,11 @@ describe "Order Details", type: :feature, js: true do
 
             within(all('.stock-contents', count: 2).first) do
               within_row(1) { click_icon 'arrows-h' }
-              complete_split_to(@shipment2, quantity: 200)
-            end
 
-            accept_alert "undefined"
+              accept_alert("Unable to complete split") do
+                complete_split_to(@shipment2, quantity: 200)
+              end
+            end
 
             expect(order.shipments.count).to eq(2)
             expect(order.shipments.first.inventory_units_for(product.master).count).to eq(1)
@@ -524,11 +510,11 @@ describe "Order Details", type: :feature, js: true do
       within("table.index tr.show-method") do
         click_icon :edit
       end
-      select2 "Default", from: "Shipping Method"
+      select "UPS Ground $100.00", from: "Shipping Method"
       click_icon :check
 
       expect(page).not_to have_css('#selected_shipping_rate_id')
-      expect(page).to have_content("Default")
+      expect(page).to have_content("UPS Ground")
     end
 
     it 'can ship' do

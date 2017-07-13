@@ -4,19 +4,11 @@ module Spree
       ::Spree::StoreCredit
     end
 
-    def can_capture?(payment)
-      ['checkout', 'pending'].include?(payment.state)
-    end
-
-    def can_void?(payment)
-      payment.pending?
-    end
-
     def authorize(amount_in_cents, provided_store_credit, gateway_options = {})
       if provided_store_credit.nil?
         ActiveMerchant::Billing::Response.new(false, Spree.t('store_credit.unable_to_find'), {}, {})
       else
-        action = -> (store_credit) {
+        action = ->(store_credit) {
           store_credit.authorize(
             amount_in_cents / 100.0.to_d,
             gateway_options[:currency],
@@ -28,7 +20,7 @@ module Spree
     end
 
     def capture(amount_in_cents, auth_code, gateway_options = {})
-      action = -> (store_credit) {
+      action = ->(store_credit) {
         store_credit.capture(
           amount_in_cents / 100.0.to_d,
           auth_code,
@@ -55,14 +47,14 @@ module Spree
     end
 
     def void(auth_code, gateway_options = {})
-      action = -> (store_credit) {
+      action = ->(store_credit) {
         store_credit.void(auth_code, action_originator: gateway_options[:originator])
       }
       handle_action(action, :void, auth_code)
     end
 
     def credit(amount_in_cents, auth_code, gateway_options = {})
-      action = -> (store_credit) do
+      action = ->(store_credit) do
         currency = gateway_options[:currency] || store_credit.currency
         originator = gateway_options[:originator]
 
@@ -109,7 +101,7 @@ module Spree
 
     def handle_action(action, action_name, auth_code)
       # Find first event with provided auth_code
-      store_credit = Spree::StoreCreditEvent.find_by_authorization_code(auth_code).try(:store_credit)
+      store_credit = Spree::StoreCreditEvent.find_by(authorization_code: auth_code).try(:store_credit)
 
       if store_credit.nil?
         ActiveMerchant::Billing::Response.new(false, Spree.t('store_credit.unable_to_find_for_action', auth_code: auth_code, action: action_name), {}, {})

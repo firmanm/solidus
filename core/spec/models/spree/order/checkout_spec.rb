@@ -147,7 +147,8 @@ describe Spree::Order, type: :model do
           it_behaves_like "it references the user's the default address" do
             let(:address_kind) { :bill }
             before do
-              order.user = FactoryGirl.create(:user, bill_address: default_address)
+              order.user = FactoryGirl.create(:user)
+              order.user.default_address = default_address
               order.next!
               order.reload
             end
@@ -184,7 +185,7 @@ describe Spree::Order, type: :model do
 
       it "recalculates tax and updates totals" do
         zone = create(:zone, countries: [order.tax_address.country])
-        create(:tax_rate, tax_category: line_item.tax_category, amount: 0.05, zone: zone)
+        create(:tax_rate, tax_categories: [line_item.tax_category], amount: 0.05, zone: zone)
         order.next!
         expect(order).to have_attributes(
           adjustment_total: 0.5,
@@ -254,11 +255,6 @@ describe Spree::Order, type: :model do
           allow(order).to receive(:ensure_available_shipping_rates) { true }
         end
 
-        it 'should invoke set_shipment_cost' do
-          expect(order).to receive(:set_shipments_cost)
-          order.next!
-        end
-
         it 'should update shipment_total' do
           expect { order.next! }.to change{ order.shipment_total }.by(10.00)
         end
@@ -300,7 +296,6 @@ describe Spree::Order, type: :model do
         end
 
         it "transitions to payment" do
-          expect(order).to receive(:set_shipments_cost)
           order.next!
           assert_state_changed(order, 'delivery', 'payment')
           expect(order.state).to eq('payment')
@@ -333,7 +328,7 @@ describe Spree::Order, type: :model do
         context "with a shipment that has a price" do
           before do
             shipment.shipping_rates.first.update_column(:cost, 10)
-            order.set_shipments_cost
+            order.recalculate
           end
 
           it "transitions to payment" do
@@ -345,7 +340,6 @@ describe Spree::Order, type: :model do
         context "with a shipment that is free" do
           before do
             shipment.shipping_rates.first.update_column(:cost, 0)
-            order.set_shipments_cost
           end
 
           it "skips payment, transitions to confirm" do
@@ -362,8 +356,9 @@ describe Spree::Order, type: :model do
       let(:default_credit_card) { create(:credit_card) }
 
       before do
-        user = Spree::LegacyUser.new(email: 'spree@example.org', bill_address: user_bill_address)
-        allow(user).to receive(:default_credit_card) { default_credit_card }
+        user = create(:user, email: 'spree@example.org', bill_address: user_bill_address)
+        wallet_payment_source = user.wallet.add(default_credit_card)
+        user.wallet.default_wallet_payment_source = wallet_payment_source
         order.user = user
 
         allow(order).to receive_messages(payment_required?: true)
@@ -561,13 +556,13 @@ describe Spree::Order, type: :model do
       it "makes the current credit card a user's default credit card" do
         order.complete!
         expect(order.state).to eq 'complete'
-        expect(order.user.reload.default_credit_card.try(:id)).to eq(order.credit_cards.first.id)
+        expect(order.user.reload.wallet.default_wallet_payment_source.payment_source).to eq(order.credit_cards.first)
       end
 
-      it "does not assign a default credit card if temporary_credit_card is set" do
-        order.temporary_credit_card = true
+      it "does not assign a default credit card if temporary_payment_source is set" do
+        order.temporary_payment_source = true
         order.complete!
-        expect(order.user.reload.default_credit_card).to be_nil
+        expect(order.user.reload.wallet.default_wallet_payment_source).to be_nil
       end
     end
 
@@ -595,28 +590,12 @@ describe Spree::Order, type: :model do
       end
     end
 
-    context 'a shipment has no shipping rates' do
-      let(:order) { create(:order_with_line_items, state: 'confirm') }
-      let(:shipment) { order.shipments.first }
-
-      before do
-        shipment.shipping_rates.destroy_all
-      end
-
-      it 'clears the shipments and fails the transition' do
-        expect(order.complete).to eq(false)
-        expect(order.errors[:base]).to include(Spree.t(:items_cannot_be_shipped))
-        expect(order.shipments.count).to eq(0)
-        expect(Spree::InventoryUnit.where(shipment_id: shipment.id).count).to eq(0)
-      end
-    end
-
     context 'the order is already paid' do
       let(:order) { create(:order_with_line_items) }
 
       it 'can complete the order' do
         create(:payment, state: 'completed', order: order, amount: order.total)
-        order.update!
+        order.recalculate
         expect(order.complete).to eq(true)
       end
     end
