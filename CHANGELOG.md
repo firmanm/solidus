@@ -1,4 +1,15 @@
-## Solidus 2.3.0 (master, unreleased)
+## Solidus 2.4.0 (master, unreleased)
+
+- Change HTTP Status code for `Api::ShipmentsController#transfer_to_*` to be always 202 Accepted rather than 201 Created or 500.
+  Speed up changing fulfilment for parts of a shipment [\#2070](https://github.com/solidusio/solidus/pull/2070) ([mamhoff](https://github.com/mamhoff))
+
+- Customized responders have been removed. They are available in the `solidus_responders` extension
+
+- The all configuration objects now use static preferences by default. It's no longer necessary to call `use_static_preferences!`, as that is the new default. For the old behaviour of loading preferences from the DB, call `config.use_legacy_db_preferences!`. [\#2112](https://github.com/solidusio/solidus/pull/2112) ([jhawthorn](https://github.com/jhawthorn))
+
+- Remove Skeleton Grid CSS from the admin and complete its transition to Bootstrap. [\#2127](https://github.com/solidusio/solidus/pull/2127) ([graygilmore](https://github.com/graygilmore))
+
+## Solidus 2.3.0 (unreleased)
 
 - Rails 5.1 [\#1895](https://github.com/solidusio/solidus/pull/1895) ([jhawthorn](https://github.com/jhawthorn))
 
@@ -60,6 +71,8 @@
 - Fix path for distributed amount fields partial [\#2023](https://github.com/solidusio/solidus/pull/2023) ([graygilmore](https://github.com/graygilmore))
 - Use `.all` instead of `.where\(nil\)` in Admin::ResourceController [\#2047](https://github.com/solidusio/solidus/pull/2047) ([jordan-brough](https://github.com/jordan-brough))
 - Fix typo on the new promotions form [\#2035](https://github.com/solidusio/solidus/pull/2035) ([swcraig](https://github.com/swcraig))
+- Use translated model name in admin payment methods form [\#1975](https://github/com/solidusio/solidus/pull/1975) ([tvdeyen](https://github.com/tvdeyen))
+
 
 ### Deprecations
 - Renamed `Spree::Gateway` payment method into `Spree::PaymentMethod::CreditCard` [\#2001](https://github.com/solidusio/solidus/pull/2001) ([tvdeyen](https://github.com/tvdeyen))

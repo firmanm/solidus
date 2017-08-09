@@ -73,14 +73,13 @@ module Spree
     has_many :products, through: :variants
 
     # Shipping
+    has_many :inventory_units, inverse_of: :order
+    has_many :cartons, -> { distinct }, through: :inventory_units
     has_many :shipments, dependent: :destroy, inverse_of: :order do
       def states
         pluck(:state).uniq
       end
     end
-    has_many :inventory_units, through: :shipments
-    has_many :cartons, -> { distinct }, through: :inventory_units
-
     has_many :order_stock_locations, class_name: "Spree::OrderStockLocation"
     has_many :stock_locations, through: :order_stock_locations
 
@@ -417,7 +416,7 @@ module Spree
       # update payment and shipment(s) states, and save
       updater.update_payment_state
       shipments.each do |shipment|
-        shipment.update!(self)
+        shipment.update_state
         shipment.finalize!
       end
 
@@ -431,7 +430,7 @@ module Spree
     end
 
     def fulfill!
-      shipments.each { |shipment| shipment.update!(self) if shipment.persisted? }
+      shipments.each { |shipment| shipment.update_state if shipment.persisted? }
       updater.update_shipment_state
       save!
     end

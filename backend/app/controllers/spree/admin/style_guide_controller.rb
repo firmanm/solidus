@@ -22,6 +22,8 @@ module Spree
             'validation'
           ],
           components: [
+            'pills',
+            'modals',
             'tabs'
           ],
           messaging: [

@@ -32,7 +32,9 @@ describe Spree::Shipment, type: :model do
 
       aggregate_failures("verifying new shipment attributes") do
         expect do
-          shipment.transfer_to_location(variant, 1, stock_location)
+          Spree::Deprecation.silence do
+            shipment.transfer_to_location(variant, 1, stock_location)
+          end
         end.to change { Spree::Shipment.count }.by(1)
 
         new_shipment = order.shipments.last
@@ -247,7 +249,6 @@ describe Spree::Shipment, type: :model do
         end
 
         before do
-          allow(line_item).to receive(:order) { order }
           allow(shipment).to receive(:inventory_units) { inventory_units }
           allow(inventory_units).to receive_message_chain(:includes, :joins).and_return inventory_units
         end
@@ -265,13 +266,13 @@ describe Spree::Shipment, type: :model do
     end
   end
 
-  context "#update!" do
+  context "#update_state" do
     shared_examples_for "immutable once shipped" do
       before { shipment.update_columns(state: 'shipped') }
 
       it "should remain in shipped state once shipped" do
         expect {
-          shipment.update!(order)
+          shipment.update_state
         }.not_to change { shipment.state }
       end
     end
@@ -283,7 +284,7 @@ describe Spree::Shipment, type: :model do
 
         allow(shipment).to receive_messages(inventory_units: [mock_model(Spree::InventoryUnit, allow_ship?: false, canceled?: false)])
         expect(shipment).to receive(:update_columns).with(state: 'pending', updated_at: kind_of(Time))
-        shipment.update!(order)
+        shipment.update_state
       end
     end
 
@@ -293,7 +294,7 @@ describe Spree::Shipment, type: :model do
         # Set as ready so we can test for change
         shipment.update_attributes!(state: 'ready')
         expect(shipment).to receive(:update_columns).with(state: 'pending', updated_at: kind_of(Time))
-        shipment.update!(order)
+        shipment.update_state
       end
     end
 
@@ -301,7 +302,7 @@ describe Spree::Shipment, type: :model do
       before { allow(order).to receive_messages paid?: true }
       it "should result in a 'ready' state" do
         expect(shipment).to receive(:update_columns).with(state: 'ready', updated_at: kind_of(Time))
-        shipment.update!(order)
+        shipment.update_state
       end
       it_should_behave_like 'immutable once shipped'
       it_should_behave_like 'pending if backordered'
@@ -314,7 +315,7 @@ describe Spree::Shipment, type: :model do
 
       it "should result in a 'ready' state" do
         expect(shipment).to receive(:update_columns).with(state: 'ready', updated_at: kind_of(Time))
-        shipment.update!(order)
+        shipment.update_state
       end
       it_should_behave_like 'immutable once shipped'
       it_should_behave_like 'pending if backordered'
@@ -325,7 +326,7 @@ describe Spree::Shipment, type: :model do
       it "should result in a 'pending' state" do
         shipment.state = 'ready'
         expect(shipment).to receive(:update_columns).with(state: 'pending', updated_at: kind_of(Time))
-        shipment.update!(order)
+        shipment.update_state
       end
       it_should_behave_like 'immutable once shipped'
       it_should_behave_like 'pending if backordered'
@@ -336,7 +337,7 @@ describe Spree::Shipment, type: :model do
       it "should result in a 'ready' state" do
         shipment.state = 'pending'
         expect(shipment).to receive(:update_columns).with(state: 'ready', updated_at: kind_of(Time))
-        shipment.update!(order)
+        shipment.update_state
       end
       it_should_behave_like 'immutable once shipped'
       it_should_behave_like 'pending if backordered'
@@ -348,7 +349,7 @@ describe Spree::Shipment, type: :model do
         expect(shipment).to receive :after_ship
         allow(shipment).to receive_messages determine_state: 'shipped'
         expect(shipment).to receive(:update_columns).with(state: 'shipped', updated_at: kind_of(Time))
-        shipment.update!(order)
+        shipment.update_state
       end
 
       # Regression test for https://github.com/spree/spree/issues/4347
@@ -642,7 +643,7 @@ describe Spree::Shipment, type: :model do
     let(:inventory_units) { double }
 
     let(:params) do
-      { variant_id: variant.id, state: 'on_hand', line_item_id: line_item.id }
+      { variant_id: variant.id, state: 'on_hand', order_id: order.id, line_item_id: line_item.id }
     end
 
     before { allow(shipment).to receive_messages inventory_units: inventory_units }

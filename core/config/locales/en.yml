@@ -6,6 +6,16 @@ en:
         state: State
         shipment: Shipment
         cancel: Cancel
+    errors:
+      models:
+        spree/fulfilment_changer:
+          attributes:
+            desired_shipment:
+              can_not_transfer_within_same_shipment: can not be same as current shipment
+              not_enough_stock_at_desired_location: not enough stock in desired stock location
+            current_shipment:
+              has_already_been_shipped: has already been shipped
+              can_not_have_backordered_inventory_units: has backordered inventory units
   activerecord:
     attributes:
       spree/address:
@@ -170,13 +180,14 @@ en:
         code: Code
         description: Description
         event_name: Event Name
-        expires_at: Expiration date
+        expires_at: End
         name: Name
         path: Path
         per_code_usage_limit: Per Code Usage Limit
         promotion_uses: Promotion Uses
-        starts_at: Start date
-        usage_limit: Overall Usage Limit
+        starts_at: Start
+        status: Status
+        usage_limit: Usage Limit
       spree/promotion/actions/create_adjustment:
         description: Creates a promotion credit adjustment on the order
       spree/promotion/actions/create_item_adjustments:
@@ -496,6 +507,10 @@ en:
       spree/payment_method:
         one: Payment Method
         other: Payment Methods
+      spree/payment_method/check: Check Payments
+      spree/payment_method/store_credit: Store Credit Payments
+      spree/payment_method/bogus_credit_card: Bogus Credit Card Payments
+      spree/payment_method/simple_bogus_credit_card: Simple Bogus Credit Card Payments
       spree/price:
         one: Price
         other: Prices
@@ -1074,6 +1089,7 @@ en:
     clear_cache_warning: Clearing cache will temporarily reduce the performance of your store.
     clone: Clone
     close: Close
+    closed: Closed
     close_stock_transfer:
       confirm: "Are you sure you want to close this stock transfer?\n\nStock levels will be changed for the received items and you will no longer be able to edit the stock transfer."
     code: Code
@@ -1368,11 +1384,11 @@ en:
     inventory_not_available: Inventory not available for %{item}.
     inventory_state: Inventory State
     inventory_states:
-      backordered: backordered
-      canceled: canceled
-      on_hand: on hand
-      returned: returned
-      shipped: shipped
+      backordered: Backordered
+      canceled: Canceled
+      on_hand: On hand
+      returned: Returned
+      shipped: Shipped
     is_not_available_to_shipment_address: is not available to shipment address
     iso_name: Iso Name
     item: Item
@@ -1577,16 +1593,16 @@ en:
     order_refresh_totals: Refresh Totals
     order_resumed: Order resumed
     order_state:
-      address: address
-      awaiting_return: awaiting return
-      canceled: canceled
-      cart: cart
-      complete: complete
-      confirm: confirm
-      delivery: delivery
-      payment: payment
-      resumed: resumed
-      returned: returned
+      address: Address
+      awaiting_return: Awaiting return
+      canceled: Canceled
+      cart: Cart
+      complete: Complete
+      confirm: Confirm
+      delivery: Delivery
+      payment: Payment
+      resumed: Resumed
+      returned: Returned
     order_summary: Order Summary
     order_sure_want_to: Are you sure you want to %{event} this order?
     order_total: Order Total
@@ -1620,15 +1636,16 @@ en:
     payment_processor_choose_link: our payments page
     payment_state: Payment State
     payment_states:
-      balance_due: balance due
-      checkout: checkout
-      completed: completed
-      credit_owed: credit owed
-      failed: failed
-      paid: paid
-      pending: pending
-      processing: processing
-      void: void
+      balance_due: Balance due
+      checkout: Checkout
+      completed: Completed
+      credit_owed: Credit owed
+      failed: Failed
+      paid: Paid
+      pending: Pending
+      processing: Processing
+      void: Void
+      invalid: Invalid
     payment_updated: Payment Updated
     payments: Payments
     percent: Percent
@@ -1711,6 +1728,17 @@ en:
     received_successfully: Received Successfully
     receiving: Receiving
     receiving_match: Receiving match
+    reception_states:
+      awaiting: Awaiting
+      canceled: Canceled
+      expired: Expired
+      given_to_customer: Given to customer
+      in_transit: In transit
+      lost_in_transit: Lost in transit
+      received: Received
+      shipped_wrong_item: Wrong item
+      short_shipped: Short shipped
+      unexchanged: Unexchanged
     reception_status: Reception Status
     reference: Reference
     refund: Refund
@@ -1725,6 +1753,10 @@ en:
     reimbursed: Reimbursed
     reimbursement: Reimbursement
     reimbursement_perform_failed: "Reimbursement could not be performed.  Error: %{error}"
+    reimbursement_states:
+      errored: Errored
+      pending: Pending
+      reimbursed: Reimbursed
     reimbursement_status: Reimbursement status
     reimbursement_type: Reimbursement type
     reimbursement_type_override: Reimbursement Type Override
@@ -1744,6 +1776,9 @@ en:
     resumed: Resumed
     return: return
     return_authorization: Return Merchandise Authorization
+    return_authorization_states:
+      authorized: Authorized
+      canceled: Canceled
     return_authorizations: Return Merchandise Authorizations
     return_authorization_updated: Return merchandise authorization updated
     return_item_inventory_unit_ineligible: Return item's inventory unit must be shipped
@@ -1825,12 +1860,12 @@ en:
     shipment_numbers: Shipment numbers
     shipment_state: Shipment State
     shipment_states:
-      backorder: backorder
-      canceled: canceled
-      partial: partial
-      pending: pending
-      ready: ready
-      shipped: shipped
+      backorder: Backorder
+      canceled: Canceled
+      partial: Partial
+      pending: Pending
+      ready: Ready
+      shipped: Shipped
     shipment_transfer_success: 'Variants successfully transferred'
     shipment_transfer_error: 'There was an error transferring variants'
     shipments: Shipments
