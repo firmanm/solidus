@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::PermissionSets::ProductManagement do
+RSpec.describe Spree::PermissionSets::ProductManagement do
   let(:ability) { DummyAbility.new }
 
   subject { ability }

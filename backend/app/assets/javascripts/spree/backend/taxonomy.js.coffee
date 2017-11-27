@@ -44,7 +44,7 @@ TaxonTreeView = Backbone.View.extend
     })
 
   resize_placeholder: (e, ui) ->
-    handleHeight = ui.helper.find('.sortable-handle').outerHeight()
+    handleHeight = ui.helper.find('.taxon').outerHeight()
     ui.placeholder.height(handleHeight)
 
   restore_sort_targets: ->
@@ -100,7 +100,7 @@ TaxonTreeView = Backbone.View.extend
 
     @redraw_tree()
 
-$ ->
+Spree.ready ->
   if $('#taxonomy_tree').length
     model = new Spree.Models.Taxonomy({id: $('#taxonomy_tree').data("taxonomy-id")})
     new TaxonTreeView

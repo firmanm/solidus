@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::CustomerReturn, type: :model do
+RSpec.describe Spree::CustomerReturn, type: :model do
   before do
     allow_any_instance_of(Spree::Order).to receive_messages(return!: true)
   end
@@ -9,10 +9,16 @@ describe Spree::CustomerReturn, type: :model do
     describe "#return_items_belong_to_same_order" do
       let(:customer_return)       { build(:customer_return) }
 
-      let(:first_inventory_unit)  { build(:inventory_unit) }
+      let(:first_order) { create(:order_with_line_items) }
+      let(:second_order) { first_order }
+
+      let(:first_shipment) { first_order.shipments.first }
+      let(:second_shipment) { second_order.shipments.first }
+
+      let(:first_inventory_unit)  { build(:inventory_unit, shipment: first_shipment) }
       let(:first_return_item)     { build(:return_item, inventory_unit: first_inventory_unit) }
 
-      let(:second_inventory_unit) { build(:inventory_unit, order: second_order) }
+      let(:second_inventory_unit) { build(:inventory_unit, shipment: second_shipment) }
       let(:second_return_item)    { build(:return_item, inventory_unit: second_inventory_unit) }
 
       subject { customer_return.valid? }
@@ -23,7 +29,7 @@ describe Spree::CustomerReturn, type: :model do
       end
 
       context "return items are part of different orders" do
-        let(:second_order) { create(:order) }
+        let(:second_order) { create(:order_with_line_items) }
 
         it "is not valid" do
           expect(subject).to eq false
@@ -31,12 +37,12 @@ describe Spree::CustomerReturn, type: :model do
 
         it "adds an error message" do
           subject
-          expect(customer_return.errors.full_messages).to include(Spree.t(:return_items_cannot_be_associated_with_multiple_orders))
+          expect(customer_return.errors.full_messages).to include(I18n.t('spree.return_items_cannot_be_associated_with_multiple_orders'))
         end
       end
 
       context "return items are part of the same order" do
-        let(:second_order) { first_inventory_unit.order }
+        let(:second_order) { first_order }
 
         it "is valid" do
           expect(subject).to eq true
@@ -207,7 +213,12 @@ describe Spree::CustomerReturn, type: :model do
       end
 
       it "should NOT raise an error when no stock item exists in the stock location" do
-        inventory_unit.find_stock_item.destroy
+        inventory_unit.find_stock_item.really_destroy!
+        create(:customer_return_without_return_items, return_items: [return_item], stock_location_id: new_stock_location.id)
+      end
+
+      it "should NOT raise an error when a soft-deleted stock item exists in the stock location" do
+        inventory_unit.find_stock_item.paranoia_destroy
         create(:customer_return_without_return_items, return_items: [return_item], stock_location_id: new_stock_location.id)
       end
 

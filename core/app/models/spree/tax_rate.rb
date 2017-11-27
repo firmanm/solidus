@@ -3,7 +3,7 @@ module Spree
     acts_as_paranoid
 
     # Need to deal with adjustments before calculator is destroyed.
-    before_destroy :deals_with_adjustments_for_deleted_source
+    before_destroy :remove_adjustments_from_incomplete_orders
 
     include Spree::CalculatedAdjustments
     include Spree::AdjustmentSource
@@ -38,7 +38,7 @@ module Spree
     # For instance:
     #
     # Zones:
-    #   - Spain (default tax zone)
+    #   - Spain
     #   - France
     #
     # Tax rates: (note: amounts below do not actually reflect real VAT rates)
@@ -82,14 +82,12 @@ module Spree
     def adjust(_order_tax_zone, item)
       amount = compute_amount(item)
 
-      included = included_in_price && amount > 0
-
       item.adjustments.create!(
         source: self,
         amount: amount,
         order_id: item.order_id,
         label: adjustment_label(amount),
-        included: included
+        included: included_in_price
       )
     end
 
@@ -104,9 +102,9 @@ module Spree
     end
 
     def adjustment_label(amount)
-      Spree.t(
+      I18n.t(
         translation_key(amount),
-        scope: "adjustment_labels.tax_rates",
+        scope: "spree.adjustment_labels.tax_rates",
         name: name.presence || tax_categories.map(&:name).join(", "),
         amount: amount_for_adjustment_label
       )
@@ -133,7 +131,6 @@ module Spree
 
     def translation_key(amount)
       key = included_in_price? ? "vat" : "sales_tax"
-      key += "_refund" if amount < 0
       key += "_with_rate" if show_rate_in_label?
       key.to_sym
     end

@@ -61,11 +61,11 @@ describe "Orders Listing", type: :feature, js: true do
 
   context "searching orders" do
     context "when there are multiple stores" do
-      let(:stores) { FactoryGirl.create_pair(:store) }
+      let(:stores) { FactoryBot.create_pair(:store) }
 
       before do
         stores.each do |store|
-          FactoryGirl.create(:completed_order_with_totals, number: "R#{store.id}999", store: store)
+          FactoryBot.create(:completed_order_with_totals, number: "R#{store.id}999", store: store)
         end
       end
 
@@ -73,7 +73,7 @@ describe "Orders Listing", type: :feature, js: true do
         main_store, other_store = stores
 
         click_on "Filter Results"
-        select main_store.name, from: Spree.t(:store)
+        select main_store.name, from: I18n.t('spree.store')
         click_on "Filter Results"
 
         within_row(1) do
@@ -88,7 +88,7 @@ describe "Orders Listing", type: :feature, js: true do
     context "when there's a single store" do
       it "should be able to search orders" do
         click_on "Filter Results"
-        fill_in "q_number_cont", with: "R200"
+        fill_in "q_number_start", with: "R200"
         click_on 'Filter Results'
         within_row(1) do
           expect(page).to have_content("R200")
@@ -100,7 +100,7 @@ describe "Orders Listing", type: :feature, js: true do
 
       it "should be able to filter on variant_id" do
         click_on "Filter Results"
-        select2_search @order1.products.first.sku, from: Spree.t(:variant)
+        select2_search @order1.products.first.sku, from: I18n.t('spree.variant')
         click_on 'Filter Results'
 
         within_row(1) do
@@ -161,7 +161,7 @@ describe "Orders Listing", type: :feature, js: true do
 
         it "only shows the orders with the selected promotion" do
           click_on "Filter Results"
-          fill_in "q_order_promotions_promotion_code_value_cont", with: promotion.codes.first.value
+          fill_in "q_order_promotions_promotion_code_value_start", with: promotion.codes.first.value
           click_on 'Filter Results'
           within_row(1) { expect(page).to have_content("R100") }
           within("table#listing_orders") { expect(page).not_to have_content("R200") }

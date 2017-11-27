@@ -25,12 +25,11 @@ module Spree
 
     ###################################################################
 
-    def self.register(*_klasses)
-    end
-
     # Returns all calculators applicable for kind of work
     def self.calculators
-      Rails.application.config.spree.calculators
+      Spree::Deprecation.warn("Calling .calculators is deprecated. Please access through Rails.application.config.spree.calculators")
+
+      Spree::Config.environment.calculators
     end
 
     def to_s

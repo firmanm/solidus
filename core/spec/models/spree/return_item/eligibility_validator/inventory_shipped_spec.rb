@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::ReturnItem::EligibilityValidator::InventoryShipped do
+RSpec.describe Spree::ReturnItem::EligibilityValidator::InventoryShipped do
   let(:return_item) { create(:return_item) }
   let(:validator)   { Spree::ReturnItem::EligibilityValidator::InventoryShipped.new(return_item) }
 
@@ -24,7 +24,7 @@ describe Spree::ReturnItem::EligibilityValidator::InventoryShipped do
 
       it "sets an error" do
         subject
-        expect(validator.errors[:inventory_unit_shipped]).to eq Spree.t('return_item_inventory_unit_ineligible')
+        expect(validator.errors[:inventory_unit_shipped]).to eq I18n.t('spree.return_item_inventory_unit_ineligible')
       end
     end
   end

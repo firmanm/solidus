@@ -2,8 +2,8 @@ require 'spree/testing_support/factories/store_credit_category_factory'
 require 'spree/testing_support/factories/store_credit_type_factory'
 require 'spree/testing_support/factories/user_factory'
 
-FactoryGirl.define do
-  factory :store_credit, class: Spree::StoreCredit do
+FactoryBot.define do
+  factory :store_credit, class: 'Spree::StoreCredit' do
     user
     association :created_by, factory: :user
     association :category, factory: :store_credit_category

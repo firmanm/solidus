@@ -219,7 +219,7 @@ module Spree
 
     describe 'GET #show' do
       let(:order) { create :order_with_line_items }
-      let(:adjustment) { FactoryGirl.create(:adjustment, adjustable: order, order: order) }
+      let(:adjustment) { FactoryBot.create(:adjustment, adjustable: order, order: order) }
 
       subject { get spree.api_order_path(order) }
 
@@ -275,13 +275,6 @@ module Spree
       get spree.api_order_path(order)
       expect(response.status).to eq(200)
       expect(json_response["checkout_steps"]).to eq(%w[address delivery confirm complete])
-    end
-
-    # Regression test for https://github.com/spree/spree/issues/1992
-    it "can view an order not in a standard state" do
-      allow_any_instance_of(Order).to receive_messages user: current_api_user
-      order.update_column(:state, 'shipped')
-      get spree.api_order_path(order)
     end
 
     it "can not view someone else's order" do
@@ -513,6 +506,7 @@ module Spree
 
       context "with a line item" do
         let(:order) { create(:order_with_line_items) }
+        let(:line_item) { order.line_items.first }
 
         it "can empty an order" do
           create(:adjustment, order: order, adjustable: order)
@@ -575,7 +569,7 @@ module Spree
 
         context "when in delivery" do
           let!(:shipping_method) do
-            FactoryGirl.create(:shipping_method).tap do |shipping_method|
+            FactoryBot.create(:shipping_method).tap do |shipping_method|
               shipping_method.calculator.preferred_amount = 10
               shipping_method.calculator.save
             end
@@ -784,7 +778,7 @@ module Spree
           expect(response.status).to eq 200
           expect(order.reload.promotions).to eq [promo]
           expect(json_response).to eq({
-            "success" => Spree.t(:coupon_code_applied),
+            "success" => I18n.t('spree.coupon_code_applied'),
             "error" => nil,
             "successful" => true,
             "status_code" => "coupon_code_applied"
@@ -802,7 +796,7 @@ module Spree
           expect(order.reload.promotions).to eq []
           expect(json_response).to eq({
             "success" => nil,
-            "error" => Spree.t(:coupon_code_unknown_error),
+            "error" => I18n.t('spree.coupon_code_unknown_error'),
             "successful" => false,
             "status_code" => "coupon_code_unknown_error"
           })

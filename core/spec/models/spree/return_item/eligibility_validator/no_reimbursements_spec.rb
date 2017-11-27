@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::ReturnItem::EligibilityValidator::NoReimbursements do
+RSpec.describe Spree::ReturnItem::EligibilityValidator::NoReimbursements do
   let(:validator) { Spree::ReturnItem::EligibilityValidator::NoReimbursements.new(return_item) }
 
   describe "#eligible_for_return?" do
@@ -16,7 +16,7 @@ describe Spree::ReturnItem::EligibilityValidator::NoReimbursements do
 
       it "sets an error" do
         subject
-        expect(validator.errors[:inventory_unit_reimbursed]).to eq Spree.t('return_item_inventory_unit_reimbursed')
+        expect(validator.errors[:inventory_unit_reimbursed]).to eq I18n.t('spree.return_item_inventory_unit_reimbursed')
       end
 
       context "but the return item has been expired" do

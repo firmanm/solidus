@@ -1,4 +1,4 @@
-require 'spec_helper'
+require 'rails_helper'
 
 # This method in particular has been difficult to get right.
 # Many things will affect this amount
@@ -63,7 +63,7 @@ RSpec.describe "Outstanding balance integration tests" do
 
     context 'with a removed item' do
       before do
-        item_amount = item_1.final_amount
+        item_amount = item_1.total
         order.contents.remove(item_1.variant)
         create(:refund, payment: payment, amount: item_amount)
       end

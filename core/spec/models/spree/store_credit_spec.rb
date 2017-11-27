@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::StoreCredit do
+RSpec.describe Spree::StoreCredit do
   let(:currency) { "TEST" }
   let(:store_credit) { build(:store_credit, store_credit_attrs) }
   let(:store_credit_attrs) { {} }
@@ -10,7 +10,7 @@ describe Spree::StoreCredit do
 
     context "amount used is greater than zero" do
       let(:store_credit) { create(:store_credit, amount: 100, amount_used: 1) }
-      subject { store_credit.destroy }
+      subject { store_credit.paranoia_destroy }
 
       it 'can not delete the store credit' do
         subject

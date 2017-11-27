@@ -8,25 +8,25 @@ input[type="url"],
 input[type="number"],
 input[type="tel"],
 textarea {
-  padding: $input-padding-y $input-padding-x;
+  padding: $input-btn-padding-y $input-btn-padding-x;
   color: $input-color;
   border: $input-btn-border-width solid $input-border-color;
   border-radius: $input-border-radius;
   background: $input-bg;
   font-size: $font-size-base;
-  line-height: $input-line-height;
+  line-height: $input-btn-line-height;
 
   &:focus {
-    border-color: $input-border-focus;
+    border-color: $input-focus-border-color;
     outline: 0;
   }
 
   &:disabled {
-    background: $input-bg-disabled;
+    background: $input-disabled-bg;
   }
 
   &::placeholder {
-    color: $input-color-placeholder;
+    color: $input-placeholder-color;
     // Override Firefox's unusual default opacity; see https://github.com/twbs/bootstrap/pull/11526.
     opacity: 1;
   }
@@ -45,7 +45,6 @@ label {
   font-size: 90%;
   display: inline;
   margin-bottom: 5px;
-  color: $color-4;
 
   &.inline {
     display: inline-block !important;
@@ -66,9 +65,14 @@ input[type="submit"],
 input[type="button"],
 button,
 .button {
-  &:not(.close) {
+  &:not(.close):not([class*="btn"]) {
+    // We want to apply the primary button coloring to all buttons that do not
+    // currently use the Bootstrap class naming convention (`btn`).
+    //
+    // In order to avoid the clashing between using `:not(.btn)` and
+    // `@extend .btn` we need to use an attribute selector of `[class*="btn"]`.
     @extend .btn;
-    @include button-variant($btn-primary-color, $btn-primary-bg, $btn-primary-border);
+    @include button-variant(theme-color("primary"), theme-color("primary"));
   }
 
   &:before {
@@ -112,19 +116,19 @@ span.info {
   }
 
   ul {
-    border-top: 1px solid $color-border;
     list-style: none;
-    padding-top: 5px;
+    margin: 5px 0;
+    padding-left: 0;
 
     li {
       display: inline-block;
       padding-right: 10px;
 
-
       label {
         font-weight: normal;
         text-transform: none;
       }
+
       &.white-space-nowrap {
         white-space: nowrap;
       }
@@ -134,21 +138,21 @@ span.info {
   &.withError {
     .field_with_errors {
       label {
-        color: very-light($brand-danger, 30);
+        color: very-light(theme-color("danger"), 30);
       }
 
       input {
-        border-color: very-light($brand-danger, 15);
+        border-color: very-light(theme-color("danger"), 15);
       }
     }
     .formError {
-      color: very-light($brand-danger, 30);
+      color: very-light(theme-color("danger"), 30);
       font-style: italic;
       font-size: 85%;
     }
     .select2-container {
       border-radius: 4px;
-      border: 1px solid very-light($brand-danger, 15);
+      border: 1px solid very-light(theme-color("danger"), 15);
     }
   }
 }
@@ -185,10 +189,6 @@ fieldset {
     i {
       color: $link-color;
     }
-  }
-
-  label {
-    color: lighten($body-color, 8);
   }
 
   .filter-actions {

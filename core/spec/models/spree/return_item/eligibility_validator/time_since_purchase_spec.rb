@@ -1,7 +1,7 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::ReturnItem::EligibilityValidator::TimeSincePurchase, type: :model do
-  let(:inventory_unit) { create(:inventory_unit, order: create(:shipped_order)) }
+RSpec.describe Spree::ReturnItem::EligibilityValidator::TimeSincePurchase, type: :model do
+  let(:inventory_unit) { create(:inventory_unit, shipment: create(:shipped_order).shipments.first) }
   let(:return_item)    { create(:return_item, inventory_unit: inventory_unit) }
   let(:validator)      { Spree::ReturnItem::EligibilityValidator::TimeSincePurchase.new(return_item) }
 
@@ -28,7 +28,7 @@ describe Spree::ReturnItem::EligibilityValidator::TimeSincePurchase, type: :mode
 
       it "sets an error" do
         subject
-        expect(validator.errors[:number_of_days]).to eq Spree.t('return_item_time_period_ineligible')
+        expect(validator.errors[:number_of_days]).to eq I18n.t('spree.return_item_time_period_ineligible')
       end
     end
   end

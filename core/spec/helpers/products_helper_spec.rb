@@ -1,9 +1,9 @@
 # encoding: utf-8
 
-require 'spec_helper'
+require 'rails_helper'
 
 module Spree
-  describe ProductsHelper, type: :helper do
+  RSpec.describe ProductsHelper, type: :helper do
     include ProductsHelper
 
     let(:product) { create(:product, price: product_price) }
@@ -156,7 +156,7 @@ THIS IS THE BEST PRODUCT EVER!
       subject { line_item_description_text description }
       context 'variant has a blank description' do
         let(:description) { nil }
-        it { is_expected.to eq(Spree.t(:product_has_no_description)) }
+        it { is_expected.to eq(I18n.t('spree.product_has_no_description')) }
       end
       context 'variant has a description' do
         let(:description) { 'test_desc' }

@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-shared_examples "an invalid state transition" do |status, expected_status|
+RSpec.shared_examples "an invalid state transition" do |status, expected_status|
   let(:status) { status }
 
   it "cannot transition to #{expected_status}" do
@@ -8,7 +8,7 @@ shared_examples "an invalid state transition" do |status, expected_status|
   end
 end
 
-describe Spree::ReturnItem, type: :model do
+RSpec.describe Spree::ReturnItem, type: :model do
   all_reception_statuses = Spree::ReturnItem.state_machines[:reception_status].states.map(&:name).map(&:to_s)
   all_acceptance_statuses = Spree::ReturnItem.state_machines[:acceptance_status].states.map(&:name).map(&:to_s)
 
@@ -19,7 +19,7 @@ describe Spree::ReturnItem, type: :model do
   describe '#receive!' do
     let(:now)            { Time.current }
     let(:order)          { create(:shipped_order) }
-    let(:inventory_unit) { create(:inventory_unit, order: order, state: 'shipped') }
+    let(:inventory_unit) { create(:inventory_unit, state: 'shipped') }
     let!(:customer_return) { create(:customer_return_without_return_items, return_items: [return_item], stock_location_id: inventory_unit.shipment.stock_location_id) }
     let(:return_item) { create(:return_item, inventory_unit: inventory_unit) }
 
@@ -45,7 +45,7 @@ describe Spree::ReturnItem, type: :model do
       let!(:return_item_with_dupe_inventory_unit) { create(:return_item, inventory_unit: inventory_unit, reception_status: 'received') }
 
       before do
-        assert_raises(StateMachines::InvalidTransition) { subject }
+        expect { subject }.to raise_error { StateMachines::InvalidTransition }
       end
 
       it 'does not receive the return item' do
@@ -58,7 +58,7 @@ describe Spree::ReturnItem, type: :model do
     end
 
     context 'when the received item is actually the exchange (aka customer changed mind about exchange)' do
-      let(:exchange_inventory_unit) { create(:inventory_unit, order: order, state: 'shipped') }
+      let(:exchange_inventory_unit) { create(:inventory_unit, state: 'shipped') }
       let!(:return_item_with_exchange) { create(:return_item, inventory_unit: inventory_unit, exchange_inventory_unit: exchange_inventory_unit) }
       let!(:return_item_in_lieu) { create(:return_item, inventory_unit: exchange_inventory_unit) }
 
@@ -112,7 +112,7 @@ describe Spree::ReturnItem, type: :model do
       end
 
       context "when the inventory unit's variant does not yet have a stock item for the stock location it was returned to" do
-        before { inventory_unit.variant.stock_items.destroy_all }
+        before { inventory_unit.variant.stock_items.each(&:really_destroy!) }
 
         it "creates a new stock item for the inventory unit with a count of 1" do
           expect { subject }.to change(Spree::StockItem, :count).by(1)
@@ -140,13 +140,13 @@ describe Spree::ReturnItem, type: :model do
     end
   end
 
-  describe "#display_pre_tax_amount" do
+  describe "#display_total_excluding_vat" do
     let(:amount) { 21.22 }
     let(:included_tax_total) { 1.22 }
     let(:return_item) { build(:return_item, amount: amount, included_tax_total: included_tax_total) }
 
     it "returns a Spree::Money" do
-      expect(return_item.display_pre_tax_amount).to eq Spree::Money.new(amount - included_tax_total)
+      expect(return_item.display_total_excluding_vat).to eq Spree::Money.new(amount - included_tax_total)
     end
   end
 
@@ -222,7 +222,8 @@ describe Spree::ReturnItem, type: :model do
   end
 
   describe "#receive" do
-    let(:inventory_unit) { create(:inventory_unit, order: create(:shipped_order)) }
+    let(:order) { create(:shipped_order) }
+    let(:inventory_unit) { create(:inventory_unit, shipment: order.shipments.first) }
     let(:return_item)    { create(:return_item, reception_status: status, inventory_unit: inventory_unit) }
 
     subject { return_item.receive! }
@@ -558,7 +559,7 @@ describe Spree::ReturnItem, type: :model do
     end
   end
 
-  describe "exchange pre_tax_amount" do
+  describe "exchange amount" do
     let(:return_item) { build(:return_item) }
 
     context "the return item is intended to be exchanged" do
@@ -602,7 +603,6 @@ describe Spree::ReturnItem, type: :model do
           expect(subject).not_to be_persisted
           expect(subject.original_return_item).to eq return_item
           expect(subject.line_item).to eq return_item.inventory_unit.line_item
-          expect(subject.order).to eq return_item.inventory_unit.order
         end
       end
     end

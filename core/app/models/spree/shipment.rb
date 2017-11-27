@@ -7,7 +7,7 @@ module Spree
 
     has_many :adjustments, as: :adjustable, inverse_of: :adjustable, dependent: :delete_all
     has_many :inventory_units, dependent: :destroy, inverse_of: :shipment
-    has_many :shipping_rates, -> { order(:cost) }, dependent: :destroy
+    has_many :shipping_rates, -> { order(:cost) }, dependent: :destroy, inverse_of: :shipment
     has_many :shipping_methods, through: :shipping_rates
     has_many :state_changes, as: :stateful
     has_many :cartons, -> { uniq }, through: :inventory_units
@@ -89,7 +89,12 @@ module Spree
     end
 
     extend DisplayMoney
-    money_methods :cost, :amount, :discounted_cost, :final_price, :item_cost
+    money_methods(
+      :cost, :amount, :discounted_cost, :final_price, :item_cost,
+      :total, :total_before_tax,
+    )
+    deprecate display_discounted_cost: :display_total_before_tax, deprecator: Spree::Deprecation
+    deprecate display_final_price: :display_total, deprecator: Spree::Deprecation
     alias_attribute :amount, :cost
 
     def add_shipping_method(shipping_method, selected = false)
@@ -116,18 +121,40 @@ module Spree
     def discounted_cost
       cost + promo_total
     end
+    deprecate discounted_cost: :total_before_tax, deprecator: Spree::Deprecation
     alias discounted_amount discounted_cost
+    deprecate discounted_amount: :total_before_tax, deprecator: Spree::Deprecation
+
+    # @return [BigDecimal] the amount of this shipment, taking into
+    #   consideration all its adjustments.
+    def total
+      cost + adjustment_total
+    end
+    alias final_price total
+    deprecate final_price: :total, deprecator: Spree::Deprecation
+
+    # @return [BigDecimal] the amount of this item, taking into consideration
+    #   all non-tax adjustments.
+    def total_before_tax
+      amount + adjustments.select { |a| !a.tax? && a.eligible? }.sum(&:amount)
+    end
+
+    # @return [BigDecimal] the amount of this shipment before VAT tax
+    # @note just like `cost`, this does not include any additional tax
+    def total_excluding_vat
+      total_before_tax - included_tax_total
+    end
+    alias pre_tax_amount total_excluding_vat
+    deprecate pre_tax_amount: :total_excluding_vat, deprecator: Spree::Deprecation
+
+    def total_with_items
+      total + item_cost
+    end
+    alias final_price_with_items total_with_items
+    deprecate final_price_with_items: :total_with_items, deprecator: Spree::Deprecation
 
     def editable_by?(_user)
       !shipped?
-    end
-
-    def final_price
-      cost + adjustment_total
-    end
-
-    def final_price_with_items
-      item_cost + final_price
     end
 
     # Decrement the stock counts for all pending inventory units in this
@@ -156,15 +183,11 @@ module Spree
     end
 
     def item_cost
-      line_items.map(&:final_amount).sum
+      line_items.map(&:total).sum
     end
 
     def line_items
       inventory_units.includes(:line_item).map(&:line_item).uniq
-    end
-
-    def pre_tax_amount
-      discounted_amount - included_tax_total
     end
 
     def ready_or_pending?
@@ -209,14 +232,17 @@ module Spree
     end
 
     def selected_shipping_rate_id=(id)
-      selected_shipping_rate.update(selected: false) if selected_shipping_rate
+      return if selected_shipping_rate_id == id
       new_rate = shipping_rates.detect { |rate| rate.id == id.to_i }
       fail(
         ArgumentError,
         "Could not find shipping rate id #{id} for shipment #{number}"
       ) unless new_rate
-      new_rate.update(selected: true)
-      save!
+
+      transaction do
+        selected_shipping_rate.update!(selected: false) if selected_shipping_rate
+        new_rate.update!(selected: true)
+      end
     end
 
     # Determines the appropriate +state+ according to the following logic:
@@ -236,11 +262,10 @@ module Spree
       end
     end
 
-    def set_up_inventory(state, variant, order, line_item)
+    def set_up_inventory(state, variant, _order, line_item)
       inventory_units.create(
         state: state,
         variant_id: variant.id,
-        order_id: order.id,
         line_item_id: line_item.id
       )
     end

@@ -1,14 +1,14 @@
-require 'spec_helper'
+require 'rails_helper'
 require 'shared_examples/calculator_shared_examples'
 
-describe Spree::Calculator::DistributedAmount, type: :model do
+RSpec.describe Spree::Calculator::DistributedAmount, type: :model do
   describe "#compute_line_item" do
     subject { calculator.compute_line_item(order.line_items.first) }
 
     let(:calculator) { Spree::Calculator::DistributedAmount.new }
 
     let(:order) do
-      FactoryGirl.create(
+      FactoryBot.create(
         :order_with_line_items,
         line_items_attributes: [{ price: 50 }, { price: 50 }, { price: 50 }]
       )

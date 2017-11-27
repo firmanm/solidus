@@ -10,7 +10,7 @@ module Spree
         delegate :eligible?, to: :promotion
 
         before_validation :ensure_action_has_calculator
-        before_destroy :deals_with_adjustments_for_deleted_source
+        before_destroy :remove_adjustments_from_incomplete_orders
 
         # Creates the adjustment related to a promotion for the order passed
         # through options hash
@@ -27,7 +27,7 @@ module Spree
             order: order,
             source: self,
             promotion_code: options[:promotion_code],
-            label: Spree.t('adjustment_labels.order', promotion: Spree::Promotion.model_name.human, promotion_name: promotion.name)
+            label: I18n.t('spree.adjustment_labels.order', promotion: Spree::Promotion.model_name.human, promotion_name: promotion.name)
           )
           true
         end

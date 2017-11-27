@@ -3,38 +3,24 @@ table {
   @extend .table;
   border-spacing: 0;
 
-  th, td {
-    border-right: 1px solid $color-border;
-    border-bottom: 1px solid $color-border;
+  &.sortable td {
     vertical-align: middle;
+  }
+
+  th, td {
     text-overflow: ellipsis;
 
-    img {
-      border: 1px solid transparent;
-    }
-
-    &:first-child {
-      border-left: 1px solid $color-border;
-    }
-
-    a {
-      border-bottom: 1px dotted lighten($link-color, 10);
-
-      &:hover {
-        border-color: lighten($link-hover-color, 10);
-      }
-    }
-
     .handle {
+      @extend .fa;
+      @extend .fa-bars;
+      cursor: move;
       display: block !important;
       text-align: center;
-      padding-right: 0;
+      padding: 3px 0;
     }
 
     &.actions {
-      background-color: transparent;
-      border: none !important;
-      text-align: left;
+      text-align: right;
       padding-left: 1.25rem;
 
       span.text {
@@ -59,7 +45,13 @@ table {
 
       button[class*='fa-'] {
         color: $link-color;
+        background-color: transparent;
+        border: 0 none;
         padding: 0 !important;
+
+        &:hover {
+          background-color: transparent;
+        }
       }
 
       .fa-envelope-alt, .fa-eye-open {
@@ -72,27 +64,28 @@ table {
       }
 
       .fa-trash:hover, .fa-void:hover, .fa-failure:hover {
-        color: $brand-danger;
+        color: theme-color("danger");
       }
 
       .fa-cancel:hover {
-        color: $brand-warning;
+        color: theme-color("warning");
       }
 
-      .fa-edit:hover, .fa-capture:hover, .fa-ok:hover, .fa-plus:hover, .fa-save:hover {
-        color: $brand-success;
+      .fa-edit:hover, .fa-capture:hover, .fa-ok:hover, .fa-plus:hover,
+      .fa-save:hover, .fa-arrows-h:hover, .fa-check:hover {
+        color: theme-color("success");
       }
 
       .fa-copy:hover {
-        color: $brand-warning;
+        color: theme-color("warning");
       }
 
       .fa-thumbs-up:hover {
-        color: $brand-success;
+        color: theme-color("success");
       }
 
       .fa-thumbs-down:hover {
-        color: $brand-danger;
+        color: theme-color("danger");
       }
     }
 
@@ -100,17 +93,6 @@ table {
     input[type="text"] {
       width: 100%;
     }
-
-    &.no-border {
-      border-right: none;
-    }
-
-    .handle {
-      @extend .fa;
-      @extend .fa-bars;
-      cursor: move;
-    }
-
   }
 
   &.no-borders {
@@ -123,42 +105,15 @@ table {
     white-space: nowrap;
   }
 
-  thead {
-    th {
-      border-top: 1px solid $color-border;
-      border-bottom: none;
-      background-color: $color-tbl-thead;
-      text-align: center;
-      font-weight: $font-weight-bold;
-      vertical-align: top;
-    }
+  th a {
+    color: $color-4;
   }
 
   tbody {
     tr {
-      &:first-child th,
-      &:first-child td {
-        border-top: 1px solid $color-border;
-      }
-      &.even td {
-        background-color: $color-tbl-even;
-
-        img {
-          border: 1px solid very-light($color-3, 6);
-        }
-      }
-
-      &:hover td {
-        background-color: very-light($color-3, 5);
-
-        img {
-          border: 1px solid $color-border;
-        }
-      }
-
       &.deleted td {
-        background-color: very-light($brand-danger, 6);
-        border-color: very-light($brand-danger, 15);
+        background-color: very-light(theme-color("danger"), 6);
+        border-color: very-light(theme-color("danger"), 15);
       }
 
       &.ui-sortable-placeholder td {

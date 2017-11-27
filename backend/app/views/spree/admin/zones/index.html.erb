@@ -1,14 +1,10 @@
-<%= render 'spree/admin/shared/areas_tabs' %>
-
-<% admin_breadcrumb(Spree.t(:settings)) %>
-<% admin_breadcrumb(Spree.t('admin.tab.areas')) %>
+<% admin_breadcrumb(t('spree.settings')) %>
 <% admin_breadcrumb(plural_resource_name(Spree::Zone)) %>
-
 
 <% content_for :page_actions do %>
   <% if can?(:create, Spree::Zone) %>
     <li>
-      <%= button_link_to Spree.t(:new_zone), new_object_url, id: 'admin_new_zone_link' %>
+      <%= button_link_to t('spree.new_zone'), new_object_url, id: 'admin_new_zone_link' %>
     </li>
   <% end %>
 <% end %>
@@ -34,8 +30,8 @@
     </thead>
     <tbody>
       <% @zones.each do |zone| %>
-        <tr id="<%= spree_dom_id zone %>" data-hook="zones_row" class="<%= cycle('odd', 'even')%>">
-          <td class="align-center"><%= zone.name %></td>
+        <tr id="<%= spree_dom_id zone %>" data-hook="zones_row">
+          <td><%= zone.name %></td>
           <td><%= zone.description %></td>
           <td class="actions">
             <% if can?(:update, zone) %>

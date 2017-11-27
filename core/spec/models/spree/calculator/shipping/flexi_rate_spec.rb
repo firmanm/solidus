@@ -1,9 +1,9 @@
-require 'spec_helper'
+require 'rails_helper'
 require 'shared_examples/calculator_shared_examples'
 
 module Spree
   module Calculator::Shipping
-    describe FlexiRate, type: :model do
+    RSpec.describe FlexiRate, type: :model do
       let(:variant1) { build(:variant, price: 10) }
       let(:variant2) { build(:variant, price: 20) }
 

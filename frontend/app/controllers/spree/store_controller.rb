@@ -3,8 +3,6 @@ module Spree
     include Spree::Core::ControllerHelpers::Pricing
     include Spree::Core::ControllerHelpers::Order
 
-    skip_before_action :set_current_order, only: :cart_link
-
     def unauthorized
       render 'spree/shared/unauthorized', layout: Spree::Config[:layout], status: 401
     end
@@ -41,7 +39,7 @@ module Spree
     def lock_order
       Spree::OrderMutex.with_lock!(@order) { yield }
     rescue Spree::OrderMutex::LockFailed
-      flash[:error] = Spree.t(:order_mutex_error)
+      flash[:error] = t('spree.order_mutex_error')
       redirect_to spree.cart_path
     end
   end

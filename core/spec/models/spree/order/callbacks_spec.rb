@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::Order, type: :model do
+RSpec.describe Spree::Order, type: :model do
   let(:order) { stub_model(Spree::Order) }
   before do
     Spree::Order.define_state_machine!
@@ -12,7 +12,7 @@ describe Spree::Order, type: :model do
       it "o'brien@gmail.com is a valid email address" do
         order.state = 'address'
         order.email = "o'brien@gmail.com"
-        expect(order.error_on(:email).size).to eq(0)
+        expect(order.errors[:email].size).to eq(0)
       end
     end
   end
@@ -36,7 +36,7 @@ describe Spree::Order, type: :model do
     it "should not validate email address" do
       order.state = "cart"
       order.email = nil
-      expect(order.error_on(:email).size).to eq(0)
+      expect(order.errors[:email].size).to eq(0)
     end
   end
 end

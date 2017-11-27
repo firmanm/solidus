@@ -103,7 +103,7 @@ module Spree
 
         # Regression Spec for https://github.com/spree/spree/issues/5389 and https://github.com/spree/spree/issues/5880
         it "can update addresses but not transition to delivery w/o shipping setup" do
-          Spree::ShippingMethod.destroy_all
+          Spree::ShippingMethod.all.each(&:really_destroy!)
           put spree.api_checkout_path(order),
             params: { order_token: order.guest_token, order: {
               bill_address_attributes: address,
@@ -349,6 +349,14 @@ module Spree
         expect(PromotionHandler::Coupon).to receive(:new).with(order).and_call_original
         expect_any_instance_of(PromotionHandler::Coupon).to receive(:apply).and_return({ coupon_applied?: true })
         put spree.api_checkout_path(order.to_param), params: { order_token: order.guest_token, order: { coupon_code: "foobar" } }
+        expect(response.status).to eq(200)
+      end
+
+      it "renders error failing to apply coupon" do
+        order.update_column(:state, "payment")
+        put spree.api_checkout_path(order.to_param), params: { order_token: order.guest_token, order: { coupon_code: "foobar" } }
+        expect(response.status).to eq(422)
+        expect(json_response).to eq({ "error" => "The coupon code you entered doesn't exist. Please try again." })
       end
     end
 
@@ -359,7 +367,7 @@ module Spree
         order.update_column(:email, "spree@example.com")
         put spree.next_api_checkout_path(order), params: { order_token: order.guest_token }
         expect(response.status).to eq(422)
-        expect(json_response["errors"]["base"]).to include(Spree.t(:there_are_no_items_for_this_order))
+        expect(json_response["errors"]["base"]).to include(I18n.t('spree.there_are_no_items_for_this_order'))
       end
 
       it "can transition an order to the next state" do
@@ -405,7 +413,7 @@ module Spree
         it "returns a sensible error when no payment method is specified" do
           # put :complete, id: order.to_param, order_token: order.token, order: {}
           subject
-          expect(json_response["errors"]["base"]).to include(Spree.t(:no_payment_found))
+          expect(json_response["errors"]["base"]).to include(I18n.t('spree.no_payment_found'))
         end
 
         context "with mismatched expected_total" do
@@ -415,7 +423,7 @@ module Spree
             # put :complete, id: order.to_param, order_token: order.token, expected_total: order.total + 1
             subject
             expect(response.status).to eq(400)
-            expect(json_response['errors']['expected_total']).to include(Spree.t(:expected_total_mismatch, scope: 'api.order'))
+            expect(json_response['errors']['expected_total']).to include(I18n.t('spree.api.order.expected_total_mismatch'))
           end
         end
       end

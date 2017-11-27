@@ -1,7 +1,7 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::AppConfiguration, type: :model do
-  let(:prefs) { Rails.application.config.spree.preferences }
+RSpec.describe Spree::AppConfiguration, type: :model do
+  let(:prefs) { Spree::Config }
 
   it "should be available from the environment" do
     prefs.layout = "my/layout"

@@ -165,7 +165,7 @@ describe "Visiting Products", type: :feature, inaccessible: true do
       click_link product.name
       within("#product-price") do
         expect(page).to have_content variant.price
-        expect(page).not_to have_content Spree.t(:out_of_stock)
+        expect(page).not_to have_content I18n.t('spree.out_of_stock')
       end
     end
 
@@ -174,7 +174,7 @@ describe "Visiting Products", type: :feature, inaccessible: true do
 
       click_link product.name
       within("#product-price") do
-        expect(page).not_to have_content Spree.t(:out_of_stock)
+        expect(page).not_to have_content I18n.t('spree.out_of_stock')
       end
     end
   end
@@ -253,7 +253,7 @@ describe "Visiting Products", type: :feature, inaccessible: true do
   end
 
   it "should be able to put a product without a description in the cart" do
-    product = FactoryGirl.create(:base_product, description: nil, name: 'Sample', price: '19.99')
+    product = FactoryBot.create(:base_product, description: nil, name: 'Sample', price: '19.99')
     visit spree.product_path(product)
     expect(page).to have_content "This product has no description"
     click_button 'add-to-cart-button'
@@ -261,7 +261,7 @@ describe "Visiting Products", type: :feature, inaccessible: true do
   end
 
   it "shouldn't be able to put a product without a current price in the cart" do
-    product = FactoryGirl.create(:base_product, description: nil, name: 'Sample', price: '19.99')
+    product = FactoryBot.create(:base_product, description: nil, name: 'Sample', price: '19.99')
     Spree::Config.currency = "CAN"
     Spree::Config.show_products_without_price = true
     visit spree.product_path(product)

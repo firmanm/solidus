@@ -13,16 +13,12 @@ end
 
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 ENV["RAILS_ENV"] ||= 'test'
+ENV["LIB_NAME"] = 'solidus_api'
 
-begin
-  require File.expand_path("../dummy/config/environment", __FILE__)
-rescue LoadError
-  $stderr.puts "Could not load dummy application. Please ensure you have run `bundle exec rake test_app`"
-  exit 1
-end
+require 'spree/testing_support/dummy_app'
+DummyApp::Migrations.auto_migrate
 
 require 'rspec/rails'
-require 'ffaker'
 
 # Requires supporting ruby files with custom matchers and macros, etc,
 # in spec/support/ and its subdirectories.
@@ -49,7 +45,7 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 
-  config.include FactoryGirl::Syntax::Methods
+  config.include FactoryBot::Syntax::Methods
   config.include Spree::Api::TestingSupport::Helpers, type: :request
   config.extend Spree::Api::TestingSupport::Setup, type: :request
   config.include Spree::Api::TestingSupport::Helpers, type: :controller
@@ -67,10 +63,6 @@ RSpec.configure do |config|
   end
 
   config.include ActiveJob::TestHelper
-  config.include VersionCake::TestHelpers, type: :controller
-  config.before(:each, type: :controller) do
-    set_request_version('', 1)
-  end
 
   config.use_transactional_fixtures = true
 

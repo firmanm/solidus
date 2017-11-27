@@ -19,30 +19,30 @@ gem 'coffee-rails'
 gem 'sass-rails'
 
 group :test do
-  gem 'capybara', '~> 2.7'
-  gem 'capybara-screenshot'
+  gem 'capybara', '~> 2.15'
+  gem 'capybara-screenshot', '>= 1.0.18'
   gem 'database_cleaner', '~> 1.3'
-  gem 'email_spec'
-  gem 'factory_girl_rails', '~> 4.8'
+  gem 'factory_bot_rails', '~> 4.8'
   gem 'launchy'
   gem 'rspec-activemodel-mocks', '~>1.0.2'
-  gem 'rspec-collection_matchers'
-  gem 'rspec-its'
-  gem 'rspec-rails', '~> 3.5'
+  gem 'rspec-rails', '~> 3.6.0'
   gem 'simplecov'
   gem 'poltergeist', '~> 1.9'
   gem 'timecop'
   gem 'with_model'
   gem 'rspec_junit_formatter'
   gem 'rails-controller-testing'
+  gem 'selenium-webdriver'
 end
 
 group :test, :development do
   gem 'rubocop'
   gem 'pry'
-  gem 'listen', '~> 3.1.5'
 
   platforms :mri do
     gem 'byebug'
   end
 end
+
+custom_gemfile = File.expand_path("../Gemfile-custom", __FILE__)
+eval File.read(custom_gemfile) if File.exist?(custom_gemfile)

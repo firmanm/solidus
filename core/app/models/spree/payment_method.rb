@@ -1,3 +1,5 @@
+require 'spree/preferences/statically_configurable'
+
 module Spree
   # A base class which is used for implementing payment methods.
   #
@@ -56,7 +58,7 @@ module Spree
       def providers
         Spree::Deprecation.warn 'Spree::PaymentMethod.providers is deprecated and will be deleted in Solidus 3.0. ' \
           'Please use Rails.application.config.spree.payment_methods instead'
-        Rails.application.config.spree.payment_methods
+        Spree::Config.environment.payment_methods
       end
 
       def available(display_on = nil, store: nil)
@@ -219,8 +221,23 @@ module Spree
       true
     end
 
-    def cancel(_response)
-      raise ::NotImplementedError, 'You must implement cancel method for this payment method.'
+    # Used by Spree::Payment#cancel!
+    #
+    # Implement `try_void` on your payment method implementation to handle void attempts.
+    # In that method return a ActiveMerchant::Billing::Response object if the void succeeds.
+    # Return +false+ or +nil+ if the void is not possible anymore - because it was already processed by the bank.
+    # Solidus will refund the amount of the payment in this case.
+    #
+    # @return [ActiveMerchant::Billing::Response] with +true+ if the void succeeded
+    # @return [ActiveMerchant::Billing::Response] with +false+ if the void failed
+    # @return [false] if it can't be voided at this time
+    #
+    def try_void(_payment)
+      raise ::NotImplementedError,
+        "You need to implement `try_void` for #{self.class.name}. In that " \
+        'return a ActiveMerchant::Billing::Response object if the void succeeds '\
+        'or `false|nil` if the void is not possible anymore. ' \
+        'Solidus will refund the amount of the payment then.'
     end
 
     def store_credit?

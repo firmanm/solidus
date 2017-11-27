@@ -93,7 +93,8 @@ module Spree
     end
 
     extend DisplayMoney
-    money_methods :pre_tax_amount, :amount, :total
+    money_methods :pre_tax_amount, :amount, :total, :total_excluding_vat
+    deprecate display_pre_tax_amount: :display_total_excluding_vat, deprecator: Spree::Deprecation
 
     # @return [Boolean] true when this retur item is in a complete reception
     #   state
@@ -159,10 +160,12 @@ module Spree
       amount + additional_tax_total
     end
 
-    # @return [BigDecimal] the cost of the item before tax
-    def pre_tax_amount
+    # @return [BigDecimal] the cost of the item before VAT tax
+    def total_excluding_vat
       amount - included_tax_total
     end
+    alias pre_tax_amount total_excluding_vat
+    deprecate pre_tax_amount: :total_excluding_vat, deprecator: Spree::Deprecation
 
     # @note This uses the exchange_variant_engine configured on the class.
     # @param stock_locations [Array<Spree::StockLocation>] the stock locations to check
@@ -181,7 +184,7 @@ module Spree
       # for pricing information for if the inventory unit is
       # ever returned. This means that the inventory unit's line_item
       # will have a different variant than the inventory unit itself
-      super(variant: exchange_variant, line_item: inventory_unit.line_item, order: inventory_unit.order) if exchange_required?
+      super(variant: exchange_variant, line_item: inventory_unit.line_item) if exchange_required?
     end
 
     # @return [Spree::Shipment, nil] the exchange inventory unit's shipment if it exists
@@ -259,14 +262,14 @@ module Spree
       return unless customer_return && inventory_unit
 
       if customer_return.order_id != inventory_unit.order_id
-        errors.add(:base, Spree.t(:return_items_cannot_be_associated_with_multiple_orders))
+        errors.add(:base, I18n.t('spree.return_items_cannot_be_associated_with_multiple_orders'))
       end
     end
 
     def eligible_exchange_variant
       return unless exchange_variant && exchange_variant_id_changed?
       unless eligible_exchange_variants.include?(exchange_variant)
-        errors.add(:base, Spree.t(:invalid_exchange_variant))
+        errors.add(:base, I18n.t('spree.invalid_exchange_variant'))
       end
     end
 

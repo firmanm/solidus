@@ -1,10 +1,9 @@
 require 'spree/testing_support/sequences'
 require 'spree/testing_support/factories/country_factory'
 
-FactoryGirl.define do
-  factory :global_zone, class: Spree::Zone do
+FactoryBot.define do
+  factory :global_zone, class: 'Spree::Zone' do
     name 'GlobalZone'
-    description { generate(:random_string) }
     zone_members do |proxy|
       zone = proxy.instance_eval { @instance }
       Spree::Country.all.map do |c|
@@ -13,9 +12,8 @@ FactoryGirl.define do
     end
   end
 
-  factory :zone, class: Spree::Zone do
-    name { generate(:random_string) }
-    description { generate(:random_string) }
+  factory :zone, class: 'Spree::Zone' do
+    sequence(:name) { |i| "Zone #{i}" }
 
     trait :with_country do
       countries { [create(:country)] }

@@ -1,8 +1,8 @@
-require 'spec_helper'
+require 'rails_helper'
 
 module Spree
   module PromotionHandler
-    describe Cart, type: :model do
+    RSpec.describe Cart, type: :model do
       let(:line_item) { create(:line_item) }
       let(:order) { line_item.order }
       let(:promotion) { create(:promotion, apply_automatically: true) }

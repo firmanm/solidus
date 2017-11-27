@@ -5,6 +5,8 @@ describe 'Users', type: :feature do
   let!(:country) { create(:country) }
   let!(:user_a) { create(:user_with_addresses, email: 'a@example.com') }
   let!(:user_b) { create(:user_with_addresses, email: 'b@example.com') }
+  let!(:admin_role) { create(:role, name: 'admin') }
+  let!(:user_role) { create(:role, name: 'user') }
 
   let(:order) { create(:completed_order_with_totals, user: user_a, number: "R123") }
 
@@ -23,7 +25,7 @@ describe 'Users', type: :feature do
       visit current_url # need to refresh after creating the orders for specs that did not require orders
       within("#user-lifetime-stats") do
         [:total_sales, :num_orders, :average_order_value, :member_since].each do |stat_name|
-          expect(page).to have_content Spree.t(stat_name)
+          expect(page).to have_content I18n.t(stat_name, scope: 'spree')
         end
         expect(page).to have_content(order.total + order_2.total)
         expect(page).to have_content orders.count
@@ -37,15 +39,15 @@ describe 'Users', type: :feature do
     end
 
     it 'can navigate to the account page' do
-      expect(page).to have_link Spree.t(:"admin.user.account"), href: spree.edit_admin_user_path(user_a)
+      expect(page).to have_link I18n.t("spree.admin.user.account"), href: spree.edit_admin_user_path(user_a)
     end
 
     it 'can navigate to the order history' do
-      expect(page).to have_link Spree.t(:"admin.user.order_history"), href: spree.orders_admin_user_path(user_a)
+      expect(page).to have_link I18n.t("spree.admin.user.order_history"), href: spree.orders_admin_user_path(user_a)
     end
 
     it 'can navigate to the items purchased' do
-      expect(page).to have_link Spree.t(:"admin.user.items"), href: spree.items_admin_user_path(user_a)
+      expect(page).to have_link I18n.t("spree.admin.user.items"), href: spree.items_admin_user_path(user_a)
     end
   end
 
@@ -62,7 +64,8 @@ describe 'Users', type: :feature do
 
     it "can sort desc" do
       within_table(table_id) do
-        click_link sort_link
+        # Ransack adds a ▲ to the sort link. With exact match Capybara is not able to find that link
+        click_link sort_link, exact: false
 
         expect(page).to have_text text_match_1
         expect(page).to have_text text_match_2
@@ -86,12 +89,47 @@ describe 'Users', type: :feature do
       end
     end
 
-    it 'displays the correct results for a user search' do
+    it 'displays the correct results for a user search by email' do
       fill_in 'q_email_cont', with: user_a.email
       click_button 'Search'
       within_table('listing_users') do
         expect(page).to have_text user_a.email
         expect(page).not_to have_text user_b.email
+      end
+    end
+
+    context "member since" do
+      it_behaves_like "a sortable attribute" do
+        let(:text_match_1) { user_a.email }
+        let(:text_match_2) { user_b.email }
+        let(:table_id) { "listing_users" }
+        let(:sort_link) { I18n.t('spree.member_since') }
+      end
+
+      it 'displays the correct results for a user search by creation date' do
+        user_a.update_column(:created_at, 2.weeks.ago)
+        fill_in 'q_created_at_lt', with: 1.week.ago
+        click_button 'Search'
+        within_table('listing_users') do
+          expect(page).to have_text user_a.email
+          expect(page).not_to have_text user_b.email
+        end
+      end
+    end
+
+    context 'with users having roles' do
+      before do
+        user_a.spree_roles << admin_role
+        user_b.spree_roles << user_role
+      end
+
+      it 'displays the correct results for a user search by role' do
+        select 'admin', from: Spree.user_class.human_attribute_name(:spree_roles)
+        click_button 'Search'
+        within_table('listing_users') do
+          expect(page).to have_text user_a.email
+          expect(page).not_to have_text user_b.email
+        end
       end
     end
   end
@@ -119,7 +157,6 @@ describe 'Users', type: :feature do
     end
 
     it 'can edit user roles' do
-      Spree::Role.create name: "admin"
       click_link 'Account'
 
       check 'user_spree_role_admin'
@@ -201,7 +238,7 @@ describe 'Users', type: :feature do
       it 'can generate a new api key' do
         within("#admin_user_edit_api_key") do
           expect(user_a.spree_api_key).to be_blank
-          click_button Spree.t('generate_key', scope: 'api')
+          click_button "Generate API key"
         end
 
         expect(user_a.reload.spree_api_key).to be_present
@@ -220,7 +257,7 @@ describe 'Users', type: :feature do
       it 'can clear an api key' do
         expect(page).to have_css('#current-api-key')
 
-        click_button Spree.t('clear_key', scope: 'api')
+        click_button "Clear key"
 
         expect(page).to have_no_css('#current-api-key')
 
@@ -231,7 +268,7 @@ describe 'Users', type: :feature do
         old_key = user_a.spree_api_key
 
         within("#admin_user_edit_api_key") do
-          click_button Spree.t('regenerate_key', scope: 'api')
+          click_button "Regenerate key"
         end
 
         expect(user_a.reload.spree_api_key).to be_present
@@ -246,7 +283,7 @@ describe 'Users', type: :feature do
     before do
       orders
       click_link user_a.email
-      within(".tabs") { click_link Spree.t(:"admin.user.order_history") }
+      within(".tabs") { click_link I18n.t("spree.admin.user.order_history") }
     end
 
     it_behaves_like 'a user page'
@@ -283,7 +320,7 @@ describe 'Users', type: :feature do
     before do
       orders
       click_link user_a.email
-      within(".tabs") { click_link Spree.t(:"admin.user.items") }
+      within(".tabs") { click_link I18n.t("spree.admin.user.items") }
     end
 
     it_behaves_like 'a user page'

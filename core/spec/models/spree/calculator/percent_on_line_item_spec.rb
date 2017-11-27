@@ -1,9 +1,9 @@
-require 'spec_helper'
+require 'rails_helper'
 require 'shared_examples/calculator_shared_examples'
 
 module Spree
   class Calculator
-    describe PercentOnLineItem, type: :model do
+    RSpec.describe PercentOnLineItem, type: :model do
       context "compute" do
         let(:line_item) { double("LineItem", amount: 100) }
 

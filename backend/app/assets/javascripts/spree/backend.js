@@ -10,7 +10,7 @@
 //= require solidus_admin/underscore
 //= require solidus_admin/backbone
 //= require solidus_admin/backbone-nested-models
-//= require solidus_admin/tether
+//= require solidus_admin/popover
 //= require solidus_admin/bootstrap
 //= require prism
 //= require spree
@@ -39,7 +39,6 @@
 //= require spree/backend/images/index
 //= require spree/backend/images/upload
 //= require spree/backend/navigation
-//= require spree/backend/number_field_updater
 //= require spree/backend/option_type_autocomplete
 //= require spree/backend/option_value_picker
 //= require spree/backend/orders
@@ -53,18 +52,9 @@
 //= require spree/backend/routes
 //= require spree/backend/shipments
 //= require spree/backend/spree-select2
-//= require spree/backend/states
 //= require spree/backend/stock_management/index_add_forms
 //= require spree/backend/stock_management/index_update_forms
 //= require spree/backend/stock_management/stock_item
-//= require spree/backend/stock_transfers/count_update_forms
-//= require spree/backend/stock_transfers/edit
-//= require spree/backend/stock_transfers/receive
-//= require spree/backend/stock_transfers/received_counter
-//= require spree/backend/stock_transfers/stock_transfer
-//= require spree/backend/stock_transfers/transfer_item
-//= require spree/backend/stock_transfers/transfer_item_deleting
-//= require spree/backend/stock_transfers/variant_form
 //= require spree/backend/store_credits
 //= require spree/backend/style_guide
 //= require spree/backend/taxon_autocomplete

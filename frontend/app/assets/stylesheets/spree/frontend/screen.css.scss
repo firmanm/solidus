@@ -452,7 +452,7 @@ nav#taxonomies {
 
 %price_text {
   font-weight: bold;
-  color: $link_text_color;
+  color: $product_price_text_color;
 }
 
 span.price {
@@ -520,7 +520,7 @@ ul#products {
     }
 
     .price {
-      color: $link_text_color;
+      color: $product_price_text_color;
       font-size: $product_list_price_font_size;
       padding-top: 5px;
       display: block;
@@ -752,7 +752,7 @@ ul#products {
   }
 }
 
-#billing {
+#billing, #shipping {
   input[type="text"], input[type="email"],
   input[type="tel"], input[type="number"],
   select, textarea {
@@ -993,10 +993,10 @@ div[data-hook="inside_cart_form"] {
 }
 
 .cart-subtotal, .cart-total {
-  background: #00ADEE;
+  background: $cart_total_background_color;
 
   td h5 {
-    color: #fff;
+    color: $cart_total_text_color;
   }
 }
 

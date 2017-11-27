@@ -1,6 +1,6 @@
 <%= render 'spree/admin/shared/payments_tabs' %>
 
-<% admin_breadcrumb(Spree.t(:settings)) %>
+<% admin_breadcrumb(t('spree.settings')) %>
 <% admin_breadcrumb(plural_resource_name(Spree::Payment)) %>
 <% admin_breadcrumb(plural_resource_name(Spree::PaymentMethod)) %>
 
@@ -8,7 +8,7 @@
 <% content_for :page_actions do %>
   <% if can?(:create, Spree::PaymentMethod) %>
     <li>
-      <%= button_link_to Spree.t(:new_payment_method), new_object_url, id: 'admin_new_payment_methods_link' %>
+      <%= button_link_to t('spree.new_payment_method'), new_object_url, id: 'admin_new_payment_methods_link' %>
     </li>
   <% end %>
 <% end %>
@@ -26,7 +26,7 @@
     </colgroup>
     <thead>
       <tr data-hook="admin_payment_methods_index_headers">
-        <th class="no-border"></th>
+        <th></th>
         <th><%= Spree::PaymentMethod.human_attribute_name(:name) %></th>
         <th><%= Spree::PaymentMethod.human_attribute_name(:type) %></th>
         <th><%= Spree::PaymentMethod.human_attribute_name(:available_to_users) %></th>
@@ -37,15 +37,15 @@
     </thead>
     <tbody>
       <% @payment_methods.each do |method|%>
-        <tr id="<%= spree_dom_id method %>" data-hook="admin_payment_methods_index_rows" class="<%= cycle('odd', 'even')%>">
-          <td class="no-border"><span class="handle"></span></td>
-          <td class="align-center"><%= method.name %></td>
-          <td class="align-center"><%= method.model_name.human %></td>
-          <td class="align-center"><%= method.available_to_users ? Spree.t(:say_yes) : Spree.t(:say_no) %></td>
-          <td class="align-center"><%= method.available_to_admin ? Spree.t(:say_yes) : Spree.t(:say_no) %></td>
+        <tr id="<%= spree_dom_id method %>" data-hook="admin_payment_methods_index_rows">
+          <td><span class="handle"></span></td>
+          <td><%= method.name %></td>
+          <td><%= method.model_name.human %></td>
+          <td class="align-center"><%= method.available_to_users ? t('spree.say_yes') : t('spree.say_no') %></td>
+          <td class="align-center"><%= method.available_to_admin ? t('spree.say_yes') : t('spree.say_no') %></td>
           <td class="align-center">
             <span class="pill pill-<%= method.active ? 'active' : 'inactive' %>">
-              <%= Spree.t(method.active? ? :active : :inactive) %>
+              <%= t(method.active? ? :active : :inactive, scope: 'spree') %>
             </span>
           </td>
           <td data-hook="admin_payment_methods_index_row_actions" class="actions">

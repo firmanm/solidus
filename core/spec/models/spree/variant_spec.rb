@@ -1,8 +1,8 @@
 # encoding: utf-8
 
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::Variant, type: :model do
+RSpec.describe Spree::Variant, type: :model do
   let!(:variant) { create(:variant) }
 
   it_behaves_like 'default_price'
@@ -114,7 +114,7 @@ describe Spree::Variant, type: :model do
   context "product has other variants" do
     describe "option value accessors" do
       before {
-        @multi_variant = FactoryGirl.create :variant, product: variant.product
+        @multi_variant = FactoryBot.create :variant, product: variant.product
         variant.product.reload
       }
 
@@ -145,7 +145,7 @@ describe Spree::Variant, type: :model do
       context "and a variant is soft-deleted" do
         let!(:old_options_text) { variant.options_text }
 
-        before { variant.destroy }
+        before { variant.paranoia_destroy! }
 
         it "still keeps the option values for that variant" do
           expect(variant.reload.options_text).to eq(old_options_text)
@@ -657,7 +657,7 @@ describe Spree::Variant, type: :model do
   describe "deleted_at scope" do
     let!(:previous_variant_price) { variant.display_price }
 
-    before { variant.destroy }
+    before { variant.paranoia_destroy }
 
     it "should keep its price if deleted" do
       expect(variant.display_price).to eq(previous_variant_price)

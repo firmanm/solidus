@@ -70,13 +70,13 @@ module Spree
       def remove
         quantity = params[:quantity].to_i
 
-        if @shipment.pending?
+        if @shipment.shipped? || @shipment.canceled?
+          @shipment.errors.add(:base, :cannot_remove_items_shipment_state, state: @shipment.state)
+          invalid_resource!(@shipment)
+        else
           @shipment.order.contents.remove(variant, quantity, { shipment: @shipment })
           @shipment.reload if @shipment.persisted?
           respond_with(@shipment, default_template: :show)
-        else
-          @shipment.errors.add(:base, :cannot_remove_items_shipment_state, state: @shipment.state)
-          invalid_resource!(@shipment)
         end
       end
 
@@ -97,7 +97,7 @@ module Spree
         )
 
         if fulfilment_changer.run!
-          render json: { success: true, message: Spree.t(:shipment_transfer_success) }, status: :accepted
+          render json: { success: true, message: t('spree.shipment_transfer_success') }, status: :accepted
         else
           render json: { success: false, message: fulfilment_changer.errors.full_messages.to_sentence }, status: :accepted
         end

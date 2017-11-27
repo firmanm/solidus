@@ -1,7 +1,7 @@
-require 'spec_helper'
+require 'rails_helper'
 require 'benchmark'
 
-describe Spree::Shipment, type: :model do
+RSpec.describe Spree::Shipment, type: :model do
   let(:order) { create(:order_ready_to_ship, line_items_count: 1) }
   let(:shipping_method) { create(:shipping_method, name: "UPS") }
   let(:stock_location) { create(:stock_location) }
@@ -105,10 +105,10 @@ describe Spree::Shipment, type: :model do
     end
   end
 
-  context "display_final_price" do
+  context "display_total" do
     it "retuns a Spree::Money" do
-      allow(shipment).to receive(:final_price) { 21.22 }
-      expect(shipment.display_final_price).to eq(Spree::Money.new(21.22))
+      allow(shipment).to receive(:total) { 21.22 }
+      expect(shipment.display_total).to eq(Spree::Money.new(21.22))
     end
   end
 
@@ -145,7 +145,22 @@ describe Spree::Shipment, type: :model do
     shipment = create(:shipment)
     shipment.cost = 10
     shipment.promo_total = -1
-    expect(shipment.discounted_cost).to eq(9)
+    expect(Spree::Deprecation.silence { shipment.discounted_cost }).to eq(9)
+  end
+
+  describe '#total_before_tax' do
+    before do
+      shipment.update_attributes!(cost: 10)
+    end
+    let!(:admin_adjustment) { create(:adjustment, adjustable: shipment, order: shipment.order, amount: -1, source: nil) }
+    let!(:promo_adjustment) { create(:adjustment, adjustable: shipment, order: shipment.order, amount: -2, source: promo_action) }
+    let!(:ineligible_promo_adjustment) { create(:adjustment, eligible: false, adjustable: shipment, order: shipment.order, amount: -4, source: promo_action) }
+    let(:promo_action) { promo.actions[0] }
+    let(:promo) { create(:promotion, :with_line_item_adjustment) }
+
+    it 'returns the amount minus any adjustments' do
+      expect(shipment.total_before_tax).to eq(10 - 1 - 2)
+    end
   end
 
   it "#tax_total with included taxes" do
@@ -162,12 +177,12 @@ describe Spree::Shipment, type: :model do
     expect(shipment.tax_total).to eq(10)
   end
 
-  it "#final_price" do
+  it "#total" do
     shipment = Spree::Shipment.new
     shipment.cost = 10
     shipment.adjustment_total = -2
     shipment.included_tax_total = 1
-    expect(shipment.final_price).to eq(8)
+    expect(shipment.total).to eq(8)
   end
 
   context "manifest" do
@@ -181,7 +196,7 @@ describe Spree::Shipment, type: :model do
     end
 
     context "variant was removed" do
-      before { variant.destroy }
+      before { variant.paranoia_destroy }
 
       it "still returns variant expected" do
         expect(shipment.manifest.first.variant).to eq variant
@@ -249,6 +264,7 @@ describe Spree::Shipment, type: :model do
         end
 
         before do
+          allow(line_item).to receive(:order) { order }
           allow(shipment).to receive(:inventory_units) { inventory_units }
           allow(inventory_units).to receive_message_chain(:includes, :joins).and_return inventory_units
         end
@@ -510,14 +526,6 @@ describe Spree::Shipment, type: :model do
           allow(shipment).to receive_messages(require_inventory: false, update_order: true, state: state)
         end
 
-        it "should call fulfill_order_with_stock_location" do
-          expect(Spree::OrderStockLocation).to(
-            receive(:fulfill_for_order_with_stock_location).
-            with(order, stock_location)
-          )
-          shipment.ship!
-        end
-
         it "finalizes adjustments" do
           shipment.adjustments.each do |adjustment|
             expect(adjustment).to receive(:finalize!)
@@ -643,7 +651,7 @@ describe Spree::Shipment, type: :model do
     let(:inventory_units) { double }
 
     let(:params) do
-      { variant_id: variant.id, state: 'on_hand', order_id: order.id, line_item_id: line_item.id }
+      { variant_id: variant.id, state: 'on_hand', line_item_id: line_item.id }
     end
 
     before { allow(shipment).to receive_messages inventory_units: inventory_units }
@@ -801,6 +809,14 @@ describe Spree::Shipment, type: :model do
     let!(:air_shipping_method) { create(:shipping_method, name: "Air") }
     let(:new_rate) { shipment.shipping_rates.create!(shipping_method: air_shipping_method) }
 
+    context 'selecting the same id' do
+      it 'keeps the same shipping rate selected' do
+        expect {
+          shipment.selected_shipping_rate_id = shipping_rate.id
+        }.not_to change { shipping_rate.selected }.from(true)
+      end
+    end
+
     context 'when the id exists' do
       it 'sets the new shipping rate as selected' do
         expect {
@@ -820,6 +836,9 @@ describe Spree::Shipment, type: :model do
         expect {
           shipment.selected_shipping_rate_id = -1
         }.to raise_error(ArgumentError)
+
+        # Should not change selection
+        expect(shipping_rate.reload).to be_selected
       end
     end
   end

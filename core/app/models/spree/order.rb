@@ -73,13 +73,14 @@ module Spree
     has_many :products, through: :variants
 
     # Shipping
-    has_many :inventory_units, inverse_of: :order
-    has_many :cartons, -> { distinct }, through: :inventory_units
     has_many :shipments, dependent: :destroy, inverse_of: :order do
       def states
         pluck(:state).uniq
       end
     end
+    has_many :inventory_units, through: :shipments
+    has_many :cartons, -> { distinct }, through: :inventory_units
+
     has_many :order_stock_locations, class_name: "Spree::OrderStockLocation"
     has_many :stock_locations, through: :order_stock_locations
 
@@ -131,7 +132,13 @@ module Spree
     validates :number, presence: true, uniqueness: { allow_blank: true }
     validates :store_id, presence: true
 
-    make_permalink field: :number
+    def self.find_by_param(value)
+      find_by number: value
+    end
+
+    def self.find_by_param!(value)
+      find_by! number: value
+    end
 
     delegate :update_totals, :persist_totals, to: :updater
     delegate :firstname, :lastname, to: :bill_address, prefix: true, allow_nil: true
@@ -185,15 +192,22 @@ module Spree
       line_items.map(&:amount).sum
     end
 
-    # Sum of all line item amounts pre-tax
-    def pre_tax_item_amount
-      line_items.to_a.sum(&:pre_tax_amount)
-    end
-
     # Sum of all line item amounts after promotions, before added tax
     def discounted_item_amount
       line_items.to_a.sum(&:discounted_amount)
     end
+    deprecate discounted_item_amount: :item_total_before_tax, deprecator: Spree::Deprecation
+
+    def item_total_before_tax
+      line_items.to_a.sum(&:total_before_tax)
+    end
+
+    # Sum of all line item amounts pre-tax
+    def item_total_excluding_vat
+      line_items.to_a.sum(&:total_excluding_vat)
+    end
+    alias pre_tax_item_amount item_total_excluding_vat
+    deprecate pre_tax_item_amount: :item_total_excluding_vat, deprecator: Spree::Deprecation
 
     def currency
       self[:currency] || Spree::Config[:currency]
@@ -232,14 +246,6 @@ module Spree
     def backordered?
       shipments.any?(&:backordered?)
     end
-
-    # Returns the relevant zone (if any) to be used for taxation purposes.
-    # Uses default tax zone unless there is a specific match
-    def tax_zone
-      Spree::Zone.match(tax_address) || Spree::Zone.default_tax
-    end
-    deprecate tax_zone: "Please use Spree::Order#tax_address instead.",
-              deprecator: Spree::Deprecation
 
     # Returns the address for taxation based on configuration
     def tax_address
@@ -462,7 +468,7 @@ module Spree
     # If so add error and restart checkout.
     def ensure_line_item_variants_are_not_deleted
       if line_items.any? { |li| li.variant.paranoia_destroyed? }
-        errors.add(:base, Spree.t(:deleted_variants_present))
+        errors.add(:base, I18n.t('spree.deleted_variants_present'))
         restart_checkout_flow
         false
       else
@@ -521,25 +527,26 @@ module Spree
 
     def ensure_shipping_address
       unless ship_address && ship_address.valid?
-        errors.add(:base, Spree.t(:ship_address_required)) && (return false)
+        errors.add(:base, I18n.t('spree.ship_address_required')) && (return false)
       end
     end
 
     def create_proposed_shipments
       if completed?
-        raise CannotRebuildShipments.new(Spree.t(:cannot_rebuild_shipments_order_completed))
+        raise CannotRebuildShipments.new(I18n.t('spree.cannot_rebuild_shipments_order_completed'))
       elsif shipments.any? { |s| !s.pending? }
-        raise CannotRebuildShipments.new(Spree.t(:cannot_rebuild_shipments_shipments_not_pending))
+        raise CannotRebuildShipments.new(I18n.t('spree.cannot_rebuild_shipments_shipments_not_pending'))
       else
         shipments.destroy_all
         self.shipments = Spree::Config.stock.coordinator_class.new(self).shipments
       end
     end
 
-    def apply_free_shipping_promotions
-      Spree::PromotionHandler::FreeShipping.new(self).activate
+    def apply_shipping_promotions
+      Spree::PromotionHandler::Shipping.new(self).activate
       recalculate
     end
+    deprecate apply_free_shipping_promotions: :apply_shipping_promotions, deprecator: Spree::Deprecation
 
     # Clean shipments and make order back to address state
     #
@@ -620,7 +627,7 @@ module Spree
 
     def add_store_credit_payments
       return if user.nil?
-      return if payments.store_credits.checkout.empty? && user.total_available_store_credit.zero?
+      return if payments.store_credits.checkout.empty? && user.available_store_credit_total(currency: currency).zero?
 
       payments.store_credits.checkout.each(&:invalidate!)
 
@@ -631,10 +638,12 @@ module Spree
 
       remaining_total = outstanding_balance - authorized_total
 
-      if user.store_credits.any?
+      matching_store_credits = user.store_credits.where(currency: currency)
+
+      if matching_store_credits.any?
         payment_method = Spree::PaymentMethod::StoreCredit.first
 
-        user.store_credits.order_by_priority.each do |credit|
+        matching_store_credits.order_by_priority.each do |credit|
           break if remaining_total.zero?
           next if credit.amount_remaining.zero?
 
@@ -657,20 +666,20 @@ module Spree
 
       payments.reset
 
-      if payments.where(state: %w(checkout pending)).sum(:amount) != total
-        errors.add(:base, Spree.t("store_credit.errors.unable_to_fund")) && (return false)
+      if payments.where(state: %w(checkout pending completed)).sum(:amount) != total
+        errors.add(:base, I18n.t('spree.store_credit.errors.unable_to_fund')) && (return false)
       end
     end
 
     def covered_by_store_credit?
       return false unless user
-      user.total_available_store_credit >= total
+      user.available_store_credit_total(currency: currency) >= total
     end
     alias_method :covered_by_store_credit, :covered_by_store_credit?
 
     def total_available_store_credit
       return 0.0 unless user
-      user.total_available_store_credit
+      user.available_store_credit_total(currency: currency)
     end
 
     def order_total_after_store_credit
@@ -681,7 +690,7 @@ module Spree
       if can_complete? || complete?
         payments.store_credits.valid.sum(:amount)
       else
-        [total, (user.try(:total_available_store_credit) || 0.0)].min
+        [total, (user.try(:available_store_credit_total, currency: currency) || 0.0)].min
       end
     end
 
@@ -763,7 +772,7 @@ module Spree
       return if !payment_required?
 
       if payments.valid.empty?
-        errors.add(:base, Spree.t(:no_payment_found))
+        errors.add(:base, I18n.t('spree.no_payment_found'))
         return false
       end
 
@@ -792,6 +801,7 @@ module Spree
         @updating_params[:order][:payments_attributes].first[:amount] = total
       end
     end
+    deprecate update_params_payment_source: :set_payment_parameters_amount, deprecator: Spree::Deprecation
 
     def associate_store
       self.store ||= Spree::Store.default
@@ -822,7 +832,7 @@ module Spree
       if adjustment_changed
         restart_checkout_flow
         recalculate
-        errors.add(:base, Spree.t(:promotion_total_changed_before_complete))
+        errors.add(:base, I18n.t('spree.promotion_total_changed_before_complete'))
       end
       errors.empty?
     end
@@ -834,7 +844,7 @@ module Spree
 
     def ensure_line_items_present
       unless line_items.present?
-        errors.add(:base, Spree.t(:there_are_no_items_for_this_order)) && (return false)
+        errors.add(:base, I18n.t('spree.there_are_no_items_for_this_order')) && (return false)
       end
     end
 
@@ -843,13 +853,13 @@ module Spree
         # After this point, order redirects back to 'address' state and asks user to pick a proper address
         # Therefore, shipments are not necessary at this point.
         shipments.destroy_all
-        errors.add(:base, Spree.t(:items_cannot_be_shipped)) && (return false)
+        errors.add(:base, I18n.t('spree.items_cannot_be_shipped')) && (return false)
       end
     end
 
     def after_cancel
       shipments.each(&:cancel!)
-      payments.completed.each(&:cancel!)
+      payments.completed.each { |payment| payment.cancel! unless payment.fully_refunded? }
       payments.store_credits.pending.each(&:void_transaction!)
 
       send_cancel_email

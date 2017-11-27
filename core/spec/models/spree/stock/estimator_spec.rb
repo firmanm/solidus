@@ -1,8 +1,8 @@
-require 'spec_helper'
+require 'rails_helper'
 
 module Spree
   module Stock
-    describe Estimator, type: :model do
+    RSpec.describe Estimator, type: :model do
       let(:shipping_rate) { 4.00 }
       let!(:shipping_method) { create(:shipping_method, cost: shipping_rate, currency: currency) }
       let(:package) do
@@ -83,7 +83,7 @@ module Spree
         end
 
         it "sorts shipping rates by cost" do
-          ShippingMethod.destroy_all
+          ShippingMethod.all.each(&:really_destroy!)
           create(:shipping_method, cost: 5)
           create(:shipping_method, cost: 3)
           create(:shipping_method, cost: 4)
@@ -92,7 +92,7 @@ module Spree
         end
 
         context "general shipping methods" do
-          before { Spree::ShippingMethod.destroy_all }
+          before { Spree::ShippingMethod.all.each(&:really_destroy!) }
 
           context 'with two shipping methods of different cost' do
             let!(:shipping_methods) do
@@ -125,7 +125,7 @@ module Spree
         end
 
         context "involves backend only shipping methods" do
-          before{ Spree::ShippingMethod.destroy_all }
+          before{ Spree::ShippingMethod.all.each(&:really_destroy!) }
           let!(:backend_method) { create(:shipping_method, available_to_users: false, cost: 0.00) }
           let!(:generic_method) { create(:shipping_method, cost: 5.00) }
 
@@ -189,20 +189,19 @@ module Spree
         end
 
         it 'uses the configured shipping rate taxer' do
-          class Spree::Tax::TestTaxer
-            def initialize
+          class Spree::Tax::TestTaxCalculator
+            def initialize(_order)
             end
 
-            def tax(_)
-              Spree::ShippingRate.new
+            def calculate(_shipping_rate)
+              [
+                Spree::Tax::ItemTax.new(label: "TAX", amount: 5)
+              ]
             end
           end
-          Spree::Config.shipping_rate_taxer_class = Spree::Tax::TestTaxer
+          Spree::Config.shipping_rate_tax_calculator_class = Spree::Tax::TestTaxCalculator
 
-          shipping_rate = Spree::ShippingRate.new
-          allow(Spree::ShippingRate).to receive(:new).and_return(shipping_rate)
-
-          expect(Spree::Tax::TestTaxer).to receive(:new).and_call_original
+          expect(Spree::Tax::TestTaxCalculator).to receive(:new).and_call_original
           subject.shipping_rates(package)
         end
       end

@@ -29,16 +29,19 @@ module Spree
     end
 
     extend DisplayMoney
-    money_methods :pre_tax_total, :amount
+    money_methods :pre_tax_total, :amount, :total_excluding_vat
+    deprecate display_pre_tax_total: :display_total_excluding_vat, deprecator: Spree::Deprecation
 
     self.whitelisted_ransackable_attributes = ['memo']
 
-    def pre_tax_total
-      return_items.map(&:pre_tax_amount).sum
+    def total_excluding_vat
+      return_items.map(&:total_excluding_vat).sum
     end
+    alias pre_tax_total total_excluding_vat
+    deprecate pre_tax_total: :total_excluding_vat, deprecator: Spree::Deprecation
 
     def amount
-      return_item.sum(:amount)
+      return_items.sum(:amount)
     end
 
     def currency
@@ -46,7 +49,7 @@ module Spree
     end
 
     def refundable_amount
-      order.discounted_item_amount + order.promo_total
+      order.item_total_before_tax + order.promo_total
     end
 
     def customer_returned_items?
@@ -61,7 +64,7 @@ module Spree
 
     def must_have_shipped_units
       if order.nil? || order.inventory_units.shipped.none?
-        errors.add(:order, Spree.t(:has_no_shipped_units))
+        errors.add(:order, I18n.t('spree.has_no_shipped_units'))
       end
     end
 
@@ -74,7 +77,7 @@ module Spree
 
     def no_previously_exchanged_inventory_units
       if return_items.map(&:inventory_unit).any?(&:exchange_requested?)
-        errors.add(:base, Spree.t(:return_items_cannot_be_created_for_inventory_units_that_are_already_awaiting_exchange))
+        errors.add(:base, I18n.t('spree.return_items_cannot_be_created_for_inventory_units_that_are_already_awaiting_exchange'))
       end
     end
 

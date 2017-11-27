@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::CreditCard, type: :model do
+RSpec.describe Spree::CreditCard, type: :model do
   let(:valid_credit_card_attributes) do
     {
       number: '4111111111111111',
@@ -52,7 +52,7 @@ describe Spree::CreditCard, type: :model do
 
     it "validates name presence" do
       credit_card.valid?
-      expect(credit_card.error_on(:name).size).to eq(1)
+      expect(credit_card.errors[:name].size).to eq(1)
     end
 
     it "should only validate on create" do

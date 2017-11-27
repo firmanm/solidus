@@ -1,8 +1,8 @@
-require "spec_helper"
+require "rails_helper"
 
 RSpec.describe Spree::DistributedAmountsHandler, type: :model do
   let(:order) do
-    FactoryGirl.create(
+    FactoryBot.create(
       :order_with_line_items,
       line_items_attributes: line_items_attributes
     )

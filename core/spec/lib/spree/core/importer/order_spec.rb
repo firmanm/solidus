@@ -1,8 +1,8 @@
-require 'spec_helper'
+require 'rails_helper'
 
 module Spree
   module Core
-    describe Importer::Order do
+    RSpec.describe Importer::Order do
       let!(:store) { create(:store) }
       let!(:country) { create(:country) }
       let!(:state) { country.states.first || create(:state, country: country) }
@@ -240,9 +240,9 @@ module Spree
         end
       end
 
-      context 'variant was deleted' do
+      context 'variant was soft-deleted' do
         it 'raise error as variant shouldnt be found' do
-          variant.product.destroy
+          variant.product.paranoia_destroy
           hash = { sku: variant.sku }
           expect {
             Importer::Order.ensure_variant_id_from_params(hash)

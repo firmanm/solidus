@@ -146,6 +146,11 @@ module Spree
       credit_allowed > 0
     end
 
+    # @return [Boolean] true when this payment has been fully refunded
+    def fully_refunded?
+      refunds.map(&:amount).sum == amount
+    end
+
     # @return [Array<String>] the actions available on this payment
     def actions
       sa = source_actions
@@ -199,7 +204,7 @@ module Spree
       if source && !source.valid?
         source.errors.each do |field, error|
           field_name = I18n.t("activerecord.attributes.#{source.class.to_s.underscore}.#{field}")
-          errors.add(Spree.t(source.class.to_s.demodulize.underscore), "#{field_name} #{error}")
+          errors.add(I18n.t(source.class.to_s.demodulize.underscore, scope: 'spree'), "#{field_name} #{error}")
         end
       end
       if errors.any?
@@ -230,11 +235,9 @@ module Spree
 
     def invalidate_old_payments
       if !store_credit? && !['invalid', 'failed'].include?(state)
-        order.payments.select do |payment|
-          payment.state == 'checkout' &&
-            payment.payment_method_id == payment_method.try!(:id) &&
-            payment.id != id
-        end.each(&:invalidate!)
+        order.payments.select { |payment|
+          payment.state == 'checkout' && !payment.store_credit? && payment.id != id
+        }.each(&:invalidate!)
       end
     end
 

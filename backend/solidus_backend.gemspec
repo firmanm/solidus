@@ -8,7 +8,6 @@ Gem::Specification.new do |s|
   s.summary     = 'Admin interface for the Solidus e-commerce framework.'
   s.description = s.summary
 
-  s.required_ruby_version = '>= 2.1.0'
   s.author      = 'Solidus Team'
   s.email       = 'contact@solidus.io'
   s.homepage    = 'http://solidus.io'
@@ -31,6 +30,8 @@ Gem::Specification.new do |s|
   s.add_dependency 'jquery-ui-rails', '~> 5.0.0'
   s.add_dependency 'font-awesome-rails', '~> 4.0'
   s.add_dependency 'kaminari', '>= 0.17', '< 2.0'
+  s.add_dependency 'jbuilder', '~> 2.6'
 
   s.add_dependency 'handlebars_assets', '~> 0.23'
+  s.add_dependency 'autoprefixer-rails', '~> 7.1'
 end

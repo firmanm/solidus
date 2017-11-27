@@ -4,7 +4,7 @@
   <% if @order.shipments.any? &:shipped? %>
     <li>
       <% if can? :create, Spree::ReturnAuthorization %>
-        <%= button_link_to Spree.t(:new_return_authorization), new_admin_order_return_authorization_url(@order) %>
+        <%= button_link_to t('spree.new_return_authorization'), new_admin_order_return_authorization_url(@order) %>
       <% end %>
     </li>
   <% end %>
@@ -19,24 +19,24 @@
       <tr>
         <th><%= Spree::ReturnAuthorization.human_attribute_name(:number) %></th>
         <th><%= Spree::ReturnAuthorization.human_attribute_name(:state) %></th>
-        <th><%= Spree::ReturnAuthorization.human_attribute_name(:pre_tax_total) %></th>
+        <th><%= Spree::ReturnAuthorization.human_attribute_name(:total_excluding_vat) %></th>
         <th><%= Spree::ReturnAuthorization.human_attribute_name(:created_at) %></th>
         <th class="actions"></th>
       </tr>
     </thead>
     <tbody>
       <% @return_authorizations.each do |return_authorization| %>
-        <tr id="<%= spree_dom_id(return_authorization) %>" data-hook="rma_row" class="<%= cycle('odd', 'even')%>">
+        <tr id="<%= spree_dom_id(return_authorization) %>" data-hook="rma_row">
           <td><%= return_authorization.number %></td>
           <td>
             <span class="pill pill-<%= return_authorization.state %>">
-              <%= Spree.t(
+              <%= t(
                 return_authorization.state,
-                scope: :return_authorization_states
+                scope: 'spree.return_authorization_states'
               ) %>
             </span>
           </td>
-          <td><%= return_authorization.display_pre_tax_total.to_html %></td>
+          <td><%= return_authorization.display_total_excluding_vat.to_html %></td>
           <td><%= pretty_time(return_authorization.created_at) %></td>
           <td class="actions">
             <% if can? :update, return_authorization %>
@@ -52,6 +52,6 @@
   </table>
 <% else %>
   <div data-hook="rma_cannot_create" class="no-objects-found">
-    <%= Spree.t(:cannot_create_returns) %>
+    <%= t('spree.cannot_create_returns') %>
   </div>
 <% end %>

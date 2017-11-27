@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::OrderContents, type: :model do
+RSpec.describe Spree::OrderContents, type: :model do
   let!(:store) { create :store }
   let(:order) { create(:order) }
   let(:variant) { create(:variant) }
@@ -19,7 +19,7 @@ describe Spree::OrderContents, type: :model do
     end
 
     context 'given a shipment' do
-      let!(:shipment) { create(:shipment) }
+      let!(:shipment) { create(:shipment, order: order) }
 
       it "ensure shipment calls update_amounts instead of order calling ensure_updated_shipments" do
         expect(subject.order).to_not receive(:ensure_updated_shipments)
@@ -78,14 +78,6 @@ describe Spree::OrderContents, type: :model do
 
       expect(order.item_total.to_f).to eq(19.99)
       expect(order.total.to_f).to eq(19.99)
-    end
-
-    it "should create stock location associations if provided" do
-      line_item = subject.add(variant, 3, stock_location_quantities: { stock_location.id => 1, stock_location_2.id => 2 })
-      order_stock_locations = line_item.order.order_stock_locations
-      expect(order_stock_locations.count).to eq(2)
-      expect(order_stock_locations.map(&:quantity)).to eq([1, 2])
-      expect(order_stock_locations.map(&:stock_location_id)).to eq([stock_location.id, stock_location_2.id])
     end
 
     context "running promotions" do

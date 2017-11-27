@@ -1,6 +1,6 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe Spree::PaymentMethod::StoreCredit do
+RSpec.describe Spree::PaymentMethod::StoreCredit do
   let(:order)           { create(:order) }
   let(:payment)         { create(:payment, order: order) }
   let(:gateway_options) { payment.gateway_options }
@@ -21,7 +21,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       it "declines an unknown store credit" do
         expect(subject.success?).to be false
-        expect(subject.message).to include Spree.t('store_credit.unable_to_find')
+        expect(subject.message).to include I18n.t('spree.store_credit.unable_to_find')
       end
     end
 
@@ -30,7 +30,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       it "declines a store credit" do
         expect(subject.success?).to be false
-        expect(subject.message).to include Spree.t('store_credit.insufficient_funds')
+        expect(subject.message).to include I18n.t('spree.store_credit.insufficient_funds')
       end
     end
 
@@ -39,7 +39,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       it "declines the credit" do
         expect(subject.success?).to be false
-        expect(subject.message).to include Spree.t('store_credit.currency_mismatch')
+        expect(subject.message).to include I18n.t('spree.store_credit.currency_mismatch')
       end
     end
 
@@ -80,7 +80,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       it "declines an unknown store credit" do
         expect(subject.success?).to be false
-        expect(subject.message).to include Spree.t('store_credit.unable_to_find')
+        expect(subject.message).to include I18n.t('spree.store_credit.unable_to_find')
       end
     end
 
@@ -93,7 +93,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       it "declines a store credit" do
         expect(subject.success?).to be false
-        expect(subject.message).to include Spree.t('store_credit.insufficient_authorized_amount')
+        expect(subject.message).to include I18n.t('spree.store_credit.insufficient_authorized_amount')
       end
     end
 
@@ -102,13 +102,13 @@ describe Spree::PaymentMethod::StoreCredit do
 
       it "declines the credit" do
         expect(subject.success?).to be false
-        expect(subject.message).to include Spree.t('store_credit.currency_mismatch')
+        expect(subject.message).to include I18n.t('spree.store_credit.currency_mismatch')
       end
     end
 
     context 'with a valid request' do
       it "captures the store credit" do
-        expect(subject.message).to include Spree.t('store_credit.successful_action', action: Spree::StoreCredit::CAPTURE_ACTION)
+        expect(subject.message).to include I18n.t('spree.store_credit.successful_action', action: Spree::StoreCredit::CAPTURE_ACTION)
         expect(subject.success?).to be true
       end
 
@@ -139,7 +139,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       it "declines an unknown store credit" do
         expect(subject.success?).to be false
-        expect(subject.message).to include Spree.t('store_credit.unable_to_find')
+        expect(subject.message).to include I18n.t('spree.store_credit.unable_to_find')
       end
     end
 
@@ -153,7 +153,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
     it "voids a valid store credit void request" do
       expect(subject.success?).to be true
-      expect(subject.message).to include Spree.t('store_credit.successful_action', action: Spree::StoreCredit::VOID_ACTION)
+      expect(subject.message).to include I18n.t('spree.store_credit.successful_action', action: Spree::StoreCredit::VOID_ACTION)
     end
 
     context 'with an originator' do
@@ -181,7 +181,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       resp = subject.purchase(amount * 100.0, store_credit, gateway_options)
       expect(resp.success?).to be false
-      expect(resp.message).to include Spree.t('store_credit.unable_to_find')
+      expect(resp.message).to include I18n.t('spree.store_credit.unable_to_find')
     end
 
     it "captures a purchase if it can find a pending credit for the correct amount" do
@@ -194,7 +194,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       resp = subject.purchase(amount * 100.0, store_credit, gateway_options)
       expect(resp.success?).to be true
-      expect(resp.message).to include Spree.t('store_credit.successful_action', action: Spree::StoreCredit::CAPTURE_ACTION)
+      expect(resp.message).to include I18n.t('spree.store_credit.successful_action', action: Spree::StoreCredit::CAPTURE_ACTION)
     end
   end
 
@@ -214,7 +214,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       it "declines an unknown store credit" do
         expect(subject.success?).to be false
-        expect(subject.message).to include Spree.t('store_credit.unable_to_find')
+        expect(subject.message).to include I18n.t('spree.store_credit.unable_to_find')
       end
     end
 
@@ -231,7 +231,7 @@ describe Spree::PaymentMethod::StoreCredit do
 
       it "credits a valid store credit credit request" do
         expect(subject.success?).to be true
-        expect(subject.message).to include Spree.t('store_credit.successful_action', action: Spree::StoreCredit::CREDIT_ACTION)
+        expect(subject.message).to include I18n.t('spree.store_credit.successful_action', action: Spree::StoreCredit::CREDIT_ACTION)
       end
     end
 
@@ -246,13 +246,14 @@ describe Spree::PaymentMethod::StoreCredit do
     end
   end
 
-  context "#cancel" do
+  context "#try_void" do
     subject do
-      Spree::PaymentMethod::StoreCredit.new.cancel(auth_code)
+      payment_method.try_void(double(response_code: auth_code))
     end
 
-    let(:store_credit) { create(:store_credit, amount: original_amount, amount_used: captured_amount) }
-    let(:auth_code)    { "1-SC-20141111111111" }
+    let(:payment_method)  { described_class.create!(name: 'Store Credit') }
+    let(:store_credit)    { create(:store_credit, amount: original_amount, amount_used: captured_amount) }
+    let(:auth_code)       { "1-SC-20141111111111" }
     let(:original_amount) { 100.0 }
     let(:captured_amount) { 10.0 }
 
@@ -263,48 +264,59 @@ describe Spree::PaymentMethod::StoreCredit do
     end
 
     context "capture event found" do
-      let!(:store_credit_event) {
+      let!(:store_credit_event) do
         create(:store_credit_capture_event,
-                                        authorization_code: auth_code,
-                                        amount: captured_amount,
-                                        store_credit: store_credit)
-      }
+          authorization_code: auth_code,
+          amount: captured_amount,
+          store_credit: store_credit)
+      end
 
-      it_behaves_like "a spree payment method"
+      it { is_expected.to be(false) }
 
-      it "refunds the capture amount" do
-        expect { subject }.to change{ store_credit.reload.amount_remaining }.
-                              from(original_amount - captured_amount).
-                              to(original_amount)
+      describe "called from payment#cancel!" do
+        subject { payment.cancel! }
+
+        let!(:payment) do
+          create(:payment,
+            order: order,
+            payment_method: payment_method,
+            source: store_credit,
+            amount: captured_amount,
+            response_code: auth_code)
+        end
+
+        it "refunds the capture amount" do
+          expect { subject }.to change { store_credit.reload.amount_remaining }.
+                                from(original_amount - captured_amount).
+                                to(original_amount)
+        end
       end
     end
 
     context "capture event not found" do
       context "auth event found" do
-        let!(:store_credit_event) {
+        let!(:store_credit_event) do
           create(:store_credit_auth_event,
-                                          authorization_code: auth_code,
-                                          amount: captured_amount,
-                                          store_credit: store_credit)
-        }
+            authorization_code: auth_code,
+            amount: captured_amount,
+            store_credit: store_credit)
+        end
 
         it_behaves_like "a spree payment method"
 
-        it "refunds the capture amount" do
-          expect { subject }.to change{ store_credit.reload.amount_remaining }.
+        it "voids the capture amount" do
+          expect { subject }.to change { store_credit.reload.amount_remaining }.
                                 from(original_amount - captured_amount).
                                 to(original_amount)
         end
       end
 
       context "store credit event not found" do
-        subject do
-          Spree::PaymentMethod::StoreCredit.new.cancel('INVALID')
-        end
+        let(:auth_code) { 'INVALID' }
 
         it_behaves_like "a spree payment method"
 
-        it { expect(subject.success?).to be(false) }
+        it { is_expected.to_not be_success }
       end
     end
   end

@@ -20,18 +20,18 @@
           <td>
             <%= pretty_time(payment.created_at) %>
           </td>
-          <td class="align-center amount">
+          <td class="amount">
             <%= payment.display_amount.to_html %>
           </td>
-          <td class="align-center">
+          <td>
             <%= payment_method_name(payment) %>
           </td>
-          <td class="align-center">
+          <td>
             <%= payment.transaction_id %>
           </td>
-          <td class="align-center">
+          <td>
             <span class="pill pill-<%= payment.state %>">
-              <%= Spree.t(payment.state, scope: :payment_states) %>
+              <%= t(payment.state, scope: 'spree.payment_states') %>
             </span>
           </td>
         </tr>

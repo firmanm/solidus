@@ -12,9 +12,6 @@ module Spree
       # TODO: Remove this after deprecated usage in #update is removed
       include Spree::Core::ControllerHelpers::PaymentParameters
 
-      # This before_action comes from Spree::Core::ControllerHelpers::Order
-      skip_before_action :set_current_order
-
       def next
         authorize! :update, @order, order_token
         if !expected_total_ok?(params[:expected_total])
@@ -115,11 +112,12 @@ module Spree
 
       def after_update_attributes
         if params[:order] && params[:order][:coupon_code].present?
-          handler = PromotionHandler::Coupon.new(@order).apply
+          handler = PromotionHandler::Coupon.new(@order)
+          handler.apply
 
           if handler.error.present?
             @coupon_message = handler.error
-            respond_with(@order, default_template: 'spree/api/orders/could_not_apply_coupon')
+            respond_with(@order, default_template: 'spree/api/orders/could_not_apply_coupon', status: 422)
             return true
           end
         end

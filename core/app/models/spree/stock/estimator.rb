@@ -31,6 +31,8 @@ module Spree
       end
 
       def calculate_shipping_rates(package)
+        tax_calculator_class = Spree::Config.shipping_rate_tax_calculator_class
+        tax_calculator = tax_calculator_class.new(package.shipment.order)
         shipping_methods(package).map do |shipping_method|
           cost = shipping_method.calculator.compute(package)
           if cost
@@ -38,7 +40,13 @@ module Spree
               cost: cost,
               shipment: package.shipment
             )
-            Spree::Config.shipping_rate_taxer_class.new.tax(rate)
+            tax_calculator.calculate(rate).each do |tax|
+              rate.taxes.new(
+                amount: tax.amount,
+                tax_rate: tax.tax_rate
+              )
+            end
+            rate
           end
         end.compact
       end
@@ -46,7 +54,7 @@ module Spree
       def shipping_methods(package)
         package.shipping_methods
           .available_for_address(package.shipment.order.ship_address)
-          .includes(:calculator, tax_category: :tax_rates)
+          .includes(:calculator)
           .to_a
           .select do |ship_method|
           calculator = ship_method.calculator

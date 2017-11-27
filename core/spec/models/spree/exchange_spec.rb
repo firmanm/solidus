@@ -1,7 +1,7 @@
-require 'spec_helper'
+require 'rails_helper'
 
 module Spree
-  describe Exchange, type: :model do
+  RSpec.describe Exchange, type: :model do
     let(:order) { Spree::Order.new }
 
     let(:return_item_1) { build(:exchange_return_item) }
@@ -52,7 +52,7 @@ module Spree
 
       context "when it cannot create shipments for all items" do
         before do
-          StockItem.where(variant_id: return_item.exchange_variant_id).destroy_all
+          StockItem.where(variant_id: return_item.exchange_variant_id).each(&:really_destroy!)
         end
 
         it 'raises an UnableToCreateShipments error' do

@@ -20,13 +20,11 @@ Spree.ready(function() {
     var tr = $(this).closest('tr');
     var klass = 'highlight action-' + $(this).data('action')
     tr.addClass(klass)
-    tr.prev().addClass('before-' + klass);
   });
   $('table').on("mouseleave", 'td.actions a, td.actions button', function(){
     var tr = $(this).closest('tr');
     var klass = 'highlight action-' + $(this).data('action')
     tr.removeClass(klass)
-    tr.prev().removeClass('before-' + klass);
   });
 });
 
@@ -48,13 +46,13 @@ $.fn.radioControlsVisibilityOfElement = function(dependentElementSelector){
 
 var handle_date_picker_fields = function(){
   $('.datepicker').datepicker({
-    dateFormat: Spree.translations.date_picker,
-    dayNames: Spree.translations.abbr_day_names,
-    dayNamesMin: Spree.translations.abbr_day_names,
-    firstDay: Spree.translations.first_day,
-    monthNames: Spree.translations.month_names,
-    prevText: Spree.translations.previous,
-    nextText: Spree.translations.next,
+    dateFormat: Spree.t('date_picker.js_format', { default: 'yy/mm/dd' }),
+    dayNames: Spree.t('abbr_day_names'),
+    dayNamesMin: Spree.t('abbr_day_names'),
+    firstDay: parseInt(Spree.t('date_picker.first_day', { default: '0' }), 10),
+    monthNames: Spree.t('month_names'),
+    prevText: Spree.t('previous'),
+    nextText: Spree.t('next'),
     showOn: "focus"
   });
 
@@ -67,20 +65,8 @@ var handle_date_picker_fields = function(){
   });
 }
 
-$(document).ready(function(){
+Spree.ready(function(){
   handle_date_picker_fields();
-  $(".observe_field").on('change', function() {
-    var target = $(this).data("update");
-    $(target).hide();
-    Spree.ajax({ dataType: 'html',
-             url: $(this).data("base-url")+encodeURIComponent($(this).val()),
-             type: 'get',
-             success: function(data){
-               $(target).html(data);
-               $(target).show();
-             }
-    });
-  });
   var uniqueId = 1;
   $('.spree_add_fields').click(function() {
     var target = $(this).data("target");

@@ -1,5 +1,4 @@
 require 'rails/all'
-require 'active_merchant'
 require 'acts_as_list'
 require 'awesome_nested_set'
 require 'cancan'
@@ -11,6 +10,8 @@ require 'paperclip'
 require 'paranoia'
 require 'ransack'
 require 'state_machines-activerecord'
+
+require 'spree/deprecation'
 
 # This is required because ActiveModel::Validations#invalid? conflicts with the
 # invalid state of a Payment. In the future this should be removed.
@@ -42,15 +43,16 @@ module Spree
   end
 
   module Core
-    autoload :ProductFilters, "spree/core/product_filters"
-
     class GatewayError < RuntimeError; end
-    class DestroyWithOrdersError < StandardError; end
+
+    include ActiveSupport::Deprecation::DeprecatedConstantAccessor
+    deprecate_constant 'DestroyWithOrdersError', ActiveRecord::DeleteRestrictionError, deprecator: Spree::Deprecation
   end
 end
 
 require 'spree/core/version'
 
+require 'spree/core/active_merchant_dependencies'
 require 'spree/core/class_constantizer'
 require 'spree/core/environment_extension'
 require 'spree/core/environment/calculators'
@@ -80,6 +82,7 @@ require 'spree/core/controller_helpers/strong_parameters'
 require 'spree/core/role_configuration'
 require 'spree/core/stock_configuration'
 require 'spree/permission_sets'
-require 'spree/deprecation'
 
-require 'spree/core/price_migrator'
+require 'spree/preferences/store'
+require 'spree/preferences/static_model_preferences'
+require 'spree/preferences/scoped_store'
