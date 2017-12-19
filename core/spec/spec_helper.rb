@@ -12,6 +12,8 @@ if ENV["COVERAGE"]
   end
 end
 
+require 'rspec/core'
+
 require 'spree/testing_support/preferences'
 require 'spree/config'
 require 'with_model'
@@ -32,8 +34,6 @@ RSpec.configure do |config|
 
   config.include Spree::TestingSupport::Preferences
   config.extend WithModel
-
-  config.fail_fast = ENV['FAIL_FAST'] || false
 
   config.filter_run focus: true
   config.run_all_when_everything_filtered = true

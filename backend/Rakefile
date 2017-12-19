@@ -6,13 +6,17 @@ require 'rspec/core/rake_task'
 require 'solidus_backend'
 require 'spree/testing_support/dummy_app/rake_tasks'
 
-ENV['LIB_NAME'] = 'solidus_backend'
-
 RSpec::Core::RakeTask.new
-task default: :spec
+task default: [:spec, 'spec:js']
 
-desc "Run the javascript specs"
+DummyApp::RakeTasks.new(
+  gem_root: File.expand_path('../', __FILE__),
+  lib_name: 'solidus_backend'
+)
+
 task :teaspoon do
+  require 'teaspoon'
+  Rake::Task['dummy_environment'].invoke
   require "teaspoon/console"
 
   options = {
@@ -27,10 +31,13 @@ task :teaspoon do
   abort("rake teaspoon failed") if Teaspoon::Console.new(options).failures?
 end
 
+desc "Run javascript specs"
+task 'spec:js' => :teaspoon
+
 namespace :teaspoon do
   task :server  do
     require 'teaspoon'
-    require 'spree/testing_support/dummy_app'
+    Rake::Task['dummy_environment'].invoke
     require 'teaspoon/server'
 
     server = Teaspoon::Server.new

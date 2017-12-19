@@ -1,13 +1,16 @@
 # This file is copied to ~/spec when you run 'ruby script/generate rspec'
 # from the project root directory.
 ENV["RAILS_ENV"] ||= 'test'
-ENV["LIB_NAME"] = 'solidus_sample'
 
 require 'solidus_sample'
 require 'spree/testing_support/dummy_app'
-DummyApp::Migrations.auto_migrate
+DummyApp.setup(
+  gem_root: File.expand_path('../../', __FILE__),
+  lib_name: 'solidus_sample'
+)
 
 require 'rspec/rails'
+require 'database_cleaner'
 
 RSpec.configure do |config|
   config.color = true
@@ -27,8 +30,6 @@ RSpec.configure do |config|
   # examples within a transaction, comment the following line or assign false
   # instead of true.
   config.use_transactional_fixtures = false
-
-  config.fail_fast = ENV['FAIL_FAST'] || false
 
   config.example_status_persistence_file_path = "./spec/examples.txt"
 

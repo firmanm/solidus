@@ -14,13 +14,16 @@ end
 # This file is copied to ~/spec when you run 'ruby script/generate rspec'
 # from the project root directory.
 ENV["RAILS_ENV"] ||= 'test'
-ENV["LIB_NAME"] = 'solidus_backend'
 
 require 'solidus_backend'
 require 'spree/testing_support/dummy_app'
-DummyApp::Migrations.auto_migrate
+DummyApp.setup(
+  gem_root: File.expand_path('../../', __FILE__),
+  lib_name: 'solidus_backend'
+)
 
 require 'rails-controller-testing'
+require 'rspec-activemodel-mocks'
 require 'rspec/rails'
 
 # Requires supporting files with custom matchers and macros, etc,
@@ -116,8 +119,6 @@ RSpec.configure do |config|
   config.include Spree::TestingSupport::Flash
 
   config.extend WithModel
-
-  config.fail_fast = ENV['FAIL_FAST'] || false
 
   config.example_status_persistence_file_path = "./spec/examples.txt"
 

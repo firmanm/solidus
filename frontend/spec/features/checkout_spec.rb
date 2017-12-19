@@ -211,9 +211,9 @@ describe "Checkout", type: :feature, inaccessible: true do
 
   # Regression test for https://github.com/spree/spree/issues/2694 and https://github.com/spree/spree/issues/4117
   context "doesn't allow bad credit card numbers" do
+    let!(:payment_method) { create(:credit_card_payment_method) }
     before(:each) do
       order = OrderWalkthrough.up_to(:delivery)
-      allow(order).to receive_messages(available_payment_methods: [create(:credit_card_payment_method)])
 
       user = create(:user)
       order.user = user
@@ -314,7 +314,8 @@ describe "Checkout", type: :feature, inaccessible: true do
   end
 
   context "user has payment sources", js: true do
-    let(:bogus) { create(:credit_card_payment_method) }
+    before { Spree::PaymentMethod.all.each(&:really_destroy!) }
+    let!(:bogus) { create(:credit_card_payment_method) }
     let(:user) { create(:user) }
 
     let!(:credit_card) do
@@ -324,7 +325,6 @@ describe "Checkout", type: :feature, inaccessible: true do
     before do
       user.wallet.add(credit_card)
       order = OrderWalkthrough.up_to(:delivery)
-      allow(order).to receive_messages(available_payment_methods: [bogus])
 
       allow_any_instance_of(Spree::CheckoutController).to receive_messages(current_order: order)
       allow_any_instance_of(Spree::CheckoutController).to receive_messages(try_spree_current_user: user)
@@ -348,7 +348,7 @@ describe "Checkout", type: :feature, inaccessible: true do
       choose "use_existing_card_no"
 
       fill_in "Name on card", with: 'Spree Commerce'
-      fill_in "Card Number", with: '4111111111111111'
+      fill_in "Card Number", with: '4111 1111 1111 1111'
       fill_in "card_expiry", with: '04 / 20'
       fill_in "Card Code", with: '123'
 
@@ -522,7 +522,7 @@ describe "Checkout", type: :feature, inaccessible: true do
 
       choose "Credit Card"
       fill_in "Name on card", with: 'Spree Commerce'
-      fill_in "Card Number", with: '4111111111111111'
+      fill_in "Card Number", with: '4111 1111 1111 1111'
       fill_in "card_expiry", with: '04 / 20'
       fill_in "Card Code", with: '123'
       click_button "Save and Continue"
@@ -655,7 +655,7 @@ describe "Checkout", type: :feature, inaccessible: true do
       click_on "Save and Continue"
       click_on "Save and Continue"
 
-      fill_in_credit_card(number: "4111111111111111")
+      fill_in_credit_card(number: "4111 1111 1111 1111")
       click_on "Save and Continue"
 
       expect(page).to have_current_path("/checkout/confirm")

@@ -699,7 +699,11 @@ en:
           attributes:
             payment_source:
               has_to_be_payment_source_class: "has to be a Spree::PaymentSource"
-
+  time:
+    formats:
+      solidus:
+        long: '%B %d, %Y %-l:%M %p'
+        short: "%b %-d '%y %-l:%M%P"
   devise:
     confirmations:
       confirmed: Your account was successfully confirmed. You are now signed in.
@@ -855,6 +859,8 @@ en:
           auto: All orders will attempt to use this promotion
           single_code_html: "This promotion uses the promotion code: <code>%{code}</code>"
           multiple_codes_html: "This promotion uses %{count} promotion codes"
+        actions:
+          calculator_label: Calculated by
       stock_locations:
         form:
           general: General
@@ -1081,6 +1087,8 @@ en:
     choose_currency: Choose Currency
     choose_dashboard_locale: Choose Dashboard Locale
     choose_location: Choose location
+    choose_promotion_action: Choose action
+    choose_promotion_rule: Choose rule
     city: City
     clear_cache: Clear Cache
     clear_cache_ok: Cache was flushed
