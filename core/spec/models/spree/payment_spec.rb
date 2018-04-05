@@ -17,12 +17,12 @@ describe Spree::Payment, type: :model do
   let(:card) { create :credit_card }
 
   let(:payment) do
-    payment = Spree::Payment.new
-    payment.source = card
-    payment.order = order
-    payment.payment_method = gateway
-    payment.amount = 5
-    payment
+    Spree::Payment.create! do |payment|
+      payment.source = card
+      payment.order = order
+      payment.payment_method = gateway
+      payment.amount = 5
+    end
   end
 
   let(:amount_in_cents) { (payment.amount * 100).round }
@@ -37,11 +37,6 @@ describe Spree::Payment, type: :model do
 
   let(:failed_response) do
     ActiveMerchant::Billing::Response.new(false, '', {}, {})
-  end
-
-  before(:each) do
-    # So it doesn't create log entries every time a processing method is called
-    allow(payment.log_entries).to receive(:create!)
   end
 
   context '.risky' do
@@ -246,8 +241,9 @@ describe Spree::Payment, type: :model do
 
       it "should log the response" do
         payment.save!
-        expect(payment.log_entries).to receive(:create!).with(details: anything)
-        payment.authorize!
+        expect {
+          payment.authorize!
+        }.to change { payment.log_entries.count }.by(1)
       end
 
       describe 'billing_address option' do
@@ -355,8 +351,9 @@ describe Spree::Payment, type: :model do
 
       it "should log the response" do
         payment.save!
-        expect(payment.log_entries).to receive(:create!).with(details: anything)
-        payment.purchase!
+        expect {
+          payment.purchase!
+        }.to change { payment.log_entries.count }.by(1)
       end
 
       context "if successful" do
@@ -532,8 +529,9 @@ describe Spree::Payment, type: :model do
       end
 
       it "should log the response" do
-        expect(payment.log_entries).to receive(:create!).with(details: anything)
-        payment.void_transaction!
+        expect {
+          payment.void_transaction!
+        }.to change { payment.log_entries.count }.by(1)
       end
 
       context "if successful" do
@@ -655,12 +653,13 @@ describe Spree::Payment, type: :model do
     end
 
     context "completed orders" do
+      let(:payment_method) { create(:check_payment_method) }
       before { allow(order).to receive_messages completed?: true }
 
       it "updates payment_state and shipments" do
         expect(order.updater).to receive(:update_payment_state)
         expect(order.updater).to receive(:update_shipment_state)
-        Spree::Payment.create(amount: 100, order: order)
+        Spree::Payment.create!(amount: 100, order: order, payment_method: payment_method)
       end
     end
 
@@ -688,6 +687,8 @@ describe Spree::Payment, type: :model do
         let(:attributes) { attributes_for(:credit_card) }
 
         it "should not try to create profiles on old failed payment attempts" do
+          order.payments.destroy_all
+
           allow_any_instance_of(Spree::Payment).to receive(:payment_method) { gateway }
 
           Spree::PaymentCreate.new(order, {
@@ -742,12 +743,13 @@ describe Spree::Payment, type: :model do
     end
 
     describe "invalidating payments updates in memory objects" do
+      let(:payment_method) { create(:check_payment_method) }
       before do
-        Spree::PaymentCreate.new(order, amount: 1).build.save!
+        Spree::PaymentCreate.new(order, amount: 1, payment_method_id: payment_method.id).build.save!
         expect(order.payments.map(&:state)).to contain_exactly(
           'checkout'
         )
-        Spree::PaymentCreate.new(order, amount: 2).build.save!
+        Spree::PaymentCreate.new(order, amount: 2, payment_method_id: payment_method.id).build.save!
       end
 
       it 'should not have stale payments' do
