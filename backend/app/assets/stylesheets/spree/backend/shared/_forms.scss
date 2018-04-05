@@ -142,7 +142,7 @@ span.info {
 
   &.checkbox {
     min-height: 73px;
-    @include display(flex);
+    display:flex;
     @include align-items(center);
 
     input[type="checkbox"] {
