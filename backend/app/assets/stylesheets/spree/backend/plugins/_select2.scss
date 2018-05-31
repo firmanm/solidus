@@ -70,7 +70,7 @@
   padding: 0 9px 0 0;
 
   &:before {
-    @extend [class^="icon-"]:before;
+    @extend [class^="icon-"], :before;
 
     position: absolute;
     top: 16px;

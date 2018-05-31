@@ -48,7 +48,7 @@
       }
 
       .ui-icon {
-        @extend [class^="icon-"]:before;
+        @extend [class^="icon-"], :before;
         @extend .fa;
 
         background-image: none;
