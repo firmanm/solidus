@@ -15,21 +15,21 @@
 }
 
 .fa-email:before     { @extend .fa-envelope, :before }
-.fa-resume:before    { @extend .fa-refresh:before  }
+.fa-resume:before    { @extend .fa-refresh, :before  }
 .fa-approve:before   { @extend .fa-check, :before    }
 
 .fa-remove:before,
 .fa-cancel:before,
 .fa-void:before      { @extend .fa-times, :before    }
 
-.fa-failure:before   { @extend .fa-thumbs-down:before }
+.fa-failure:before   { @extend .fa-thumbs-down, :before }
 
-.fa-trash:before     { @extend .fa-trash-o:before  }
+.fa-trash:before     { @extend .fa-trash-o, :before  }
 
 .fa-capture:before   { @extend .fa-check, :before    }
 .fa-credit:before    { @extend .fa-check, :before    }
 .fa-approve:before   { @extend .fa-check, :before    }
-.fa-icon-cogs:before { @extend .fa-cogs:before     }
+.fa-icon-cogs:before { @extend .fa-cogs, :before     }
 .fa-ok:before,
 .fa-icon-ok:before   { @extend .fa-check, :before    }
 
