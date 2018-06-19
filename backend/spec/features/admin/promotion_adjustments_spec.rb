@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "Promotion Adjustments", type: :feature, js: true do
@@ -174,20 +176,6 @@ describe "Promotion Adjustments", type: :feature, js: true do
       promotion = Spree::Promotion.find_by(name: "SAVE SAVE SAVE")
       expect(promotion).to be_apply_automatically
       expect(promotion.path).to be_nil
-      expect(promotion.codes).to be_empty
-      expect(promotion.rules).to be_blank
-    end
-
-    it "should allow an admin to create a promo requiring a landing page to be visited" do
-      fill_in "Name", with: "SAVE SAVE SAVE"
-      choose "URL Path"
-      fill_in "Path", with: "content/cvv"
-      click_button "Create"
-      expect(page).to have_title("SAVE SAVE SAVE - Promotions")
-
-      promotion = Spree::Promotion.find_by(name: "SAVE SAVE SAVE")
-      expect(promotion.path).to eq("content/cvv")
-      expect(promotion).not_to be_apply_automatically
       expect(promotion.codes).to be_empty
       expect(promotion.rules).to be_blank
     end

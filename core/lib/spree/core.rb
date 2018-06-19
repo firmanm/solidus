@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails/all'
 require 'acts_as_list'
 require 'awesome_nested_set'
@@ -12,6 +14,7 @@ require 'ransack'
 require 'state_machines-activerecord'
 
 require 'spree/deprecation'
+require 'spree/paranoia_deprecations'
 
 # This is required because ActiveModel::Validations#invalid? conflicts with the
 # invalid state of a Payment. In the future this should be removed.
@@ -81,6 +84,7 @@ require 'spree/core/controller_helpers/store'
 require 'spree/core/controller_helpers/strong_parameters'
 require 'spree/core/role_configuration'
 require 'spree/core/stock_configuration'
+require 'spree/core/validators/email'
 require 'spree/permission_sets'
 
 require 'spree/preferences/store'

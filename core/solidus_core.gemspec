@@ -1,4 +1,5 @@
-# encoding: UTF-8
+# frozen_string_literal: true
+
 require_relative '../core/lib/spree/core/version.rb'
 
 Gem::Specification.new do |s|
@@ -23,14 +24,15 @@ Gem::Specification.new do |s|
     actionmailer actionpack actionview activejob activemodel activerecord
     activesupport railties
   ].each do |rails_dep|
-    s.add_dependency rails_dep, '~> 5.1.0'
+    s.add_dependency rails_dep, ['>= 5.1', '< 5.3.x']
   end
 
   s.add_dependency 'activemerchant', '~> 1.66'
   s.add_dependency 'acts_as_list', '~> 0.3'
   s.add_dependency 'awesome_nested_set', '~> 3.0', '>= 3.0.1'
+  s.add_dependency 'cancancan', '~> 2.2'
   s.add_dependency 'carmen', '~> 1.1.0'
-  s.add_dependency 'cancancan', '~> 1.10'
+  s.add_dependency 'discard', '~> 1.0'
   s.add_dependency 'friendly_id', '~> 5.0'
   s.add_dependency 'kaminari-activerecord', '~> 1.1'
   s.add_dependency 'monetize', '~> 1.1'

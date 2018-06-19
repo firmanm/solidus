@@ -1,7 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe 'orders', type: :feature do
-  let(:order) { OrderWalkthrough.up_to(:complete) }
+  let(:order) { Spree::TestingSupport::OrderWalkthrough.up_to(:complete) }
   let(:user) { create(:user) }
 
   before do

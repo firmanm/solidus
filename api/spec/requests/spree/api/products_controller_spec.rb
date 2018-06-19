@@ -1,9 +1,10 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'shared_examples/protect_product_actions'
 
 module Spree
   describe Spree::Api::ProductsController, type: :request do
-
     let!(:product) { create(:product) }
     let!(:inactive_product) { create(:product, available_on: Time.current.tomorrow, name: "inactive") }
     let(:base_attributes) { Api::ApiHelpers.product_attributes }
@@ -178,7 +179,7 @@ module Spree
         specify do
           get spree.api_product_path(product)
           expect(json_response["slug"]).to match(/and-1-ways/)
-          product.paranoia_destroy
+          product.discard
 
           get spree.api_product_path(other_product)
           expect(json_response["slug"]).to match(/droids/)
@@ -349,7 +350,7 @@ module Spree
           expect(response.status).to eq 200
           expect(json_response['variants'].count).to eq(2) # 2 variants
 
-          variants = json_response['variants'].select { |v| !v['is_master'] }
+          variants = json_response['variants'].reject { |v| v['is_master'] }
           size_option_value = variants.last['option_values'].detect{ |x| x['option_type_name'] == 'size' }
           expect(size_option_value['name']).to eq('small')
 
@@ -373,7 +374,7 @@ module Spree
           } }
 
           expect(json_response['variants'].count).to eq(1)
-          variants = json_response['variants'].select { |v| !v['is_master'] }
+          variants = json_response['variants'].reject { |v| v['is_master'] }
           expect(variants.last['option_values'][0]['name']).to eq('large')
           expect(variants.last['sku']).to eq('456')
           expect(variants.count).to eq(1)

@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 module Spree
   def self.solidus_version
-    "2.5.0.alpha"
+    "2.7.0.alpha"
   end
 
   def self.solidus_gem_version

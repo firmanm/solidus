@@ -1,6 +1,9 @@
+# frozen_string_literal: true
+
 require 'rails/generators/active_record/migration'
 
 module Spree
+  # @private
   class CustomUserGenerator < Rails::Generators::NamedBase
     include ActiveRecord::Generators::Migration
 

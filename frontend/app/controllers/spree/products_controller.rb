@@ -1,15 +1,17 @@
+# frozen_string_literal: true
+
 module Spree
   class ProductsController < Spree::StoreController
     before_action :load_product, only: :show
     before_action :load_taxon, only: :index
 
-    helper 'spree/taxons'
+    helper 'spree/taxons', 'spree/taxon_filters'
 
     respond_to :html
 
     def index
-      @searcher = build_searcher(params.merge(include_images: true).reject { |k, _| ["per_page", "page"].include?(k) } )
-      @products = @searcher.retrieve_products.page(params[:page] || 1).per(params[:per_page].presence || Spree::Config[:products_per_page])
+      @searcher = build_searcher(params.merge(include_images: true))
+      @products = @searcher.retrieve_products
       @taxonomies = Spree::Taxonomy.includes(root: :children)
     end
 

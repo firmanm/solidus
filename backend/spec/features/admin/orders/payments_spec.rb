@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe 'Payments', type: :feature do
@@ -9,8 +11,7 @@ describe 'Payments', type: :feature do
         order:          order,
         amount:         order.outstanding_balance,
         payment_method: create(:credit_card_payment_method),
-        state:          state
-      )
+        state:          state)
     end
 
     let(:order) { create(:completed_order_with_totals, number: 'R100', line_items_price: 50) }
@@ -27,8 +28,7 @@ describe 'Payments', type: :feature do
         create(:payment,
           order:          order,
           amount:         order.outstanding_balance,
-          payment_method: create(:check_payment_method, available_to_admin: true) # Check
-        )
+          payment_method: create(:check_payment_method, available_to_admin: true)) # Check
       end
 
       it 'capturing a check payment from a new order' do
@@ -62,11 +62,11 @@ describe 'Payments', type: :feature do
       expect(page).to have_content 'my cc address'
     end
 
-    it 'lists and create payments for an order', js: true do
+    it 'lists, updates and creates payments for an order', js: true do
       within_row(1) do
-        expect(column_text(3)).to eq('$150.00')
-        expect(column_text(4)).to eq('Credit Card')
-        expect(column_text(6)).to eq('Checkout')
+        expect(column_text(3)).to eq('Credit Card')
+        expect(column_text(5)).to eq('Checkout')
+        expect(column_text(6)).to have_content('$150.00')
       end
 
       click_icon :void
@@ -74,9 +74,7 @@ describe 'Payments', type: :feature do
       expect(page).to have_content('Payment Updated')
 
       within_row(1) do
-        expect(column_text(3)).to eq('$150.00')
-        expect(column_text(4)).to eq('Credit Card')
-        expect(column_text(6)).to eq('Void')
+        expect(column_text(5)).to eq('Void')
       end
 
       click_on 'New Payment'
@@ -135,7 +133,6 @@ describe 'Payments', type: :feature do
           click_icon(:save)
         end
         expect(page).to have_selector('.flash.error', text: 'Invalid resource. Please fix errors and try again.')
-        expect(page).to have_field('amount', with: 'invalid')
         expect(payment.reload.amount).to eq(150.00)
       end
     end
@@ -223,12 +220,11 @@ describe 'Payments', type: :feature do
         create(:payment,
           order:          order,
           amount:         order.outstanding_balance,
-          payment_method: payment_method
-        )
+          payment_method: payment_method)
       end
 
       before do
-        payment_method.paranoia_destroy
+        payment_method.discard
         visit spree.admin_order_payments_path(order.reload)
       end
 

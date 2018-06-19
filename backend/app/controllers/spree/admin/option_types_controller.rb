@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module Admin
     class OptionTypesController < ResourceController
@@ -9,8 +11,7 @@ module Spree
         end
 
         respond_to do |format|
-          format.html { redirect_to admin_product_variants_url(params[:product_id]) }
-          format.js { render plain: 'Ok' }
+          format.js { head :no_content }
         end
       end
 

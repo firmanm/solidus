@@ -5,7 +5,7 @@
 <% content_for :page_actions do %>
   <% if can?(:create, Spree::Property) %>
     <li id="new_property_link">
-      <%= button_link_to t('spree.new_property'), new_admin_property_url, { remote: true, id: 'new_property_link' } %>
+      <%= link_to t('spree.new_property'), new_admin_property_url, remote: true, id: 'new_property_link', class: 'btn btn-primary' %>
     </li>
   <% end %>
 <% end %>
@@ -35,7 +35,7 @@
         <div class="clear"></div>
 
         <div class="form-buttons actions filter-actions" data-hook="admin_pproperties_index_search_buttons">
-          <%= button t('spree.search') %>
+          <%= button_tag t('spree.search'), class: 'btn btn-primary' %>
         </div>
     <% end %>
   </div>

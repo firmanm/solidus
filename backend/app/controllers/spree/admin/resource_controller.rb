@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Spree::Admin::ResourceController < Spree::Admin::BaseController
   include Spree::Backend::Callbacks
 
@@ -79,7 +81,7 @@ class Spree::Admin::ResourceController < Spree::Admin::BaseController
     end
 
     respond_to do |format|
-      format.js { render plain: 'Ok' }
+      format.js { head :no_content }
     end
   end
 
@@ -87,7 +89,9 @@ class Spree::Admin::ResourceController < Spree::Admin::BaseController
     invoke_callbacks(:destroy, :before)
 
     destroy_result =
-      if @object.respond_to?(:paranoia_destroy)
+      if @object.respond_to?(:discard)
+        @object.discard
+      elsif @object.respond_to?(:paranoia_destroy)
         @object.paranoia_destroy
       else
         @object.destroy
@@ -134,8 +138,10 @@ class Spree::Admin::ResourceController < Spree::Admin::BaseController
     self.class.parent_data[:model_name].gsub('spree/', '')
   end
 
-  alias_method :model_name, :parent_model_name
-  deprecate model_name: :parent_model_name, deprecator: Spree::Deprecation
+  def model_name
+    Spree::Deprecation.warn('model_name is deprecated. Please use parent_model_name instead.', caller)
+    parent_model_name
+  end
 
   def object_name
     controller_name.singularize
@@ -170,9 +176,9 @@ class Spree::Admin::ResourceController < Spree::Admin::BaseController
   end
 
   def parent_data
+    Spree::Deprecation.warn('parent_data is deprecated without replacement.', caller)
     self.class.parent_data
   end
-  deprecate :parent_data, deprecator: Spree::Deprecation
 
   def parent
     if parent?

@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe Api::AddressesController, type: :request do
-
     before do
       stub_authentication!
       @address = create(:address)

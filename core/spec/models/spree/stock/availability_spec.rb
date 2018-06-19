@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 module Spree::Stock
@@ -59,7 +61,7 @@ module Spree::Stock
         end
 
         context 'with soft-deleted stock_item' do
-          before { stock_item.paranoia_destroy! }
+          before { stock_item.discard }
 
           it "returns empty hash" do
             expect(subject).to eq({})
@@ -125,7 +127,7 @@ module Spree::Stock
         end
 
         context 'with soft-deleted stock_item' do
-          before { stock_item.paranoia_destroy! }
+          before { stock_item.discard }
 
           it { is_expected.to eq({}) }
         end

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::OrderInventory, type: :model do
@@ -6,7 +8,6 @@ RSpec.describe Spree::OrderInventory, type: :model do
   let(:shipment) { order.shipments.first }
   let(:variant) { subject.variant }
   let(:stock_item) { shipment.stock_location.stock_item(variant) }
-
 
   subject { described_class.new(order, line_item) }
 

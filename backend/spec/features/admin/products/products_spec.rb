@@ -1,4 +1,5 @@
-# encoding: utf-8
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "Products", type: :feature do
@@ -156,10 +157,7 @@ describe "Products", type: :feature do
       before(:each) do
         @shipping_category = create(:shipping_category)
         click_nav "Products"
-        click_link "admin_new_product"
-        within('#new_product') do
-          expect(page).to have_content("SKU")
-        end
+        click_on "New Product"
       end
 
       it "should allow an admin to create a new product", js: true do
@@ -174,7 +172,7 @@ describe "Products", type: :feature do
         expect(page).to have_content("successfully updated!")
       end
 
-      it "should show validation errors", js: true do
+      it "should show validation errors", js: false do
         fill_in "product_name", with: "Baseball Cap"
         fill_in "product_sku", with: "B100"
         fill_in "product_price", with: "100"

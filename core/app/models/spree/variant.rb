@@ -1,3 +1,7 @@
+# frozen_string_literal: true
+
+require 'discard'
+
 module Spree
   # == Master Variant
   #
@@ -14,8 +18,20 @@ module Spree
   # option values and may have inventory units. Sum of on_hand each variant's
   # inventory level determine "on_hand" level for the product.
   class Variant < Spree::Base
-    acts_as_paranoid
     acts_as_list scope: :product
+
+    acts_as_paranoid
+    include Spree::ParanoiaDeprecations
+
+    include Discard::Model
+    self.discard_column = :deleted_at
+
+    after_discard do
+      stock_items.discard_all
+      images.destroy_all
+      prices.discard_all
+      currently_valid_prices.discard_all
+    end
 
     attr_writer :rebuild_vat_prices
     include Spree::DefaultPrice
@@ -78,6 +94,8 @@ module Spree
     # a parameter, the scope is limited to variants that are in stock in the
     # provided stock locations.
     #
+    # If you want to also include backorderable variants see {Spree::Variant.suppliable}
+    #
     # @param stock_locations [Array<Spree::StockLocation>] the stock locations to check
     # @return [ActiveRecord::Relation]
     def self.in_stock(stock_locations = nil)
@@ -87,6 +105,22 @@ module Spree
         in_stock_variants = in_stock_variants.where(spree_stock_items: { stock_location_id: stock_locations.map(&:id) })
       end
       in_stock_variants
+    end
+
+    # Returns a scope of Variants which are suppliable. This includes:
+    # * in_stock variants
+    # * backorderable variants
+    # * variants which do not track stock
+    #
+    # @return [ActiveRecord::Relation]
+    def self.suppliable
+      return all unless Spree::Config.track_inventory_levels
+      arel_conditions = [
+        arel_table[:track_inventory].eq(false),
+        Spree::StockItem.arel_table[:count_on_hand].gt(0),
+        Spree::StockItem.arel_table[:backorderable].eq(true)
+      ]
+      joins(:stock_items).where(arel_conditions.inject(:or))
     end
 
     self.whitelisted_ransackable_associations = %w[option_values product prices default_price]
@@ -104,11 +138,23 @@ module Spree
     end
 
     # Returns variants that have a price for the given pricing options
+    # If you have modified the pricing options class, you might want to modify this scope too.
     #
     # @param pricing_options A Pricing Options object as defined on the price selector class
     # @return [ActiveRecord::Relation]
     def self.with_prices(pricing_options = Spree::Config.default_pricing_options)
-      joins(:prices).merge(Spree::Price.currently_valid.where(pricing_options.search_arguments))
+      where(
+        Spree::Price.
+          where(Spree::Variant.arel_table[:id].eq(Spree::Price.arel_table[:variant_id])).
+          # This next clause should just be `where(pricing_options.search_arguments)`, but ActiveRecord
+          # generates invalid SQL, so the SQL here is written manually.
+          where(
+            "spree_prices.currency = ? AND (spree_prices.country_iso IS NULL OR spree_prices.country_iso = ?)",
+            pricing_options.search_arguments[:currency],
+            pricing_options.search_arguments[:country_iso].compact
+          ).
+          arel.exists
+      )
     end
 
     # @return [Spree::TaxCategory] the variant's tax category
@@ -248,8 +294,6 @@ module Spree
     # Chooses an appropriate price for the given pricing options
     #
     # @see Spree::Variant::PriceSelector#price_for
-    # @param [Spree::Config.pricing_options_class] An instance of pricing options
-    # @return [Spree::Money] The chosen price as a Money object
     delegate :price_for, to: :price_selector
 
     # Returns the difference in price from the master variant

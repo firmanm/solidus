@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 Spree::Core::Engine.routes.draw do
   namespace :admin do
     resources :users do
@@ -18,12 +20,6 @@ Spree::Core::Engine.routes.draw do
     end
 
     concern :order_routes do
-      member do
-        put :cancel
-        put :empty
-        put :apply_coupon_code
-      end
-
       resources :line_items
       resources :payments do
         member do
@@ -67,7 +63,13 @@ Spree::Core::Engine.routes.draw do
     get '/orders/mine', to: 'orders#mine', as: 'my_orders'
     get "/orders/current", to: "orders#current", as: "current_order"
 
-    resources :orders, concerns: :order_routes
+    resources :orders, concerns: :order_routes do
+      member do
+        put :cancel
+        put :empty
+        put :apply_coupon_code
+      end
+    end
 
     resources :zones
     resources :countries, only: [:index, :show] do
@@ -82,6 +84,9 @@ Spree::Core::Engine.routes.draw do
       end
 
       member do
+        get :estimated_rates
+        put :select_shipping_method
+
         put :ready
         put :ship
         put :add

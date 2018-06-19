@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # This file is copied to ~/spec when you run 'ruby script/generate rspec'
 # from the project root directory.
 ENV["RAILS_ENV"] ||= 'test'
@@ -5,7 +7,7 @@ ENV["RAILS_ENV"] ||= 'test'
 require 'solidus_sample'
 require 'spree/testing_support/dummy_app'
 DummyApp.setup(
-  gem_root: File.expand_path('../../', __FILE__),
+  gem_root: File.expand_path('..', __dir__),
   lib_name: 'solidus_sample'
 )
 

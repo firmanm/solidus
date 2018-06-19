@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module Admin
     module NavigationHelper
@@ -18,9 +20,10 @@ module Spree
         end
 
         content_tag :ol, class: 'breadcrumb' do
-          safe_join admin_breadcrumbs.map { |level|
+          segments = admin_breadcrumbs.map do |level|
             content_tag(:li, level, class: "breadcrumb-item #{level == admin_breadcrumbs.last ? 'active' : ''}")
-          }
+          end
+          safe_join(segments)
         end
       end
 
@@ -125,27 +128,29 @@ module Spree
       deprecate icon: :solidus_icon, deprecator: Spree::Deprecation
 
       def button(text, icon_name = nil, button_type = 'submit', options = {})
+        Spree::Deprecation.warn "button helper is deprecated. Instead use button_tag"
         class_names = "button"
         if icon_name
           Spree::Deprecation.warn "Using icon_name arg is deprecated. Icons could not be visible in future versions.", caller
-          class_names.prepend "fa fa-#{icon_name} "
+          class_names = "fa fa-#{icon_name} #{class_names}"
         end
         button_tag(text, options.merge(type: button_type, class: class_names))
       end
 
       def button_link_to(text, url, html_options = {})
+        Spree::Deprecation.warn "Passing button_link_to is deprecated. Use either link_to or button_to instead.", caller
         html_options = { class: '' }.merge(html_options)
         if html_options[:method] &&
-           html_options[:method].to_s.downcase != 'get' &&
+           !html_options[:method].to_s.casecmp('get').zero? &&
            !html_options[:remote]
           form_tag(url, method: html_options.delete(:method)) do
-            button(text, html_options.delete(:icon), nil, html_options)
+            html_options.delete(:icon)
+            button_tag(text, html_options)
           end
         else
           html_options[:class] += ' button'
 
           if html_options[:icon]
-            Spree::Deprecation.warn "Using :icon option is deprecated. Icons could not be visible in future versions.", caller
             html_options[:class] += " fa fa-#{html_options[:icon]}"
           end
           link_to(text, url, html_options)
@@ -181,7 +186,6 @@ module Spree
           link_to(link_text, url)
         end
       end
-
     end
   end
 end

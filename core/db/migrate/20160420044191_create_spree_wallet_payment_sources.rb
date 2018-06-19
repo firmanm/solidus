@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class CreateSpreeWalletPaymentSources < ActiveRecord::Migration[4.2]
   def change
     return if table_exists?(:spree_wallet_payment_sources)
@@ -12,7 +14,7 @@ class CreateSpreeWalletPaymentSources < ActiveRecord::Migration[4.2]
       t.references :payment_source, polymorphic: true, null: false
       t.boolean :default, default: false, null: false
 
-      t.timestamps null: false
+      t.timestamps null: false, precision: 6
     end
 
     add_index(

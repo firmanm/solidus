@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
@@ -10,7 +12,6 @@ module Spree
   end
 
   describe Api::LineItemsController, type: :request do
-
     let!(:order) { create(:order_with_line_items, line_items_count: 1) }
 
     let(:product) { create(:product) }

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   class Taxonomy < Spree::Base
     acts_as_list
@@ -9,7 +11,7 @@ module Spree
 
     after_save :set_name
 
-    default_scope -> { order(:position) }
+    default_scope -> { order(position: :asc) }
 
     private
 

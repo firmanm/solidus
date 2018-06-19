@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe Api::VariantsController, type: :request do
-
     let!(:product) { create(:product) }
     let!(:variant) do
       variant = product.master
@@ -87,7 +88,6 @@ module Spree
       end
 
       context "stock filtering" do
-
         context "only variants in stock" do
           subject { get spree.api_variants_path, params: { in_stock_only: "true" } }
 
@@ -110,6 +110,32 @@ module Spree
             it "is returned in the results" do
               subject
               expect(json_response["variants"].count).to eq 1
+            end
+          end
+        end
+
+        context "only suplliable variants" do
+          subject { get spree.api_variants_path, params: { suppliable_only: "true" } }
+
+          context "variant is backorderable" do
+            before do
+              variant.stock_items.update_all(count_on_hand: 0, backorderable: true)
+            end
+
+            it "is not returned in the results" do
+              subject
+              expect(json_response["variants"].count).to eq 1
+            end
+          end
+
+          context "variant is unsuppliable" do
+            before do
+              variant.stock_items.update_all(count_on_hand: 0, backorderable: false)
+            end
+
+            it "is returned in the results" do
+              subject
+              expect(json_response["variants"].count).to eq 0
             end
           end
         end

@@ -1,5 +1,6 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
-require 'spree/testing_support/bar_ability'
 
 describe Spree::Admin::UsersController, type: :controller do
   let(:user) { create(:user) }
@@ -37,7 +38,7 @@ describe Spree::Admin::UsersController, type: :controller do
 
       it 'can visit index' do
         post :index
-        expect(response).to be_success
+        expect(response).to be_successful
       end
 
       it "allows admins to update a user's API key" do

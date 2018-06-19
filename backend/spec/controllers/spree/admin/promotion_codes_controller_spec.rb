@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Spree::Admin::PromotionCodesController do
@@ -11,7 +13,7 @@ describe Spree::Admin::PromotionCodesController do
 
   it "can create a promotion rule of a valid type" do
     get :index, params: { promotion_id: promotion.id, format: 'csv' }
-    expect(response).to be_success
+    expect(response).to be_successful
     parsed = CSV.parse(response.body, headers: true)
     expect(parsed.entries.map(&:to_h)).to eq([{ "Code" => code1.value }, { "Code" => code2.value }, { "Code" => code3.value }])
   end

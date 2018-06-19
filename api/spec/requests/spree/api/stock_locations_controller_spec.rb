@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe Api::StockLocationsController, type: :request do
-
     let!(:stock_location) { create(:stock_location) }
     let!(:attributes) { [:id, :name, :address1, :address2, :city, :state_id, :state_name, :country_id, :zipcode, :phone, :active] }
 
@@ -14,7 +15,7 @@ module Spree
       describe "#index" do
         it "can see active stock locations" do
           get spree.api_stock_locations_path
-          expect(response).to be_success
+          expect(response).to be_successful
           stock_locations = json_response['stock_locations'].map { |sl| sl['name'] }
           expect(stock_locations).to include stock_location.name
         end
@@ -22,7 +23,7 @@ module Spree
         it "cannot see inactive stock locations" do
           stock_location.update_attributes!(active: false)
           get spree.api_stock_locations_path
-          expect(response).to be_success
+          expect(response).to be_successful
           stock_locations = json_response['stock_locations'].map { |sl| sl['name'] }
           expect(stock_locations).not_to include stock_location.name
         end
@@ -31,7 +32,7 @@ module Spree
       describe "#show" do
         it "can see active stock locations" do
           get spree.api_stock_location_path(stock_location)
-          expect(response).to be_success
+          expect(response).to be_successful
           expect(json_response['name']).to eq stock_location.name
         end
 
@@ -77,7 +78,7 @@ module Spree
       describe "#index" do
         it "can see active stock locations" do
           get spree.api_stock_locations_path
-          expect(response).to be_success
+          expect(response).to be_successful
           stock_locations = json_response['stock_locations'].map { |sl| sl['name'] }
           expect(stock_locations).to include stock_location.name
         end
@@ -85,7 +86,7 @@ module Spree
         it "can see inactive stock locations" do
           stock_location.update_attributes!(active: false)
           get spree.api_stock_locations_path
-          expect(response).to be_success
+          expect(response).to be_successful
           stock_locations = json_response['stock_locations'].map { |sl| sl['name'] }
           expect(stock_locations).to include stock_location.name
         end
@@ -116,14 +117,14 @@ module Spree
       describe "#show" do
         it "can see active stock locations" do
           get spree.api_stock_location_path(stock_location)
-          expect(response).to be_success
+          expect(response).to be_successful
           expect(json_response['name']).to eq stock_location.name
         end
 
         it "can see inactive stock locations" do
           stock_location.update_attributes!(active: false)
           get spree.api_stock_location_path(stock_location)
-          expect(response).to be_success
+          expect(response).to be_successful
           expect(json_response['name']).to eq stock_location.name
         end
       end

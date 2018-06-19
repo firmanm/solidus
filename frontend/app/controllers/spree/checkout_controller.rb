@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   # This is somewhat contrary to standard REST convention since there is not
   # actually a Checkout object. There's enough distinct logic specific to
@@ -33,7 +35,6 @@ module Spree
           redirect_on_failure
           return
         end
-
 
         if @order.completed?
           finalize_order
@@ -88,7 +89,7 @@ module Spree
       if update_params = massaged_params[:order]
         update_params.permit(permitted_checkout_attributes)
       else
-        # We current allow update requests without any parameters in them.
+        # We currently allow update requests without any parameters in them.
         {}
       end
     end
@@ -110,7 +111,7 @@ module Spree
     def ensure_valid_state
       unless skip_state_validation?
         if (params[:state] && !@order.has_checkout_step?(params[:state])) ||
-          (!params[:state] && !@order.has_checkout_step?(@order.state))
+           (!params[:state] && !@order.has_checkout_step?(@order.state))
           @order.state = 'cart'
           redirect_to checkout_state_path(@order.checkout_steps.first)
         end
@@ -165,6 +166,23 @@ module Spree
       spree.order_path(@order)
     end
 
+    def apply_coupon_code
+      if update_params[:coupon_code].present?
+        @order.coupon_code = update_params[:coupon_code]
+
+        handler = PromotionHandler::Coupon.new(@order).apply
+
+        if handler.error.present?
+          flash.now[:error] = handler.error
+        elsif handler.success
+          flash[:success] = handler.success
+        end
+
+        setup_for_current_state
+        respond_with(@order) { |format| format.html { render :edit } } && return
+      end
+    end
+
     def setup_for_current_state
       method_name = :"before_#{@order.state}"
       send(method_name) if respond_to?(method_name, true)
@@ -174,7 +192,7 @@ module Spree
       @order.assign_default_user_addresses
       # If the user has a default address, the previous method call takes care
       # of setting that; but if he doesn't, we need to build an empty one here
-      default = {country_id: Spree::Country.default.id}
+      default = { country_id: Spree::Country.default.id }
       @order.build_bill_address(default) unless @order.bill_address
       @order.build_ship_address(default) if @order.checkout_steps.include?('delivery') && !@order.ship_address
     end

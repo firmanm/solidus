@@ -1,8 +1,16 @@
-# coding: UTF-8
+# frozen_string_literal: true
 
 require 'rails_helper'
 
 RSpec.describe Spree::Taxon, type: :model do
+  context "#destroy" do
+    subject(:nested_set_options) { described_class.acts_as_nested_set_options }
+
+    it "should destroy all associated taxons" do
+      expect(nested_set_options[:dependent]).to eq :destroy
+    end
+  end
+
   describe '#to_param' do
     let(:taxon) { FactoryBot.build(:taxon, name: "Ruby on Rails") }
 

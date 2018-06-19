@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module Admin
     class ShippingMethodsController < ResourceController
@@ -6,7 +8,7 @@ module Spree
       before_action :set_zones, only: [:create, :update]
 
       def destroy
-        @object.paranoia_destroy
+        @object.discard
 
         flash[:success] = flash_message_for(@object, :successfully_removed)
 

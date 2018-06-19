@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::TaxRate, type: :model do
@@ -144,8 +146,7 @@ RSpec.describe Spree::TaxRate, type: :model do
         included_in_price: included_in_price,
         show_rate_in_label: show_rate_in_label,
         amount: 0.125,
-        zone: tax_zone
-      )
+        zone: tax_zone)
     end
 
     let(:item) { order.line_items.first }
@@ -232,7 +233,7 @@ RSpec.describe Spree::TaxRate, type: :model do
 
     context "when starts_at is set" do
       context "now" do
-        let(:validity) { { starts_at: DateTime.now } }
+        let(:validity) { { starts_at: Time.current } }
 
         it { is_expected.to eq(true) }
       end
@@ -252,7 +253,7 @@ RSpec.describe Spree::TaxRate, type: :model do
 
     context "when expires_at is set" do
       context "now" do
-        let(:validity) { { expires_at: DateTime.now } }
+        let(:validity) { { expires_at: Time.current } }
 
         it { is_expected.to eq(false) }
       end

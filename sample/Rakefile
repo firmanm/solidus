@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rake'
 require 'rake/testtask'
 require 'rspec/core/rake_task'
@@ -7,7 +9,7 @@ RSpec::Core::RakeTask.new
 task default: :spec
 
 DummyApp::RakeTasks.new(
-  gem_root: File.expand_path('../', __FILE__),
+  gem_root: File.expand_path(__dir__),
   lib_name: 'solidus_sample'
 )
 

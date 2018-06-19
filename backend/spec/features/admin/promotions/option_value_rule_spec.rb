@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 feature 'Promotion with option value rule' do
@@ -74,9 +76,8 @@ feature 'Promotion with option value rule' do
     end
 
     scenario "deleting a product", js: true do
-      within(".promo-rule-option-value:last-child") do
-        find(".remove").click
-      end
+      expect(page).to have_css('.promo-rule-option-value', count: 2)
+      all('.promo-rule-option-value')[1].find('.remove').click
 
       within('#rules_container') { click_button "Update" }
 

@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe Api::CheckoutsController, type: :request do
-
     before(:each) do
       stub_authentication!
       Spree::Config[:track_inventory_levels] = false

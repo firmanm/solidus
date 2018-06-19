@@ -1,15 +1,8 @@
+# frozen_string_literal: true
+
 if ENV["COVERAGE"]
-  # Run Coverage report
   require 'simplecov'
-  SimpleCov.start do
-    add_group 'Controllers', 'app/controllers'
-    add_group 'Helpers', 'app/helpers'
-    add_group 'Mailers', 'app/mailers'
-    add_group 'Models', 'app/models'
-    add_group 'Views', 'app/views'
-    add_group 'Jobs', 'app/jobs'
-    add_group 'Libraries', 'lib'
-  end
+  SimpleCov.start('rails')
 end
 
 require 'rspec/core'

@@ -1,4 +1,5 @@
-# encoding: utf-8
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "Variants", type: :feature do
@@ -66,6 +67,23 @@ describe "Variants", type: :feature do
         expect(page).to have_css("label", text: option_type.presentation)
         expect(page).to have_select('Size', selected: 'S')
       end
+    end
+  end
+
+  context "deleting a variant", js: true do
+    let!(:variant) { create(:variant, product: product) }
+    let!(:option_type) { create(:option_type) }
+    let!(:option_value) { create(:option_value, option_type: option_type) }
+
+    it "can delete a variant" do
+      visit spree.admin_product_variants_path(product)
+      within 'tr', text: 'Size: S' do
+        accept_alert do
+          click_icon :trash
+        end
+      end
+
+      expect(page).to have_no_text('Size: S')
     end
   end
 end

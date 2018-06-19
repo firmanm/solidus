@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module DummyApp
   module Migrations
     extend self
@@ -12,15 +14,25 @@ module DummyApp
     end
 
     def needs_migration?
-      !database_exists? || ActiveRecord::Migrator.needs_migration?
+      return true if !database_exists?
+      if ActiveRecord::Base.connection.respond_to?(:migration_context)
+        # Rails >= 5.2
+        ActiveRecord::Base.connection.migration_context.needs_migration?
+      else
+        ActiveRecord::Migrator.needs_migration?
+      end
     end
 
     def auto_migrate
       if needs_migration?
         puts "Configuration changed. Re-running migrations"
+
+        # Disconnect to avoid "database is being accessed by other users" on postgres
+        ActiveRecord::Base.remove_connection
+
         sh 'rake db:reset VERBOSE=false'
 
-        # We might have a brand new database, so we must re-establish our connection
+        # We have a brand new database, so we must re-establish our connection
         ActiveRecord::Base.establish_connection
       end
     end

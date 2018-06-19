@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::CustomerReturn, type: :model do
@@ -7,7 +9,7 @@ RSpec.describe Spree::CustomerReturn, type: :model do
 
   describe ".validation" do
     describe "#return_items_belong_to_same_order" do
-      let(:customer_return)       { build(:customer_return) }
+      let(:customer_return) { build(:customer_return) }
 
       let(:first_order) { create(:order_with_line_items) }
       let(:second_order) { first_order }
@@ -218,7 +220,7 @@ RSpec.describe Spree::CustomerReturn, type: :model do
       end
 
       it "should NOT raise an error when a soft-deleted stock item exists in the stock location" do
-        inventory_unit.find_stock_item.paranoia_destroy
+        inventory_unit.find_stock_item.discard
         create(:customer_return_without_return_items, return_items: [return_item], stock_location_id: new_stock_location.id)
       end
 

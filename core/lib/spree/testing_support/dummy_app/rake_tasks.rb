@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module DummyApp
   class RakeTasks
     include Rake::DSL
@@ -36,7 +38,12 @@ namespace :db do
     # railties:install:migrations and then db:migrate.
     # Migrations should be run one directory at a time
     ActiveRecord::Migrator.migrations_paths.each do |path|
-      ActiveRecord::Migrator.migrate(path)
+      if defined?(ActiveRecord::MigrationContext)
+        # Rails >= 5.2
+        ActiveRecord::MigrationContext.new([path]).migrate
+      else
+        ActiveRecord::Migrator.migrate(path)
+      end
     end
 
     ActiveRecord::Base.clear_cache!
@@ -54,6 +61,7 @@ task console: :dummy_environment do
   rescue LoadError
   end
 
+  require 'rails/commands'
   require 'rails/commands/console/console_command'
   Rails::Console.new(Rails.application, sandbox: true, environment: "test").start
 end

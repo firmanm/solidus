@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module Api
     class ProductsController < Spree::Api::BaseController
@@ -91,7 +93,7 @@ module Spree
       def destroy
         @product = find_product(params[:id])
         authorize! :destroy, @product
-        @product.paranoia_destroy
+        @product.discard
         respond_with(@product, status: 204)
       end
 

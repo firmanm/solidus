@@ -1,14 +1,8 @@
+# frozen_string_literal: true
+
 if ENV["COVERAGE"]
-  # Run Coverage report
   require 'simplecov'
-  SimpleCov.start do
-    add_group 'Controllers', 'app/controllers'
-    add_group 'Helpers', 'app/helpers'
-    add_group 'Mailers', 'app/mailers'
-    add_group 'Models', 'app/models'
-    add_group 'Views', 'app/views'
-    add_group 'Libraries', 'lib'
-  end
+  SimpleCov.start('rails')
 end
 
 # This file is copied to ~/spec when you run 'ruby script/generate rspec'
@@ -18,7 +12,7 @@ ENV["RAILS_ENV"] ||= 'test'
 require 'solidus_frontend'
 require 'spree/testing_support/dummy_app'
 DummyApp.setup(
-  gem_root: File.expand_path('../../', __FILE__),
+  gem_root: File.expand_path('..', __dir__),
   lib_name: 'solidus_frontend'
 )
 
@@ -61,7 +55,7 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 
-  config.fixture_path = File.join(File.expand_path(File.dirname(__FILE__)), "fixtures")
+  config.fixture_path = File.join(__dir__, "fixtures")
 
   # If you're not using ActiveRecord, or you'd prefer not to run each of your
   # examples within a transaction, comment the following line or assign false

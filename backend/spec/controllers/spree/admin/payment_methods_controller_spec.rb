@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
@@ -60,7 +62,7 @@ module Spree
         second_method.move_to_top
       end
 
-      it { is_expected.to be_success }
+      it { is_expected.to be_successful }
       it { is_expected.to render_template "index"  }
 
       it "respects the order of payment methods by position" do

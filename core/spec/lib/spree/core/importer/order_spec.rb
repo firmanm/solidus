@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 module Spree
@@ -128,8 +130,11 @@ module Spree
       end
 
       it 'can build an order from API with variant sku' do
-        params = { line_items_attributes: {
-                     "0" => { sku: sku, quantity: 5 } } }
+        params = {
+          line_items_attributes: {
+            "0" => { sku: sku, quantity: 5 }
+          }
+        }
 
         order = Importer::Order.import(user, params)
 
@@ -242,7 +247,7 @@ module Spree
 
       context 'variant was soft-deleted' do
         it 'raise error as variant shouldnt be found' do
-          variant.product.paranoia_destroy
+          variant.product.discard
           hash = { sku: variant.sku }
           expect {
             Importer::Order.ensure_variant_id_from_params(hash)
@@ -275,14 +280,17 @@ module Spree
 
       context "shipments" do
         let(:params) do
-          { shipments_attributes: [
-              { tracking: '123456789',
+          {
+            shipments_attributes: [
+              {
+                tracking: '123456789',
                 cost: '14.99',
                 shipping_method: shipping_method.name,
                 stock_location: stock_location.name,
                 inventory_units: [{ sku: sku }]
               }
-          ] }
+            ]
+          }
         end
 
         it 'ensures variant exists and is not deleted' do
@@ -323,7 +331,8 @@ module Spree
             {
               completed_at: 2.days.ago,
               shipments_attributes: [
-                { tracking: '123456789',
+                {
+                  tracking: '123456789',
                   cost: '4.99',
                   shipped_at: 1.day.ago,
                   shipping_method: shipping_method.name,
@@ -354,9 +363,12 @@ module Spree
       end
 
       it 'adds adjustments' do
-        params = { adjustments_attributes: [
+        params = {
+          adjustments_attributes: [
             { label: 'Shipping Discount', amount: -4.99 },
-            { label: 'Promotion Discount', amount: -3.00 }] }
+            { label: 'Promotion Discount', amount: -3.00 }
+          ]
+        }
 
         order = Importer::Order.import(user, params)
         expect(order.adjustments.all?(&:finalized?)).to be true

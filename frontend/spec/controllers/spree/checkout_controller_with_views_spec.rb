@@ -1,4 +1,5 @@
-# encoding: utf-8
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 # This spec is useful for when we just want to make sure a view is rendering correctly
@@ -22,7 +23,7 @@ describe Spree::CheckoutController, type: :controller do
       before do
         # Using a let block won't acknowledge the currency setting
         # Therefore we just do it like this...
-        order = OrderWalkthrough.up_to(:address)
+        order = Spree::TestingSupport::OrderWalkthrough.up_to(:address)
         allow(controller).to receive_messages current_order: order
       end
 

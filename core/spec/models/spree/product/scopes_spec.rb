@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe "Product scopes", type: :model do
@@ -131,7 +133,7 @@ RSpec.describe "Product scopes", type: :model do
       end
 
       context "with soft-deleted master price" do
-        before { product.master.prices.each(&:paranoia_destroy!) }
+        before { product.master.prices.discard_all }
 
         it "doesn't include the product" do
           expect(Spree::Product.available).to match_array([])

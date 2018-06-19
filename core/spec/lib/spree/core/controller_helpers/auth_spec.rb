@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 class FakesController < ApplicationController
@@ -38,6 +40,7 @@ RSpec.describe Spree::Core::ControllerHelpers::Auth, type: :controller do
     end
     it 'sends cookie header' do
       get :index
+      expect(response.headers["Set-Cookie"]).to match(/guest_token.*HttpOnly/)
       expect(response.cookies['guest_token']).not_to be_nil
     end
   end

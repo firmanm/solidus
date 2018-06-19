@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   class ReturnItem < Spree::Base
     INTERMEDIATE_RECEPTION_STATUSES = %i(given_to_customer lost_in_transit shipped_wrong_item short_shipped in_transit)
@@ -210,7 +212,7 @@ module Spree
       event_paths.delete(:expired)
       event_paths.delete(:unexchange)
 
-      status_paths.map{ |s| s.to_s.humanize }.zip(event_paths)
+      status_paths.map{ |s| I18n.t("spree.reception_states.#{s}", default: s.to_s.humanize) }.zip(event_paths)
     end
 
     def part_of_exchange?

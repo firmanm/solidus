@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::FulfilmentChanger do
@@ -55,6 +57,15 @@ RSpec.describe Spree::FulfilmentChanger do
     it "recalculates shipping costs for the new shipment" do
       expect(desired_shipment).to receive(:refresh_rates)
       subject
+    end
+
+    it 'updates order totals' do
+      original_total = order.total
+      original_shipment_total = order.shipment_total
+
+      expect { subject }.
+        to change { order.total }.from(original_total).to(original_total + original_shipment_total).
+        and change { order.shipment_total }.by(original_shipment_total)
     end
 
     context "when transferring to another stock location" do

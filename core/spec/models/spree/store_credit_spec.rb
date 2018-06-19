@@ -1,6 +1,10 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::StoreCredit do
+  include ActiveSupport::Testing::TimeHelpers
+
   let(:currency) { "TEST" }
   let(:store_credit) { build(:store_credit, store_credit_attrs) }
   let(:store_credit_attrs) { {} }
@@ -10,12 +14,16 @@ RSpec.describe Spree::StoreCredit do
 
     context "amount used is greater than zero" do
       let(:store_credit) { create(:store_credit, amount: 100, amount_used: 1) }
-      subject { store_credit.paranoia_destroy }
 
-      it 'can not delete the store credit' do
-        subject
-        expect(store_credit.reload).to eq store_credit
-        expect(store_credit.errors[:amount_used]).to include("is greater than zero. Can not delete store credit")
+      describe "#discard" do
+        subject { store_credit.discard }
+
+        it 'can not delete the store credit' do
+          subject
+          expect(store_credit.reload).to eq store_credit
+          expect(store_credit.errors[:amount_used]).to include("is greater than zero. Can not delete store credit")
+          expect(store_credit).not_to be_discarded
+        end
       end
     end
 
@@ -737,7 +745,7 @@ RSpec.describe Spree::StoreCredit do
       end
     end
 
-    describe "#store_events" do
+    describe "#store_event" do
       context "create" do
         context "user has one store credit" do
           let(:store_credit_amount) { 100.0 }
@@ -755,19 +763,34 @@ RSpec.describe Spree::StoreCredit do
           it "saves the user's total store credit in the event" do
             expect(subject.store_credit_events.first.user_total_amount).to eq store_credit_amount
           end
+
+          it "saves the user's unused store credit in the event" do
+            expect(subject.store_credit_events.first.amount_remaining).to eq store_credit_amount
+          end
         end
 
         context "user has multiple store credits" do
           let(:store_credit_amount)            { 100.0 }
           let(:additional_store_credit_amount) { 200.0 }
-
           let(:user)                           { create(:user) }
-          let!(:store_credit)                  { create(:store_credit, user: user, amount: store_credit_amount) }
 
-          subject { create(:store_credit, user: user, amount: additional_store_credit_amount) }
+          let!(:store_credits) do
+            [
+              create(:store_credit, user: user, amount: store_credit_amount),
+              create(:store_credit, user: user, amount: additional_store_credit_amount)
+            ]
+          end
+
+          subject { store_credits.flat_map(&:store_credit_events) }
 
           it "saves the user's total store credit in the event" do
-            expect(subject.store_credit_events.first.user_total_amount).to eq(store_credit_amount + additional_store_credit_amount)
+            expect(subject.first.user_total_amount).to eq store_credit_amount
+            expect(subject.last.user_total_amount).to eq(store_credit_amount + additional_store_credit_amount)
+          end
+
+          it "saves the user's unused store credit in the event" do
+            expect(subject.first.amount_remaining).to eq store_credit_amount
+            expect(subject.last.amount_remaining).to eq additional_store_credit_amount
           end
         end
 
@@ -839,7 +862,7 @@ RSpec.describe Spree::StoreCredit do
 
     it "sets the invalidated_at field to the current time" do
       invalidated_at = 2.minutes.from_now
-      Timecop.freeze(invalidated_at) do
+      travel_to(invalidated_at) do
         subject
         expect(store_credit.invalidated_at).to be_within(1.second).of invalidated_at
       end

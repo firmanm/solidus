@@ -1,8 +1,17 @@
+# frozen_string_literal: true
+
+require 'discard'
+
 module Spree
   # Represents a means of having a shipment delivered, such as FedEx or UPS.
   #
   class ShippingMethod < Spree::Base
     acts_as_paranoid
+    include Spree::ParanoiaDeprecations
+
+    include Discard::Model
+    self.discard_column = :deleted_at
+
     include Spree::CalculatedAdjustments
     DISPLAY = ActiveSupport::Deprecation::DeprecatedObjectProxy.new(
       [:both, :front_end, :back_end],
@@ -23,9 +32,17 @@ module Spree
     has_many :shipping_method_stock_locations, dependent: :destroy, class_name: "Spree::ShippingMethodStockLocation"
     has_many :stock_locations, through: :shipping_method_stock_locations
 
+    has_many :store_shipping_methods, inverse_of: :shipping_method
+    has_many :stores, through: :store_shipping_methods
+
     validates :name, presence: true
 
     validate :at_least_one_shipping_category
+
+    scope :available_to_store, ->(store) do
+      raise ArgumentError, "You must provide a store" if store.nil?
+      store.shipping_methods.empty? ? all : where(id: store.shipping_method_ids)
+    end
 
     # @param shipping_category_ids [Array<Integer>] ids of desired shipping categories
     # @return [ActiveRecord::Relation] shipping methods which are associated

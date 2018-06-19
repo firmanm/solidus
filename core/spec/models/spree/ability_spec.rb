@@ -1,8 +1,13 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 require 'cancan'
 require 'cancan/matchers'
 require 'spree/testing_support/ability_helpers'
-require 'spree/testing_support/bar_ability'
+
+Spree::Deprecation.silence do
+  require 'spree/testing_support/bar_ability'
+end
 
 # Fake ability for testing registration of additional abilities
 class FooAbility

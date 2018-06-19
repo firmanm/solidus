@@ -1,4 +1,4 @@
-# encoding: utf-8
+# frozen_string_literal: true
 
 require 'rails_helper'
 
@@ -145,7 +145,7 @@ RSpec.describe Spree::Variant, type: :model do
       context "and a variant is soft-deleted" do
         let!(:old_options_text) { variant.options_text }
 
-        before { variant.paranoia_destroy! }
+        before { variant.discard }
 
         it "still keeps the option values for that variant" do
           expect(variant.reload.options_text).to eq(old_options_text)
@@ -654,19 +654,43 @@ RSpec.describe Spree::Variant, type: :model do
     end
   end
 
-  describe "deleted_at scope" do
-    let!(:previous_variant_price) { variant.display_price }
+  describe "#discard" do
+    it "discards related associations" do
+      variant.images = [create(:image)]
 
-    before { variant.paranoia_destroy }
+      expect(variant.stock_items).not_to be_empty
+      expect(variant.prices).not_to be_empty
+      expect(variant.currently_valid_prices).not_to be_empty
 
-    it "should keep its price if deleted" do
-      expect(variant.display_price).to eq(previous_variant_price)
+      variant.discard
+
+      expect(variant.images).to be_empty
+      expect(variant.stock_items).to be_empty
+      expect(variant.prices).to be_empty
+      expect(variant.currently_valid_prices).to be_empty
     end
 
-    context 'when loading with pre-fetching of default_price' do
-      it 'also keeps the previous price' do
-        reloaded_variant = Spree::Variant.with_deleted.includes(:default_price).find_by(id: variant.id)
-        expect(reloaded_variant.display_price).to eq(previous_variant_price)
+    describe 'default_price' do
+      let!(:previous_variant_price) { variant.display_price }
+
+      it "should discard default_price" do
+        variant.discard
+        variant.reload
+        expect(variant.default_price).to be_discarded
+      end
+
+      it "should keep its price if deleted" do
+        variant.discard
+        variant.reload
+        expect(variant.display_price).to eq(previous_variant_price)
+      end
+
+      context 'when loading with pre-fetching of default_price' do
+        it 'also keeps the previous price' do
+          variant.discard
+          reloaded_variant = Spree::Variant.with_deleted.includes(:default_price).find_by(id: variant.id)
+          expect(reloaded_variant.display_price).to eq(previous_variant_price)
+        end
       end
     end
   end
@@ -730,11 +754,45 @@ RSpec.describe Spree::Variant, type: :model do
     end
   end
 
+  describe ".suppliable" do
+    subject { Spree::Variant.suppliable }
+    let!(:in_stock_variant) { create(:variant) }
+    let!(:out_of_stock_variant) { create(:variant) }
+    let!(:backordered_variant) { create(:variant) }
+    let!(:stock_location) { create(:stock_location) }
+
+    before do
+      in_stock_variant.stock_items.update_all(count_on_hand: 10)
+      backordered_variant.stock_items.update_all(count_on_hand: 0, backorderable: true)
+      out_of_stock_variant.stock_items.update_all(count_on_hand: 0, backorderable: false)
+    end
+
+    it "includes the in stock variant" do
+      expect( subject ).to include(in_stock_variant)
+    end
+
+    it "includes out of stock variant" do
+      expect( subject ).to include(backordered_variant)
+    end
+
+    it "does not include out of stock variant" do
+      expect( subject ).not_to include(out_of_stock_variant)
+    end
+
+    context "inventory levels globally not tracked" do
+      before { Spree::Config.track_inventory_levels = false }
+
+      it "includes all variants" do
+        expect( subject ).to include(in_stock_variant, backordered_variant, out_of_stock_variant)
+      end
+    end
+  end
+
   describe "#display_image" do
     subject { variant.display_image }
 
     context "variant has associated images" do
-      let(:attachment) { File.open(File.expand_path('../../../fixtures/thinking-cat.jpg', __FILE__)) }
+      let(:attachment) { File.open(File.expand_path('../../fixtures/thinking-cat.jpg', __dir__)) }
       let(:image_params) { { viewable_id: variant.id, viewable_type: 'Spree::Variant', attachment: attachment, alt: "position 1", position: 1 } }
       let!(:first_image) { Spree::Image.create(image_params) }
       let!(:second_image) { image_params.merge(alt: "position 2", position: 2) }

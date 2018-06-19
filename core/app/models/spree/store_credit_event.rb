@@ -1,6 +1,14 @@
+# frozen_string_literal: true
+
+require 'discard'
+
 module Spree
   class StoreCreditEvent < Spree::Base
     acts_as_paranoid
+    include Spree::ParanoiaDeprecations
+
+    include Discard::Model
+    self.discard_column = :deleted_at
 
     belongs_to :store_credit
     belongs_to :originator, polymorphic: true
@@ -36,6 +44,10 @@ module Spree
 
     def display_user_total_amount
       Spree::Money.new(user_total_amount, { currency: currency })
+    end
+
+    def display_remaining_amount
+      Spree::Money.new(amount_remaining, { currency: currency })
     end
 
     def display_event_date

@@ -13,8 +13,8 @@
 
       <div data-hook="admin_product_form_slug">
         <%= f.field_container :slug do %>
-          <%= f.label :slug, class: 'required' %>
-          <%= f.text_field :slug, class: 'fullwidth title', required: true %>
+          <%= f.label :slug, class: ('required' if !f.object.new_record?) %>
+          <%= f.text_field :slug, class: 'fullwidth title', required: !f.object.new_record?, disabled: f.object.new_record? %>
           <%= f.error_message_on :slug %>
         <% end %>
       </div>
@@ -64,16 +64,20 @@
       <div data-hook="admin_product_form_available_on">
         <%= f.field_container :available_on do %>
           <%= f.label :available_on %>
+          <%= f.field_hint :available_on %>
+
+          <%= render "spree/admin/shared/datepicker", f: f, date_attr: :available_on %>
+
           <%= f.error_message_on :available_on %>
-          <%= f.text_field :available_on, value: datepicker_field_value(@product.available_on), class: 'datepicker' %>
         <% end %>
       </div>
 
       <div data-hook="admin_product_form_promotionable">
         <%= f.field_container :promotionable do %>
-          <%= f.label :promotionable do %>
-            <%= f.check_box :promotionable %> <%= Spree::Product.human_attribute_name(:promotionable) %>
-          <% end %>
+          <label>
+            <%= f.check_box :promotionable %>
+            <%= Spree::Product.human_attribute_name(:promotionable) %>
+          </label>
           <%= f.field_hint :promotionable %>
         <% end %>
       </div>
@@ -121,9 +125,9 @@
 
       <div data-hook="admin_product_form_shipping_categories">
         <%= f.field_container :shipping_categories do %>
-          <%= f.label :shipping_category_id, Spree::ShippingCategory.model_name.human %>
+          <%= f.label :shipping_category_id, Spree::ShippingCategory.model_name.human, class: 'required' %>
           <%= f.field_hint :shipping_category %>
-          <%= f.collection_select(:shipping_category_id, @shipping_categories, :id, :name, { include_blank: t('spree.match_choices.none') }, { class: 'custom-select' }) %>
+          <%= f.collection_select(:shipping_category_id, @shipping_categories, :id, :name, { include_blank: t('spree.match_choices.none') }, { class: 'custom-select' , required: true}) %>
           <%= f.error_message_on :shipping_category %>
         <% end %>
       </div>

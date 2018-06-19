@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spree/testing_support/factories/address_factory'
 require 'spree/testing_support/factories/shipment_factory'
 require 'spree/testing_support/factories/store_factory'
@@ -26,6 +28,10 @@ FactoryBot.define do
           order: order,
           price: evaluator.line_items_price
         )
+      end
+
+      after(:create) do |order|
+        order.recalculate
       end
     end
 

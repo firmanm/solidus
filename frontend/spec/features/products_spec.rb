@@ -1,4 +1,5 @@
-# encoding: utf-8
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "Visiting Products", type: :feature, inaccessible: true do
@@ -153,7 +154,7 @@ describe "Visiting Products", type: :feature, inaccessible: true do
 
     before do
       # Need to have two images to trigger the error
-      image = File.open(File.expand_path('../../fixtures/thinking-cat.jpg', __FILE__))
+      image = File.open(File.expand_path('../fixtures/thinking-cat.jpg', __dir__))
       product.images.create!(attachment: image)
       product.images.create!(attachment: image)
 
@@ -183,7 +184,7 @@ describe "Visiting Products", type: :feature, inaccessible: true do
     let(:product) { Spree::Product.find_by(name: "Ruby on Rails Baseball Jersey") }
 
     before do
-      image = File.open(File.expand_path('../../fixtures/thinking-cat.jpg', __FILE__))
+      image = File.open(File.expand_path('../fixtures/thinking-cat.jpg', __dir__))
       v1 = product.variants.create!(price: 9.99)
       v2 = product.variants.create!(price: 10.99)
       v1.images.create!(attachment: image)
@@ -267,6 +268,14 @@ describe "Visiting Products", type: :feature, inaccessible: true do
     visit spree.product_path(product)
     expect(page).to have_content "This product is not available in the selected currency."
     expect(page).not_to have_content "add-to-cart-button"
+  end
+
+  it "should be able to list products without a price" do
+    product = FactoryBot.create(:base_product, description: nil, name: 'Sample', price: '19.99')
+    Spree::Config.currency = "CAN"
+    Spree::Config.show_products_without_price = true
+    visit spree.products_path
+    expect(page).to have_content(product.name)
   end
 
   it "should return the correct title when displaying a single product" do

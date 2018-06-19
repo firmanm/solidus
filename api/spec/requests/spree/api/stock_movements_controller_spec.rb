@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe Api::StockMovementsController, type: :request do
-
     let!(:stock_location) { create(:stock_location_with_items) }
     let!(:stock_item) { stock_location.stock_items.order(:id).first }
     let!(:stock_movement) { create(:stock_movement, stock_item: stock_item) }

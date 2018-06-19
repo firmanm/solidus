@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe Api::StatesController, type: :request do
-
     let!(:state) { create(:state, name: "Victoria") }
     let(:attributes) { [:id, :name, :abbr, :country_id] }
 

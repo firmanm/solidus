@@ -1,5 +1,6 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
-require 'spree/testing_support/bar_ability'
 
 module Spree
   describe Api::OrdersController, type: :request do
@@ -45,20 +46,20 @@ module Spree
 
         it "does not include unpermitted params, or allow overriding the user" do
           subject
-          expect(response).to be_success
+          expect(response).to be_successful
           order = Spree::Order.last
           expect(order.user).to eq current_api_user
           expect(order.email).to eq target_user.email
         end
 
-        it { is_expected.to be_success }
+        it { is_expected.to be_successful }
 
         context 'creating payment' do
           let(:attributes) { super().merge(payments_attributes: [{ payment_method_id: payment_method.id }]) }
 
           context "with allowed payment method" do
             let!(:payment_method) { create(:check_payment_method, name: "allowed" ) }
-            it { is_expected.to be_success }
+            it { is_expected.to be_successful }
             it "creates a payment" do
               expect {
                 subject
@@ -76,6 +77,20 @@ module Spree
             end
           end
         end
+
+        context "with existing promotion" do
+          let(:discount) { 2 }
+          before do
+            create(:promotion, :with_line_item_adjustment, apply_automatically: true, adjustment_rate: discount )
+          end
+
+          it "activates the promotion" do
+            post spree.api_orders_path, params: { order: { line_items: { "0" => { variant_id: variant.to_param, quantity: 1 } } } }
+            order = Order.last
+            line_item = order.line_items.first
+            expect(order.total).to eq(line_item.price - discount)
+          end
+        end
       end
 
       context "when the current user can administrate the order" do
@@ -91,7 +106,7 @@ module Spree
           expect(order.created_at).to eq date_override
         end
 
-        it { is_expected.to be_success }
+        it { is_expected.to be_successful }
       end
 
       context 'when the line items have custom attributes' do
@@ -126,7 +141,7 @@ module Spree
           }.to change { order.reload.email }.to("foo@foobar.com")
         end
 
-        it { is_expected.to be_success }
+        it { is_expected.to be_successful }
 
         it "does not associate users" do
           expect {
@@ -145,7 +160,7 @@ module Spree
 
           context "with allowed payment method" do
             let!(:payment_method) { create(:check_payment_method, name: "allowed" ) }
-            it { is_expected.to be_success }
+            it { is_expected.to be_successful }
             it "creates a payment" do
               expect {
                 subject
@@ -289,6 +304,22 @@ module Spree
         end
       end
 
+      context 'when an item does not track inventory' do
+        before do
+          order.line_items.first.variant.update_attributes!(track_inventory: false)
+        end
+
+        it 'contains stock information on variant' do
+          subject
+          variant = json_response['line_items'][0]['variant']
+          expect(variant).to_not be_nil
+          expect(variant['in_stock']).to eq(true)
+          expect(variant['total_on_hand']).to eq(nil)
+          expect(variant['is_backorderable']).to eq(true)
+          expect(variant['is_destroyed']).to eq(false)
+        end
+      end
+
       context 'when shipment adjustments are present' do
         before do
           order.shipments.first.adjustments << adjustment
@@ -317,6 +348,21 @@ module Spree
           expect(credit_cards[0]['id']).to eq payment.source.id
           expect(credit_cards[0]['address']['id']).to eq credit_card.address_id
         end
+
+        it 'renders the payment source view for gateway' do
+          subject
+          expect(response).to render_template partial: 'spree/api/payments/source_views/_gateway'
+        end
+      end
+
+      context 'when store credit is present' do
+        let!(:payment) { create(:store_credit_payment, order: order, source: store_credit) }
+        let(:store_credit) { create(:store_credit) }
+
+        it 'renders the payment source view for store credit' do
+          subject
+          expect(response).to render_template partial: 'spree/api/payments/source_views/_storecredit'
+        end
       end
     end
 
@@ -341,18 +387,6 @@ module Spree
     it "can view an order if the token is passed in header" do
       get spree.api_order_path(order), headers: { "X-Spree-Order-Token" => order.guest_token }
       expect(response.status).to eq(200)
-    end
-
-    context "with BarAbility registered" do
-      before { Spree::Ability.register_ability(::BarAbility) }
-      after { Spree::Ability.remove_ability(::BarAbility) }
-
-      it "can view an order" do
-        user = build(:user, spree_roles: [Spree::Role.new(name: 'bar')])
-        allow(Spree.user_class).to receive_messages find_by: user
-        get spree.api_order_path(order)
-        expect(response.status).to eq(200)
-      end
     end
 
     it "cannot cancel an order that doesn't belong to them" do
@@ -541,7 +575,7 @@ module Spree
       context "order has shipments" do
         before { order.create_proposed_shipments }
 
-        it "clears out all existing shipments on line item udpate" do
+        it "clears out all existing shipments on line item update" do
           put spree.api_order_path(order), params: { order: {
             line_items: {
               0 => { id: line_item.id, quantity: 10 }

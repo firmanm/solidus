@@ -3,7 +3,7 @@
 <% content_for :page_actions do %>
   <% if can?(:admin, Spree.user_class) && can?(:create, Spree.user_class) %>
     <li>
-      <%= button_link_to t('spree.new_user'), new_admin_user_url, id: 'admin_new_user_link' %>
+      <%= link_to t('spree.new_user'), new_admin_user_url, id: 'admin_new_user_link', class: 'btn btn-primary' %>
     </li>
   <% end %>
 <% end %>
@@ -36,9 +36,11 @@
               <%= f.text_field :created_at_gt, class: 'datepicker form-control datepicker-from',
                 value: params[:q].try!("[]", :created_at_gt), placeholder: t('spree.start') %>
 
-              <span class="range-divider input-group-addon">
-                <i class="fa fa-arrow-right"></i>
-              </span>
+              <div class="input-group-prepend input-group-append">
+                <span class="input-group-text range-divider">
+                  <i class="fa fa-arrow-right"></i>
+                </span>
+              </div>
 
               <%= f.text_field :created_at_lt, class: 'datepicker form-control datepicker-to',
                 value: params[:q].try!("[]", :created_at_lt), placeholder: t('spree.stop') %>
@@ -48,7 +50,7 @@
       </div>
 
       <div class="actions filter-actions" data-hook="admin_users_index_search_buttons">
-        <%= button t('spree.search') %>
+        <%= button_tag t('spree.search'), class: 'btn btn-primary' %>
       </div>
     <% end %>
   </div>

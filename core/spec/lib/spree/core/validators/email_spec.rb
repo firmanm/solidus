@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 require 'spree/core/validators/email'
 
-RSpec.describe EmailValidator do
+RSpec.describe Spree::EmailValidator do
   class Tester
     include ActiveModel::Validations
     attr_accessor :email_address
-    validates :email_address, email: true
+    validates :email_address, 'spree/email' => true
   end
 
   let(:valid_emails) {

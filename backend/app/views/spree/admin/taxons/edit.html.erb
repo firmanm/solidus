@@ -3,7 +3,7 @@
 
 <% content_for :page_actions do %>
   <li>
-    <%= button_link_to t('spree.back_to_taxonomies_list'), spree.admin_taxonomies_path %>
+    <%= link_to t('spree.back_to_taxonomies_list'), spree.admin_taxonomies_path, class: 'btn btn-primary' %>
   </li>
 <% end %>
 
@@ -13,7 +13,7 @@
   <%= render 'form', f: f %>
 
   <div class="form-buttons filter-actions" data-hook="buttons">
-    <%= button t('spree.actions.update') %>
-    <%= button_link_to t('spree.actions.cancel'), edit_admin_taxonomy_url(@taxonomy) %>
+    <%= button_tag t('spree.actions.update'), class: 'btn btn-primary' %>
+    <%= link_to t('spree.actions.cancel'), edit_admin_taxonomy_url(@taxonomy), class: 'btn btn-primary' %>
   </div>
 <% end %>

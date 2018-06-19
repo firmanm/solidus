@@ -1,17 +1,18 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 ENV["RAILS_ENV"] ||= 'test'
 
 require 'spree/testing_support/dummy_app'
 DummyApp.setup(
-  gem_root: File.expand_path('../../', __FILE__),
+  gem_root: File.expand_path('..', __dir__),
   lib_name: 'solidus_core'
 )
 
 require 'rspec/rails'
 require 'rspec-activemodel-mocks'
 require 'database_cleaner'
-require 'timecop'
 
 Dir["./spec/support/**/*.rb"].sort.each { |f| require f }
 
@@ -22,7 +23,7 @@ require 'cancan/matchers'
 ActiveJob::Base.queue_adapter = :test
 
 RSpec.configure do |config|
-  config.fixture_path = File.join(File.expand_path(File.dirname(__FILE__)), "fixtures")
+  config.fixture_path = File.join(__dir__, "fixtures")
 
   config.infer_spec_type_from_file_location!
 

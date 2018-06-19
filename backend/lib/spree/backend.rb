@@ -1,9 +1,9 @@
+# frozen_string_literal: true
+
 require 'rails/all'
 require 'jquery-rails'
-require 'jquery-ui-rails'
 require 'coffee-rails'
 require 'sass-rails'
-require 'bourbon'
 require 'handlebars_assets'
 require 'font-awesome-rails'
 require 'autoprefixer-rails'

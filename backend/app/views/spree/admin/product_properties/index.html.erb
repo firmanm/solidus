@@ -53,7 +53,7 @@
         </div>
       <% end %>
       <div class="form-buttons filter-actions actions">
-        <%= button t('spree.filter_results') %>
+        <%= button_tag t('spree.filter_results'), class: 'btn btn-primary' %>
         <% if @option_value_ids.present? %>
           <%= link_to_add_fields t('spree.add_variant_properties'), 'tbody#variant_property_values', class: 'plus button' %>
         <% end %>
@@ -91,13 +91,6 @@
   <% end %>
 <% end %>
 
-<%= javascript_tag do -%>
-  var properties = <%= raw(@properties.to_json) %>;
-  $('#product_properties, #variant_property_values').on('keydown', 'input.autocomplete', function() {
-    already_auto_completed = $(this).is('ac_input');
-    if (!already_auto_completed) {
-      $(this).autocomplete({source: properties});
-      $(this).focus();
-    }
-  });
-<% end -%>
+<datalist id="properties">
+  <%= safe_join @properties.map { |name| tag(:option, value: name) } %>
+</datalist>

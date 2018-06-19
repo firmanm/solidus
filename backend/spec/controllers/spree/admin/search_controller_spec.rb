@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Spree::Admin::SearchController, type: :controller do
@@ -71,7 +73,7 @@ describe Spree::Admin::SearchController, type: :controller do
     shared_examples_for 'product search' do
       it 'should respond with http success' do
         subject
-        expect(response).to be_success
+        expect(response).to be_successful
       end
 
       it 'should set the Surrogate-Control header' do

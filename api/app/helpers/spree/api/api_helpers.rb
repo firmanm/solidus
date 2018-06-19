@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module Api
     module ApiHelpers
@@ -51,7 +53,7 @@ module Spree
       @@product_attributes = [
         :id, :name, :description, :price, :display_price, :available_on,
         :slug, :meta_description, :meta_keywords, :shipping_category_id,
-        :taxon_ids, :total_on_hand
+        :taxon_ids, :total_on_hand, :meta_title
       ]
 
       @@product_property_attributes = [
@@ -131,7 +133,7 @@ module Spree
 
       @@adjustment_attributes = [
         :id, :source_type, :source_id, :adjustable_type, :adjustable_id,
-        :amount, :label, :promotion_code,
+        :amount, :label, :promotion_code_id,
         :finalized, :eligible, :created_at, :updated_at
       ]
 
@@ -166,12 +168,12 @@ module Spree
 
       @@store_attributes = [
         :id, :name, :url, :meta_description, :meta_keywords, :seo_title,
-        :mail_from_address, :default_currency, :code, :default
+        :mail_from_address, :default_currency, :code, :default, :available_locales
       ]
 
       @@store_credit_history_attributes = [
         :display_amount, :display_user_total_amount, :display_action,
-        :display_event_date
+        :display_event_date, :display_remaining_amount
       ]
 
       def variant_attributes

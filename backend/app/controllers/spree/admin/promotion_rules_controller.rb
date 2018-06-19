@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Spree::Admin::PromotionRulesController < Spree::Admin::BaseController
   helper 'spree/promotion_rules'
 
@@ -31,6 +33,10 @@ class Spree::Admin::PromotionRulesController < Spree::Admin::BaseController
 
   def load_promotion
     @promotion = Spree::Promotion.find(params[:promotion_id])
+  end
+
+  def model_class
+    Spree::PromotionRule
   end
 
   def validate_promotion_rule_type

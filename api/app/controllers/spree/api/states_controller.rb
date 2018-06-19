@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module Api
     class StatesController < Spree::Api::BaseController
@@ -24,9 +26,9 @@ module Spree
       def scope
         if params[:country_id]
           @country = Spree::Country.accessible_by(current_ability, :read).find(params[:country_id])
-          return @country.states.accessible_by(current_ability, :read)
+          @country.states.accessible_by(current_ability, :read)
         else
-          return Spree::State.accessible_by(current_ability, :read)
+          Spree::State.accessible_by(current_ability, :read)
         end
       end
     end

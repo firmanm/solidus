@@ -141,7 +141,7 @@ en:
         created_at: Date/Time
         number: Identifier
         response_code: Transaction ID
-        state: Payment State
+        state: State
       spree/payment_method:
         active: Active
         auto_capture: Auto Capture
@@ -177,7 +177,6 @@ en:
       spree/product_property:
         value: Value
       spree/promotion:
-        advertise: Advertise
         apply_automatically: Apply Automatically
         code: Code
         description: Description
@@ -185,7 +184,7 @@ en:
         expires_at: End
         name: Name
         path: Path
-        per_code_usage_limit: Per Code Usage Limit
+        per_code_usage_limit: Per code usage limit
         promotion_uses: Promotion Uses
         starts_at: Start
         status: Status
@@ -224,6 +223,8 @@ en:
         form_text: "Apply this promotion to users whose last order was more than X days ago: "
       spree/promotion/rules/user_role:
         description: Order includes User with specified Role(s)
+      spree/promotion/rules/store:
+        description: Available only to the specified stores
       spree/promotion_category:
         name: Name
       spree/property:
@@ -297,12 +298,14 @@ en:
         name: Name
       spree/store:
         url: Site URL
+        default: Default
         meta_description: Meta Description
         meta_keywords: Meta Keywords
         seo_title: Seo Title
         name: Site Name
         mail_from_address: Mail From Address
         cart_tax_country_iso: Tax Country for Empty Carts
+        available_locales: Locales available in the storefront
       spree/store_credit:
         amount: Amount
         amount_authorized: Amount Authorized
@@ -315,7 +318,8 @@ en:
         memo: Memo
       spree/store_credit_event:
         action: Action
-        user_total_amount: Total Unused
+        amount_remaining: Total Unused
+        user_total_amount: Total Amount
       spree/store_credit_update_reason:
         name: Reason For Updating
       spree/stock_item:
@@ -340,8 +344,9 @@ en:
         state_id: State
         zipcode: Zip
       spree/stock_movement:
-        action: Action
+        originated_by: Originated By
         quantity: Quantity
+        variant: Variant
       spree/tax_category:
         description: Description
         name: Name
@@ -853,7 +858,6 @@ en:
         activations_new:
           auto: Apply to all orders
           multiple_codes: Multiple promotion codes
-          path: URL Path
           single_code: Single promotion code
         activations_edit:
           auto: All orders will attempt to use this promotion
@@ -868,15 +872,17 @@ en:
           address: Address
       store_credits:
         add: "Add store credit"
-        amount_authorized: "Amount Authorized"
-        amount_credited: "Amount Credited"
-        amount_used: "Amount Used"
+        amount_authorized: Authorized
+        amount_credited: Credited
+        amount_used: Used
+        created_at: Issued On
         back_to_edit: "Back to edit"
         back_to_user_list: "Back to user list"
         back_to_store_credit_list: "Store credit list"
         change_amount: "Change amount"
         created_by: "Created By"
-        credit_type: "Credit type"
+        credit_type: Type
+        memo: Memo
         current_balance: "Current balance:"
         edit: "Editing store credit"
         edit_amount: "Editing store credit amount"
@@ -1089,6 +1095,7 @@ en:
     choose_location: Choose location
     choose_promotion_action: Choose action
     choose_promotion_rule: Choose rule
+    choose_reason: Choose reason
     city: City
     clear_cache: Clear Cache
     clear_cache_ok: Cache was flushed
@@ -1276,6 +1283,7 @@ en:
         master_variant: "Changing master variant prices will not change variant prices below, but will be used to populate all new variants"
         options: "These options are used to create variants in the variants table. They can be changed in the variants tab"
       spree/product:
+        available_on: "This sets the availability date for the product. If this value is not set, or it is set to a date in the future, then the product is not available on the storefront."
         promotionable: "This determines whether or not promotions can apply to this product.<br/>Default: Checked"
         shipping_category: "This determines what kind of shipping this product requires.<br/> Default: Default"
         tax_category: "This determines what kind of taxation is applied to this product.<br/> Default: None"
@@ -1291,6 +1299,7 @@ en:
         check_stock_on_transfer: "When checked, inventory levels will be checked when performing stock transfers.<br/> Default: Checked"
       spree/store:
         cart_tax_country_iso: "This determines which country is used for taxes on carts (orders which don't yet have an address).<br/> Default: None."
+        available_locales: "This determines which locales are available for your customers to choose from in the storefront."
       spree/variant:
         tax_category: "This determines what kind of taxation is applied to this variant.<br/> Default: Use tax category of the product associated with this variant"
         deleted: "Deleted Variant"
@@ -1730,7 +1739,7 @@ en:
     receiving_match: Receiving match
     reception_states:
       awaiting: Awaiting
-      canceled: Canceled
+      cancelled: Canceled
       expired: Expired
       given_to_customer: Given to customer
       in_transit: In transit
@@ -1780,6 +1789,7 @@ en:
       authorized: Authorized
       canceled: Canceled
     return_authorizations: Return Merchandise Authorizations
+    return_authorization_fire_error: Cannot perform this action on return merchandise authorization
     return_authorization_updated: Return merchandise authorization updated
     return_item_inventory_unit_ineligible: Return item's inventory unit must be shipped
     return_item_inventory_unit_reimbursed: Return item's inventory unit is already reimbursed
@@ -1963,6 +1973,8 @@ en:
       user_has_no_store_credits: "User does not have any available store credit"
     store_credit_category:
       default: Default
+    store_rule:
+      choose_stores: Choose Stores
     street_address: Street Address
     street_address_2: Street Address (cont'd)
     subtotal: Subtotal

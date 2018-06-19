@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module CalculatedAdjustments
     extend ActiveSupport::Concern
@@ -32,7 +34,7 @@ module Spree
 
     def calculator_type=(calculator_type)
       klass = calculator_type.constantize if calculator_type
-      self.calculator = klass.new if klass && !calculator.is_a?(klass)
+      self.calculator = klass.new if klass && !calculator.instance_of?(klass)
     end
   end
 end

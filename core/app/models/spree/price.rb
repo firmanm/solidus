@@ -1,6 +1,14 @@
+# frozen_string_literal: true
+
+require 'discard'
+
 module Spree
   class Price < Spree::Base
     acts_as_paranoid
+    include Spree::ParanoiaDeprecations
+
+    include Discard::Model
+    self.discard_column = :deleted_at
 
     MAXIMUM_AMOUNT = BigDecimal('99_999_999.99')
 
@@ -18,7 +26,7 @@ module Spree
     validates :currency, inclusion: { in: ::Money::Currency.all.map(&:iso_code), message: :invalid_code }
     validates :country, presence: true, unless: -> { for_any_country? }
 
-    scope :currently_valid, -> { order("country_iso IS NULL, updated_at DESC, id DESC") }
+    scope :currently_valid, -> { order(Arel.sql("country_iso IS NULL, updated_at DESC, id DESC")) }
     scope :for_master, -> { joins(:variant).where(spree_variants: { is_master: true }) }
     scope :for_variant, -> { joins(:variant).where(spree_variants: { is_master: false }) }
     scope :for_any_country, -> { where(country: nil) }
@@ -28,7 +36,7 @@ module Spree
     money_methods :amount, :price
     alias_method :money, :display_amount
 
-    self.whitelisted_ransackable_attributes = %w( amount variant_id currency country_iso )
+    self.whitelisted_ransackable_attributes = %w(amount variant_id currency country_iso)
 
     # An alias for #amount
     def price

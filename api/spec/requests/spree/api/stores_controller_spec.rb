@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 module Spree
   describe Api::StoresController, type: :request do
-
     let!(:store) do
       create(:store, name: "My Spree Store", url: "spreestore.example.com")
     end
@@ -18,8 +19,7 @@ module Spree
         create(:store,
           name: "Extra Store",
           url: "spreestore-5.example.com",
-          default: false
-        )
+          default: false)
       end
 
       it "can list the available stores" do
@@ -35,7 +35,8 @@ module Spree
             "mail_from_address" => "spree@example.org",
             "default_currency" => nil,
             "code" => store.code,
-            "default" => true
+            "default" => true,
+            "available_locales" => ["en"]
           },
           {
             "id" => non_default_store.id,
@@ -47,7 +48,8 @@ module Spree
             "mail_from_address" => "spree@example.org",
             "default_currency" => nil,
             "code" => non_default_store.code,
-            "default" => false
+            "default" => false,
+            "available_locales" => ["en"]
           }
         ])
       end
@@ -64,7 +66,8 @@ module Spree
           "mail_from_address" => "spree@example.org",
           "default_currency" => nil,
           "code" => store.code,
-          "default" => true
+          "default" => true,
+          "available_locales" => ["en"]
         )
       end
 

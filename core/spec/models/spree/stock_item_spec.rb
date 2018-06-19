@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::StockItem, type: :model do
@@ -149,12 +151,12 @@ RSpec.describe Spree::StockItem, type: :model do
     before { Spree::StockMovement.create(stock_item: subject, quantity: 1) }
 
     it "doesnt raise ReadOnlyRecord error" do
-      subject.paranoia_destroy
+      subject.discard
     end
   end
 
   context "destroyed" do
-    before { subject.paranoia_destroy }
+    before { subject.discard }
 
     it "recreates stock item just fine" do
       stock_location.stock_items.create!(variant: subject.variant)
@@ -277,8 +279,8 @@ RSpec.describe Spree::StockItem, type: :model do
 
   # Regression test for https://github.com/spree/spree/issues/4651
   context "variant" do
-    it "can be found even if the variant is deleted" do
-      subject.variant.paranoia_destroy
+    it "can be found even if the variant is soft-deleted" do
+      subject.variant.discard
       expect(subject.reload.variant).not_to be_nil
     end
   end

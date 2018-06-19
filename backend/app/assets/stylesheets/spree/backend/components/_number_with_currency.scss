@@ -1,14 +1,20 @@
 .number-with-currency {
+  $currency-width: 5.5rem;
+
   &-symbol {
     min-width: 2.5em;
+
+    /* bootstrap makes this a flexbox item */
+    justify-content: space-around;
   }
 
   &-amount {
+    min-width: 5rem;
     text-align: right;
   }
 
   &-addon {
-    width: 5.5rem;
+    width: $currency-width;
     text-align: left;
   }
 
@@ -25,7 +31,7 @@
       @extend .custom-select;
 
       cursor: pointer;
-      width: 5.5rem;
+      width: $currency-width;
 
       @include border-radius($border-radius);
       @include border-left-radius(0);

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 namespace :order_capturing do
   desc "Looks for orders with inventory that is fully shipped/short-shipped, and captures money for it"
   task capture_payments: :environment do
@@ -9,7 +11,7 @@ namespace :order_capturing do
         if Spree::OrderCapturing.failure_handler
           begin
             Spree::OrderCapturing.new(order).capture_payments
-          rescue Exception => e
+          rescue StandardError => e
             failures << { message: "Order #{order.number} unable to capture. #{e.class}: #{e.message}" }
           end
         else

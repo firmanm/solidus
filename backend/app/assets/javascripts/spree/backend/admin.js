@@ -7,6 +7,7 @@
 //= require spree/backend/product_picker
 //= require spree/backend/option_value_picker
 //= require spree/backend/taxons
+//= require spree/backend/highlight_negative_numbers
 
 /**
 This is a collection of javascript functions and whatnot
@@ -20,11 +21,19 @@ Spree.ready(function() {
     var tr = $(this).closest('tr');
     var klass = 'highlight action-' + $(this).data('action')
     tr.addClass(klass)
-  });
-  $('table').on("mouseleave", 'td.actions a, td.actions button', function(){
-    var tr = $(this).closest('tr');
-    var klass = 'highlight action-' + $(this).data('action')
-    tr.removeClass(klass)
+
+    var observer = new MutationObserver(function(mutations) {
+      tr.removeClass(klass);
+      this.disconnect();
+    });
+    observer.observe(tr.get(0), { childList: true });
+
+    // Using .one() instead of .on() prevents multiple callbacks to be attached
+    // to this event if mouseentered multiple times.
+    $(this).one("mouseleave", function() {
+      tr.removeClass(klass);
+      observer.disconnect();
+    });
   });
 });
 
@@ -44,29 +53,7 @@ $.fn.radioControlsVisibilityOfElement = function(dependentElementSelector){
   });
 }
 
-var handle_date_picker_fields = function(){
-  $('.datepicker').datepicker({
-    dateFormat: Spree.t('date_picker.js_format', { default: 'yy/mm/dd' }),
-    dayNames: Spree.t('abbr_day_names'),
-    dayNamesMin: Spree.t('abbr_day_names'),
-    firstDay: parseInt(Spree.t('date_picker.first_day', { default: '0' }), 10),
-    monthNames: Spree.t('month_names'),
-    prevText: Spree.t('previous'),
-    nextText: Spree.t('next'),
-    showOn: "focus"
-  });
-
-  // Correctly display range dates
-  $('.date-range-filter .datepicker-from').datepicker('option', 'onSelect', function(selectedDate) {
-    $(".date-range-filter .datepicker-to" ).datepicker( "option", "minDate", selectedDate );
-  });
-  $('.date-range-filter .datepicker-to').datepicker('option', 'onSelect', function(selectedDate) {
-    $(".date-range-filter .datepicker-from" ).datepicker( "option", "maxDate", selectedDate );
-  });
-}
-
 Spree.ready(function(){
-  handle_date_picker_fields();
   var uniqueId = 1;
   $('.spree_add_fields').click(function() {
     var target = $(this).data("target");
@@ -135,54 +122,6 @@ Spree.ready(function(){
       })
     }
     return false;
-  });
-
-  // Fix sortable helper
-  var fixHelper = function(e, ui) {
-      ui.children().each(function() {
-          $(this).width($(this).width());
-      });
-      return ui;
-  };
-
-  var td_count = $(this).find('tbody tr:first-child td').length
-  $('table.sortable tbody').sortable({
-    handle: '.handle',
-    helper: fixHelper,
-    placeholder: 'ui-sortable-placeholder',
-    update: function(event, ui) {
-      $("#progress").show();
-      var tableEl = $(ui.item).closest("table.sortable")
-      var positions = {};
-      $.each(tableEl.find('tbody tr'), function(position, obj){
-        var idAttr = $(obj).prop('id');
-        if (idAttr) {
-          var objId = idAttr.split('_').slice(-1);
-          if (!isNaN(objId)) {
-            positions['positions['+objId+']'] = position+1;
-          }
-        }
-      });
-      Spree.ajax({
-        type: 'POST',
-        dataType: 'script',
-        url: tableEl.data("sortable-link"),
-        data: positions,
-        success: function(data){ $("#progress").hide(); }
-      });
-    },
-    start: function (event, ui) {
-      // Set correct height for placehoder (from dragged tr)
-      ui.placeholder.height(ui.item.height())
-      // Fix placeholder content to make it correct width
-      ui.placeholder.html("<td colspan='"+(td_count-1)+"'></td><td class='actions'></td>")
-    },
-    stop: function (event, ui) {
-      var tableEl = $(ui.item).closest("table.sortable")
-      // Fix odd/even classes after reorder
-      tableEl.find("tr:even").removeClass("odd even").addClass("even");
-      tableEl.find("tr:odd").removeClass("odd even").addClass("odd");
-    }
   });
 
   window.Spree.advanceOrder = function() {

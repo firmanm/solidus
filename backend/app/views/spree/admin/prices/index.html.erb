@@ -3,7 +3,7 @@
 
 <% content_for :page_actions do %>
   <li id="new_price_link">
-    <%= button_link_to t(".new_price"), new_object_url %>
+    <%= link_to t(".new_price"), new_object_url, class: 'btn btn-primary' %>
   </li>
 <% end if can?(:create, Spree::Product) %>
 
@@ -64,7 +64,7 @@
 
   <div class="actions filter-actions">
     <div data-hook="admin_orders_index_search_buttons">
-      <%= button t('spree.filter_results') %>
+      <%= button_tag t('spree.filter_results'), class: 'btn btn-primary' %>
     </div>
   </div>
 

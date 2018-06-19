@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::LineItem, type: :model do
@@ -5,13 +7,13 @@ RSpec.describe Spree::LineItem, type: :model do
   let(:line_item) { order.line_items.first }
 
   context '#destroy' do
-    it "fetches deleted products" do
-      line_item.product.paranoia_destroy
+    it "fetches soft-deleted products" do
+      line_item.product.discard
       expect(line_item.reload.product).to be_a Spree::Product
     end
 
-    it "fetches deleted variants" do
-      line_item.variant.paranoia_destroy
+    it "fetches soft-deleted variants" do
+      line_item.variant.discard
       expect(line_item.reload.variant).to be_a Spree::Variant
     end
 

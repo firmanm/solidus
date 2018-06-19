@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "Customer Details", type: :feature, js: true do
@@ -199,6 +201,6 @@ describe "Customer Details", type: :feature, js: true do
     fill_in "City",                    with: "Bethesda"
     fill_in "Zip Code",                with: "20170"
     select 'Alabama', from: "State"
-    fill_in "Phone",                   with: "123-456-7890"
+    fill_in "Phone", with: "123-456-7890"
   end
 end

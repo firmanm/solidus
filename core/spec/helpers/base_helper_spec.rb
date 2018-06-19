@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::BaseHelper, type: :helper do
@@ -20,6 +22,10 @@ RSpec.describe Spree::BaseHelper, type: :helper do
       it "return complete list of countries" do
         expect(available_countries.count).to eq(Spree::Country.count)
       end
+
+      it "uses locales for country names" do
+        expect(available_countries).to include(having_attributes(name: "United States of America"))
+      end
     end
 
     context "with a checkout zone defined" do
@@ -32,6 +38,10 @@ RSpec.describe Spree::BaseHelper, type: :helper do
 
         it "return only the countries defined by the checkout zone" do
           expect(available_countries).to eq([country])
+        end
+
+        it "returns only the countries defined by the checkout zone passed as parameter" do
+          expect(available_countries(restrict_to_zone: @country_zone.name)).to eq([country])
         end
       end
 

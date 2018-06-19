@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 module Spree
@@ -94,6 +96,7 @@ module Spree
       taxon = taxon_with_5_products
       classification = taxon.classifications.first
       product = classification.product
+      product.update_columns(updated_at: 1.day.ago)
       expect {
         classification.touch
       }.to change { product.reload.updated_at }
@@ -102,6 +105,7 @@ module Spree
     it "touches the taxon" do
       taxon = taxon_with_5_products
       classification = taxon.classifications.first
+      taxon.update_columns(updated_at: 1.day.ago)
       expect {
         classification.touch
       }.to change { taxon.reload.updated_at }

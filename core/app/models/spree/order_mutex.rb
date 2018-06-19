@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   class OrderMutex < Spree::Base
     class LockFailed < StandardError; end
@@ -25,7 +27,6 @@ module Spree
         end
 
         yield
-
       ensure
         order_mutex.destroy if order_mutex
       end

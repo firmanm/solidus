@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::Order, type: :model do
@@ -60,6 +62,14 @@ RSpec.describe Spree::Order, type: :model do
       it "cancels the order" do
         expect{ subject }.to change{ order.can_cancel? }.from(true).to(false)
         expect(order).to be_canceled
+      end
+
+      it "places the order into the canceled scope" do
+        expect{ subject }.to change{ Spree::Order.canceled.include?(order) }.from(false).to(true)
+      end
+
+      it "removes the order from the not_canceled scope" do
+        expect{ subject }.to change{ Spree::Order.not_canceled.include?(order) }.from(true).to(false)
       end
     end
 
@@ -157,7 +167,7 @@ RSpec.describe Spree::Order, type: :model do
     context 'when variant is destroyed' do
       before do
         allow(order).to receive(:restart_checkout_flow)
-        order.line_items.first.variant.paranoia_destroy
+        order.line_items.first.variant.discard
       end
 
       it 'should restart checkout flow' do
@@ -512,7 +522,7 @@ RSpec.describe Spree::Order, type: :model do
     end
     it "updates the state column to the first checkout_steps value" do
       order = create(:order_with_totals, state: "delivery")
-      expect(order.checkout_steps).to eql ["address", "delivery", "confirm", "complete"]
+      expect(order.checkout_steps).to eql %w(address delivery payment confirm complete)
       expect{ order.restart_checkout_flow }.to change{ order.state }.from("delivery").to("address")
     end
 
@@ -596,10 +606,14 @@ RSpec.describe Spree::Order, type: :model do
     context "with more than one payment method" do
       subject { order.available_payment_methods }
 
-      let!(:first_method) { FactoryBot.create(:payment_method, available_to_users: true,
-                                               available_to_admin: true) }
-      let!(:second_method) { FactoryBot.create(:payment_method, available_to_users: true,
-                                               available_to_admin: true) }
+      let!(:first_method) {
+        FactoryBot.create(:payment_method, available_to_users: true,
+                                               available_to_admin: true)
+      }
+      let!(:second_method) {
+        FactoryBot.create(:payment_method, available_to_users: true,
+                                               available_to_admin: true)
+      }
 
       before do
         second_method.move_to_top
@@ -615,8 +629,7 @@ RSpec.describe Spree::Order, type: :model do
 
       let!(:store_with_payment_methods) do
         create(:store,
-          payment_methods: [payment_method_with_store]
-        )
+          payment_methods: [payment_method_with_store])
       end
       let!(:payment_method_with_store) { create(:payment_method) }
       let!(:store_without_payment_methods) { create(:store) }
@@ -632,7 +645,8 @@ RSpec.describe Spree::Order, type: :model do
         end
 
         context 'and the store has an extra payment method unavailable to users' do
-          let!(:admin_only_payment_method) do create(:payment_method,
+          let!(:admin_only_payment_method) do
+            create(:payment_method,
                                                      available_to_users: false,
                                                      available_to_admin: true)
           end
@@ -1560,7 +1574,7 @@ RSpec.describe Spree::Order, type: :model do
     it 'is deprecated' do
       subject.instance_variable_set('@updating_params', {})
       expect(Spree::Deprecation).to receive(:warn)
-      subject.update_params_payment_source
+      subject.send(:update_params_payment_source)
     end
   end
 

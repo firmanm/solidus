@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   class CartonMailer < BaseMailer
     # Send an email to customers to notify that an individual carton has been
@@ -13,7 +15,7 @@ module Spree
     # Note: The signature of this method has changed. The new (non-deprecated)
     # signature is:
     #   def shipped_email(carton:, order:, resend: false)
-    def shipped_email(options, deprecated_options = {})
+    def shipped_email(options, _deprecated_options = {})
       @order = options.fetch(:order)
       @carton = options.fetch(:carton)
       @manifest = @carton.manifest_for_order(@order)

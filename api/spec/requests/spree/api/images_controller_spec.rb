@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe Spree::Api::ImagesController, type: :request do
-
     let!(:product) { create(:product) }
     let!(:attributes) {
       [:id, :position, :attachment_content_type,

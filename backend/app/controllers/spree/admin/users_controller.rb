@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module Admin
     class UsersController < ResourceController
@@ -72,7 +74,8 @@ module Spree
         @search = Spree::Order.includes(
           line_items: {
             variant: [:product, { option_values: :option_type }]
-          }).ransack(params[:q].merge(user_id_eq: @user.id))
+          }
+).ransack(params[:q].merge(user_id_eq: @user.id))
         @orders = @search.result.page(params[:page]).per(Spree::Config[:admin_products_per_page])
       end
 

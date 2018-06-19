@@ -1,9 +1,18 @@
+# frozen_string_literal: true
+
+require 'discard'
+
 module Spree
   class TaxRate < Spree::Base
     acts_as_paranoid
+    include Spree::ParanoiaDeprecations
+
+    include Discard::Model
+    self.discard_column = :deleted_at
 
     # Need to deal with adjustments before calculator is destroyed.
     before_destroy :remove_adjustments_from_incomplete_orders
+    before_discard :remove_adjustments_from_incomplete_orders
 
     include Spree::CalculatedAdjustments
     include Spree::AdjustmentSource
@@ -129,7 +138,7 @@ module Spree
       )
     end
 
-    def translation_key(amount)
+    def translation_key(_amount)
       key = included_in_price? ? "vat" : "sales_tax"
       key += "_with_rate" if show_rate_in_label?
       key.to_sym

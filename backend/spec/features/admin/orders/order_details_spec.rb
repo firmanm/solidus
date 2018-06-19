@@ -1,4 +1,5 @@
-# coding: utf-8
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe "Order Details", type: :feature, js: true do
@@ -117,6 +118,22 @@ describe "Order Details", type: :feature, js: true do
 
           expect(page).not_to have_css('#selected_shipping_rate_id')
           expect(page).to have_content("UPS Ground")
+        end
+
+        it "can use admin-only shipping methods" do
+          create(:shipping_method, name: "Admin Free Shipping", cost: 0, available_to_users: false)
+
+          visit spree.edit_admin_order_path(order)
+
+          within("tr", text: "Shipping Method") do
+            click_icon :edit
+            select "Admin Free Shipping $0.00"
+            click_icon :check
+          end
+
+          expect(page).not_to have_css('#selected_shipping_rate_id')
+          expect(page).to have_no_content("UPS Ground")
+          expect(page).to have_content("Admin Free Shipping")
         end
 
         it "will show the variant sku" do
@@ -463,7 +480,7 @@ describe "Order Details", type: :feature, js: true do
 
           @first_line_item  = order.contents.add(product2.master)
           @first_line_item.update_columns(created_at: 1.day.ago)
-          @last_line_item  = order.contents.add(product3.master)
+          @last_line_item = order.contents.add(product3.master)
           @last_line_item.update_columns(created_at: 1.day.from_now)
         end
 
@@ -537,7 +554,7 @@ describe "Order Details", type: :feature, js: true do
       within("tr", text: "Shipping Method") do
         click_icon :edit
       end
-      select "UPS Ground $100.00", from: "selected_shipping_rate_id"
+      select "UPS Ground $100.00"
       click_icon :check
 
       expect(page).not_to have_css('#selected_shipping_rate_id')

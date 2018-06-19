@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 module Spree
-  class Promotion
+  class Promotion < Spree::Base
     module Rules
       class Taxon < PromotionRule
         has_many :promotion_rule_taxons, class_name: 'Spree::PromotionRuleTaxon', foreign_key: :promotion_rule_id,
@@ -71,9 +73,9 @@ module Spree
           taxons.pluck(:id).join(',')
         end
 
-        def taxon_ids_string=(s)
-          ids = s.to_s.split(',').map(&:strip)
-          self.taxons = Spree::Taxon.find(ids)
+        def taxon_ids_string=(taxon_ids)
+          taxon_ids = taxon_ids.to_s.split(',').map(&:strip)
+          self.taxons = Spree::Taxon.find(taxon_ids)
         end
 
         private
@@ -95,7 +97,6 @@ module Spree
         def rule_taxon_ids_with_children
           taxons.flat_map { |taxon| taxon.self_and_descendants.ids }.uniq
         end
-
       end
     end
   end

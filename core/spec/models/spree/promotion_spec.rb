@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::Promotion, type: :model do
@@ -104,7 +106,7 @@ RSpec.describe Spree::Promotion, type: :model do
       promotion.created_at = 2.days.ago
 
       @user = create(:user)
-      @order = create(:order, user: @user, created_at: DateTime.current)
+      @order = create(:order, user: @user, created_at: Time.current)
       @payload = { order: @order, user: @user }
     end
 
@@ -131,7 +133,7 @@ RSpec.describe Spree::Promotion, type: :model do
 
     it "does activate if newer then order" do
       expect(@action1).to receive(:perform).with(hash_including(@payload))
-      promotion.created_at = DateTime.current + 2
+      promotion.created_at = Time.current + 2
       expect(promotion.activate(@payload)).to be true
     end
 

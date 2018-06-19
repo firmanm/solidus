@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Spree::Admin::ReportsController, type: :controller do
@@ -48,7 +50,7 @@ describe Spree::Admin::ReportsController, type: :controller do
 
     shared_examples 'sales total report' do
       it 'should respond with success' do
-        expect(response).to be_success
+        expect(response).to be_successful
       end
 
       it 'should set search to be a ransack search' do

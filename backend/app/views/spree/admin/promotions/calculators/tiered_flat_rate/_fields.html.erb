@@ -10,7 +10,7 @@
   <%= select_tag(
     "#{prefix}[calculator_attributes][preferred_currency]",
     options_for_select(
-      Money::Currency.all,
+      Spree::Config.available_currencies,
       calculator.preferred_currency || Spree::Config[:currency]
     ),
     { class: 'custom-select fullwidth' }
@@ -25,6 +25,6 @@
       'form-prefix' => prefix,
       'calculator' => 'tiered_flat_rate'
     } %>
-    <button class="button js-add-tier"><%= t('spree.actions.add') %></button>
+    <a class="button js-add-tier"><%= t('spree.actions.add') %></a>
   </div>
 </div>

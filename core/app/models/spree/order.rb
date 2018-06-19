@@ -1,4 +1,5 @@
-require 'spree/core/validators/email'
+# frozen_string_literal: true
+
 require 'spree/order/checkout'
 require 'spree/order/number_generator'
 
@@ -81,9 +82,6 @@ module Spree
     has_many :inventory_units, through: :shipments
     has_many :cartons, -> { distinct }, through: :inventory_units
 
-    has_many :order_stock_locations, class_name: "Spree::OrderStockLocation"
-    has_many :stock_locations, through: :order_stock_locations
-
     # Adjustments and promotions
     has_many :adjustments, -> { order(:created_at) }, as: :adjustable, inverse_of: :adjustable, dependent: :destroy
     has_many :line_item_adjustments, through: :line_items, source: :adjustments
@@ -127,7 +125,7 @@ module Spree
     before_create :link_by_email
 
     validates :email, presence: true, if: :require_email
-    validates :email, email: true, allow_blank: true
+    validates :email, 'spree/email' => true, allow_blank: true
     validates :guest_token, presence: { allow_nil: true }
     validates :number, presence: true, uniqueness: { allow_blank: true }
     validates :store_id, presence: true
@@ -157,7 +155,7 @@ module Spree
     scope :by_store, ->(store) { where(store_id: store.id) }
 
     # shows completed orders first, by their completed_at date, then uncompleted orders by their created_at
-    scope :reverse_chronological, -> { order('spree_orders.completed_at IS NULL', completed_at: :desc, created_at: :desc) }
+    scope :reverse_chronological, -> { order(Arel.sql('spree_orders.completed_at IS NULL'), completed_at: :desc, created_at: :desc) }
 
     def self.by_customer(customer)
       joins(:user).where("#{Spree.user_class.table_name}.email" => customer)
@@ -173,6 +171,14 @@ module Spree
 
     def self.incomplete
       where(completed_at: nil)
+    end
+
+    def self.canceled
+      where(state: 'canceled')
+    end
+
+    def self.not_canceled
+      where.not(state: 'canceled')
     end
 
     # Use this method in other gems that wish to register their own custom logic
@@ -349,7 +355,7 @@ module Spree
     # "Are these line items equal" decision.
     #
     # When adding to cart, an extension would send something like:
-    # params[:product_customizations]={...}
+    # params[:product_customizations]=...
     #
     # and would provide:
     #
@@ -467,7 +473,7 @@ module Spree
     # Check to see if any line item variants are soft, deleted.
     # If so add error and restart checkout.
     def ensure_line_item_variants_are_not_deleted
-      if line_items.any? { |li| li.variant.paranoia_destroyed? }
+      if line_items.any? { |li| li.variant.discarded? }
         errors.add(:base, I18n.t('spree.deleted_variants_present'))
         restart_checkout_flow
         false
@@ -512,7 +518,7 @@ module Spree
     def coupon_code=(code)
       @coupon_code = begin
                        code.strip.downcase
-                     rescue
+                     rescue StandardError
                        nil
                      end
     end
@@ -568,7 +574,7 @@ module Spree
         state: 'cart',
         updated_at: Time.current
       )
-      next! if line_items.size > 0
+      next! if !line_items.empty?
     end
 
     def refresh_shipment_rates
@@ -773,13 +779,12 @@ module Spree
 
     def validate_payments_attributes(attributes)
       attributes = Array(attributes)
-      # Ensure the payment methods specified are allowed for this user
-      payment_methods = Spree::PaymentMethod.where(id: available_payment_methods)
+
       attributes.each do |payment_attributes|
         payment_method_id = payment_attributes[:payment_method_id]
 
         # raise RecordNotFound unless it is an allowed payment method
-        payment_methods.find(payment_method_id) if payment_method_id
+        available_payment_methods.find(payment_method_id) if payment_method_id
       end
     end
 
@@ -813,12 +818,12 @@ module Spree
     #   }
     #
     def update_params_payment_source
+      Spree::Deprecation.warn('update_params_payment_source is deprecated. Please use set_payment_parameters_amount instead.', caller)
       if @updating_params[:order] && (@updating_params[:order][:payments_attributes] || @updating_params[:order][:existing_card])
         @updating_params[:order][:payments_attributes] ||= [{}]
         @updating_params[:order][:payments_attributes].first[:amount] = total
       end
     end
-    deprecate update_params_payment_source: :set_payment_parameters_amount, deprecator: Spree::Deprecation
 
     def associate_store
       self.store ||= Spree::Store.default

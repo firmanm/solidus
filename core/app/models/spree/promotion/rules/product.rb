@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 module Spree
-  class Promotion
+  class Promotion < Spree::Base
     module Rules
       # A rule to limit a promotion based on products in the order.  Can
       # require all or any of the products to be present.  Valid products
@@ -63,8 +65,8 @@ module Spree
           product_ids.join(',')
         end
 
-        def product_ids_string=(s)
-          self.product_ids = s.to_s.split(',').map(&:strip)
+        def product_ids_string=(product_ids)
+          self.product_ids = product_ids.to_s.split(',').map(&:strip)
         end
       end
     end

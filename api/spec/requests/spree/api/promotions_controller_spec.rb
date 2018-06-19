@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 module Spree
   describe Spree::Api::PromotionsController, type: :request do
-
     shared_examples "a JSON response" do
       it 'should be ok' do
         subject
@@ -38,7 +39,7 @@ module Spree
         end
 
         context 'when finding by code' do
-          let(:id) { promotion.codes.first }
+          let(:id) { promotion.codes.first.value }
 
           it_behaves_like "a JSON response"
         end

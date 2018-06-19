@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 ENV['RAILS_ENV'] = 'test'
 ENV['DISABLE_DATABASE_ENVIRONMENT_CHECK'] = '1'
 
@@ -10,29 +12,30 @@ Rails.env = 'test'
 
 require 'solidus_core'
 
+# @private
 class ApplicationController < ActionController::Base
   protect_from_forgery with: :exception
 end
 
+# @private
 class ApplicationRecord < ActiveRecord::Base
 end
 
+# @private
 class ApplicationMailer < ActionMailer::Base
 end
 
+# @private
 module ApplicationHelper
 end
 
+# @private
 module DummyApp
   def self.setup(gem_root:, lib_name:, auto_migrate: true)
     ENV["LIB_NAME"] = lib_name
     DummyApp::Application.config.root = File.join(gem_root, 'spec', 'dummy')
 
     DummyApp::Application.initialize!
-
-    DummyApp::Application.routes.draw do
-      mount Spree::Core::Engine, at: '/'
-    end
 
     if auto_migrate
       DummyApp::Migrations.auto_migrate
@@ -53,8 +56,12 @@ module DummyApp
     config.action_mailer.delivery_method              = :test
     config.action_controller.allow_forgery_protection = false
     config.active_support.deprecation                 = :stderr
-    config.secret_token                               = 'SECRET_TOKEN'
     config.secret_key_base                            = 'SECRET_TOKEN'
+
+    if config.active_record.sqlite3
+      # Rails >= 5.2
+      config.active_record.sqlite3.represent_boolean_as_integer = true
+    end
 
     # Avoid issues if an old spec/dummy still exists
     config.paths['config/initializers'] = []
@@ -73,12 +80,13 @@ module DummyApp
     config.action_controller.include_all_helpers = false
 
     if config.respond_to?(:assets)
-      config.assets.paths << File.expand_path('../dummy_app/assets/javascripts', __FILE__)
-      config.assets.paths << File.expand_path('../dummy_app/assets/stylesheets', __FILE__)
+      config.assets.paths << File.expand_path('dummy_app/assets/javascripts', __dir__)
+      config.assets.paths << File.expand_path('dummy_app/assets/stylesheets', __dir__)
     end
 
-    config.paths["config/database"] = File.expand_path('../dummy_app/database.yml', __FILE__)
-    config.paths['app/views'] = File.expand_path('../dummy_app/views', __FILE__)
+    config.paths["config/database"] = File.expand_path('dummy_app/database.yml', __dir__)
+    config.paths['app/views'] = File.expand_path('dummy_app/views', __dir__)
+    config.paths['config/routes.rb'] = File.expand_path('dummy_app/routes.rb', __dir__)
 
     ActionMailer::Base.default from: "store@example.com"
   end

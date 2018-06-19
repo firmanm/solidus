@@ -1,5 +1,13 @@
+# frozen_string_literal: true
+
+require 'discard'
+
 class Spree::StoreCredit < Spree::PaymentSource
   acts_as_paranoid
+  include Spree::ParanoiaDeprecations
+
+  include Discard::Model
+  self.discard_column = :deleted_at
 
   VOID_ACTION       = 'void'
   CREDIT_ACTION     = 'credit'
@@ -33,6 +41,7 @@ class Spree::StoreCredit < Spree::PaymentSource
   before_validation :associate_credit_type
   before_validation :validate_category_unchanged, on: :update
   before_destroy :validate_no_amount_used
+  validate :validate_no_amount_used, if: :discarded?
 
   attr_accessor :action, :action_amount, :action_originator, :action_authorization_code, :update_reason
 
@@ -183,7 +192,7 @@ class Spree::StoreCredit < Spree::PaymentSource
       save
     else
       errors.add(:invalidated_at, I18n.t('spree.store_credit.errors.cannot_invalidate_uncaptured_authorization'))
-      return false
+      false
     end
   end
 
@@ -237,6 +246,7 @@ class Spree::StoreCredit < Spree::PaymentSource
     event.update_attributes!({
       amount: action_amount || amount,
       authorization_code: action_authorization_code || event.authorization_code || generate_authorization_code,
+      amount_remaining: amount_remaining,
       user_total_amount: user.available_store_credit_total(currency: currency),
       originator: action_originator,
       update_reason: update_reason

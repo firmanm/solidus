@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   class Zone < Spree::Base
     has_many :zone_members, dependent: :destroy, class_name: "Spree::ZoneMember", inverse_of: :zone
@@ -58,7 +60,7 @@ module Spree
     end
 
     def kind
-      if members.any? && !members.any? { |member| member.try(:zoneable_type).nil? }
+      if members.any? && members.none? { |member| member.try(:zoneable_type).nil? }
         members.last.zoneable_type.demodulize.underscore
       end
     end

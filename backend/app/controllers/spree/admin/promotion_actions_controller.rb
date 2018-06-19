@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class Spree::Admin::PromotionActionsController < Spree::Admin::BaseController
   before_action :load_promotion, only: [:create, :destroy]
   before_action :validate_promotion_action_type, only: :create
@@ -17,7 +19,7 @@ class Spree::Admin::PromotionActionsController < Spree::Admin::BaseController
 
   def destroy
     @promotion_action = @promotion.promotion_actions.find(params[:id])
-    if @promotion_action.destroy
+    if @promotion_action.discard
       flash[:success] = t('spree.successfully_removed', resource: t('spree.promotion_action'))
     end
     respond_to do |format|

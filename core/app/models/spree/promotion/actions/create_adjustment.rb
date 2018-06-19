@@ -1,5 +1,7 @@
+# frozen_string_literal: true
+
 module Spree
-  class Promotion
+  class Promotion < Spree::Base
     module Actions
       class CreateAdjustment < PromotionAction
         include Spree::CalculatedAdjustments
@@ -11,6 +13,7 @@ module Spree
 
         before_validation :ensure_action_has_calculator
         before_destroy :remove_adjustments_from_incomplete_orders
+        before_discard :remove_adjustments_from_incomplete_orders
 
         # Creates the adjustment related to a promotion for the order passed
         # through options hash

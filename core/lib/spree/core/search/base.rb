@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spree/deprecation'
 
 module Spree
@@ -27,31 +29,33 @@ module Spree
 
         def retrieve_products
           @products = get_base_scope
+          curr_page = @properties[:page] || 1
 
           unless Spree::Config.show_products_without_price
             @products = @products.joins(:prices).merge(Spree::Price.where(pricing_options.search_arguments)).distinct
           end
-          if @properties[:page]
-            curr_page = @properties[:page] || 1
-            @products = @products.page(curr_page).per(@properties[:per_page])
-          end
-          @products
+          @products = @products.page(curr_page).per(@properties[:per_page])
         end
 
         def method_missing(name)
-          if @properties.key? name
+          if @properties.key?(name)
+            Spree::Deprecation.warn "Accessing Searcher's #{name} property using #{self.class.name}##{name} is deprecated without replacement"
             @properties[name]
           else
             super
           end
         end
 
+        def respond_to_missing?(name)
+          @properties.key?(name) || super(name)
+        end
+
         protected
 
         def get_base_scope
           base_scope = Spree::Product.display_includes.available
-          base_scope = base_scope.in_taxon(taxon) unless taxon.blank?
-          base_scope = get_products_conditions_for(base_scope, keywords)
+          base_scope = base_scope.in_taxon(@properties[:taxon]) unless @properties[:taxon].blank?
+          base_scope = get_products_conditions_for(base_scope, @properties[:keywords])
           base_scope = add_search_scopes(base_scope)
           base_scope = add_eagerload_scopes(base_scope)
           base_scope
@@ -74,19 +78,21 @@ module Spree
           # `where` constraints affecting joined tables are added to the search;
           # which is the case as soon as a taxon is added to the base scope.
           scope = scope.preload(master: :currently_valid_prices)
-          scope = scope.preload(master: :images) if include_images
+          scope = scope.preload(master: :images) if @properties[:include_images]
           scope
         end
 
         def add_search_scopes(base_scope)
-          search.each do |name, scope_attribute|
-            scope_name = name.to_sym
-            if base_scope.respond_to?(:search_scopes) && base_scope.search_scopes.include?(scope_name.to_sym)
-              base_scope = base_scope.send(scope_name, *scope_attribute)
-            else
-              base_scope = base_scope.merge(Spree::Product.ransack({ scope_name => scope_attribute }).result)
+          if @properties[:search]
+            @properties[:search].each do |name, scope_attribute|
+              scope_name = name.to_sym
+              if base_scope.respond_to?(:search_scopes) && base_scope.search_scopes.include?(scope_name.to_sym)
+                base_scope = base_scope.send(scope_name, *scope_attribute)
+              else
+                base_scope = base_scope.merge(Spree::Product.ransack({ scope_name => scope_attribute }).result)
+              end
             end
-          end if search
+          end
           base_scope
         end
 
@@ -104,14 +110,9 @@ module Spree
           @properties[:search] = params[:search]
           @properties[:include_images] = params[:include_images]
 
-          if params[:per_page].present? || params[:page].present?
-            Spree::Deprecation.warn "Pagination inside the searcher is no longer supported." \
-              "Please paginate the results of the searcher yourself."
-
-            per_page = params[:per_page].to_i
-            @properties[:per_page] = per_page > 0 ? per_page : Spree::Config[:products_per_page]
-            @properties[:page] = (params[:page].to_i <= 0) ? 1 : params[:page].to_i
-          end
+          per_page = params[:per_page].to_i
+          @properties[:per_page] = per_page > 0 ? per_page : Spree::Config[:products_per_page]
+          @properties[:page] = (params[:page].to_i <= 0) ? 1 : params[:page].to_i
         end
       end
     end

@@ -5,7 +5,7 @@
 
 <% content_for :page_actions do %>
   <li>
-    <%= button_link_to t('spree.new_order'), new_admin_order_url, id: 'admin_new_order' %>
+    <%= link_to t('spree.new_order'), new_admin_order_url, id: 'admin_new_order', class: 'btn btn-primary' %>
   </li>
 <% end if can? :create, Spree::Order %>
 
@@ -23,9 +23,11 @@
             <div class="date-range-fields input-group">
               <%= f.text_field :created_at_gt, class: 'datepicker form-control datepicker-from', value: params[:q][:created_at_gt], placeholder: t('spree.start') %>
 
-              <span class="range-divider input-group-addon">
-                <i class="fa fa-arrow-right"></i>
-              </span>
+              <div class="input-group-prepend input-group-append">
+                <span class="input-group-text range-divider">
+                  <i class="fa fa-arrow-right"></i>
+                </span>
+              </div>
 
               <%= f.text_field :created_at_lt, class: 'datepicker form-control datepicker-to', value: params[:q][:created_at_lt], placeholder: t('spree.stop') %>
             </div>
@@ -104,7 +106,7 @@
 
       <div class="actions filter-actions">
         <div data-hook="admin_orders_index_search_buttons">
-          <%= button t('spree.filter_results') %>
+          <%= button_tag t('spree.filter_results'), class: 'btn btn-primary' %>
         </div>
       </div>
     <% end %>

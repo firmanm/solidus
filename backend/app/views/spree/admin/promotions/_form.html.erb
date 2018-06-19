@@ -5,21 +5,12 @@
   <div class="row">
     <div id="general_fields" class="col-9">
       <div class="row">
-        <div class="col-3">
+        <div class="col-12">
           <%= f.field_container :name do %>
             <%= f.label :name, class: 'required' %>
             <%= f.text_field :name, class: 'fullwidth', required: true %>
           <% end %>
 
-          <%= f.field_container :advertise do %>
-            <%= label_tag do %>
-              <%= f.check_box :advertise %>
-              <%= Spree::Promotion.human_attribute_name(:advertise) %>
-            <% end %>
-          <% end %>
-        </div>
-
-        <div class="col-9">
           <%= f.field_container :description do %>
             <%= f.label :description %><br />
             <%= f.text_area :description, rows: 7, class: 'fullwidth' %>
@@ -40,6 +31,13 @@
         <span class="info">
           <%= t('spree.current_promotion_usage', count: @promotion.usage_count) %>
         </span>
+      <% end %>
+
+      <% if @promotion.persisted? %>
+        <%= f.field_container :per_code_usage_limit do %>
+          <%= f.label :per_code_usage_limit %><br />
+          <%= f.number_field :per_code_usage_limit, min: 0, class: 'fullwidth' %><br>
+        <% end %>
       <% end %>
 
       <div id="starts_at_field" class="field">

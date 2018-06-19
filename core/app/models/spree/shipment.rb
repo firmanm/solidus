@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   # An order's planned shipments including tracking and cost.
   #
@@ -10,7 +12,7 @@ module Spree
     has_many :shipping_rates, -> { order(:cost) }, dependent: :destroy, inverse_of: :shipment
     has_many :shipping_methods, through: :shipping_rates
     has_many :state_changes, as: :stateful
-    has_many :cartons, -> { uniq }, through: :inventory_units
+    has_many :cartons, -> { distinct }, through: :inventory_units
 
     before_validation :set_cost_zero_when_nil
 
@@ -80,7 +82,7 @@ module Spree
 
     def can_transition_from_pending_to_ready?
       order.can_ship? &&
-        inventory_units.all? { |iu| iu.allow_ship? || iu.canceled? } &&
+        inventory_units.all? { |iu| iu.shipped? || iu.allow_ship? || iu.canceled? } &&
         (order.paid? || !Spree::Config[:require_payment_to_ship])
     end
 
@@ -219,6 +221,14 @@ module Spree
       shipping_rates
     end
 
+    def select_shipping_method(shipping_method)
+      estimator = Spree::Config.stock.estimator_class.new
+      rates = estimator.shipping_rates(to_package, false)
+      rate = rates.detect { |r| r.shipping_method_id == shipping_method.id }
+      rate.selected = true
+      self.shipping_rates = [rate]
+    end
+
     def selected_shipping_rate
       shipping_rates.detect(&:selected?)
     end
@@ -234,10 +244,12 @@ module Spree
     def selected_shipping_rate_id=(id)
       return if selected_shipping_rate_id == id
       new_rate = shipping_rates.detect { |rate| rate.id == id.to_i }
-      fail(
-        ArgumentError,
-        "Could not find shipping rate id #{id} for shipment #{number}"
-      ) unless new_rate
+      unless new_rate
+        fail(
+          ArgumentError,
+          "Could not find shipping rate id #{id} for shipment #{number}"
+        )
+      end
 
       transaction do
         selected_shipping_rate.update!(selected: false) if selected_shipping_rate

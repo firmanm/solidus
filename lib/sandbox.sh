@@ -35,10 +35,13 @@ if [ ! -d "sandbox" ]; then
 fi
 
 cd ./sandbox
-echo "gem 'solidus', :path => '..'" >> Gemfile
-echo "gem 'solidus_auth_devise'" >> Gemfile
-
 cat <<RUBY >> Gemfile
+
+gem 'solidus', path: '..'
+gem 'solidus_auth_devise', '>= 2.1.0'
+gem 'rails-i18n'
+gem 'solidus_i18n'
+
 group :test, :development do
   platforms :mri do
     gem 'pry-byebug'

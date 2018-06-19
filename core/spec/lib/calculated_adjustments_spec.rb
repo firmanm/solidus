@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe Spree::CalculatedAdjustments do
@@ -58,7 +60,7 @@ RSpec.describe Spree::CalculatedAdjustments do
     end
 
     context 'with calculator_type and calculator_attributes' do
-      subject { Calculable.new(calculator_type: calculator_class.to_s, calculator_attributes: {preferred_amount: 123}) }
+      subject { Calculable.new(calculator_type: calculator_class.to_s, calculator_attributes: { preferred_amount: 123 }) }
 
       it 'can be initialized' do
         expect(subject.calculator).to be_a(calculator_class)
@@ -106,6 +108,26 @@ RSpec.describe Spree::CalculatedAdjustments do
       subject.reload
       expect(subject.calculator.class).to eq(Spree::Calculator::FlexiRate)
       expect(subject.calculator.preferred_first_item).to eq(123)
+    end
+  end
+
+  describe '#calculator_type=' do
+    subject { Calculable.new }
+
+    let(:calculator_subclass) { Spree::Calculator::Shipping::FlatRate }
+    let(:calculator_superclass) { Spree::ShippingCalculator }
+
+    before(:each) do
+      subject.calculator_type = calculator_subclass.to_s
+    end
+
+    it 'sets calculator type' do
+      expect(subject.calculator_type).to eq(calculator_subclass.to_s)
+    end
+
+    it 'switches from calculator subclass to calculator superclass' do
+      subject.calculator_type = calculator_superclass.to_s
+      expect(subject.calculator_type).to eq(calculator_superclass.to_s)
     end
   end
 end

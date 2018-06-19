@@ -7,7 +7,7 @@
 
 
 <% content_for :page_actions do %>
-  <li><%= button_link_to t('spree.back_to_images_list'), admin_product_images_url(@product) %></li>
+  <li><%= link_to t('spree.back_to_images_list'), admin_product_images_url(@product), class: 'btn btn-primary' %></li>
 <% end %>
 
 <%= form_for [:admin, @product, @image], html: { multipart: true } do |f| %>
@@ -26,7 +26,7 @@
     </div>
 
     <div class="form-buttons filter-actions actions" data-hook="buttons">
-      <%= button t('spree.actions.update') %>
+      <%= button_tag t('spree.actions.update'), class: 'btn btn-primary' %>
       <%= link_to t('spree.actions.cancel'), admin_product_images_url(@product), id: 'cancel_link', class: 'button' %>
     </div>
   </fieldset>

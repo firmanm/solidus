@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   # The default `source` of a `Spree::Payment`.
   #
@@ -9,8 +11,8 @@ module Spree
 
     accepts_nested_attributes_for :address
 
-    attr_reader :number
-    attr_accessor :encrypted_data, :verification_value
+    attr_reader :number, :verification_value
+    attr_accessor :encrypted_data
 
     validates :month, :year, numericality: { only_integer: true }, if: :require_card_numbers?, on: :create
     validates :number, presence: true, if: :require_card_numbers?, on: :create, unless: :imported

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe 'setting locale', type: :feature do
@@ -12,13 +14,7 @@ describe 'setting locale', type: :feature do
   end
 
   context 'shopping cart link and page' do
-    before do
-      I18n.backend.store_translations(:fr,
-       spree: {
-         cart: 'Panier',
-         shopping_cart: 'Panier'
-      })
-    end
+    include_context "fr locale"
 
     it 'should be in french' do
       with_locale('fr') do

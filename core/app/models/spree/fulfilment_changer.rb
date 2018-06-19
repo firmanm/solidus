@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   # Service class to change fulfilment of inventory units of a particular variant
   # to another shipment. The other shipment would typically have a different
@@ -95,6 +97,10 @@ module Spree
       # The desired shipment has also change, so we need to make sure shipping rates
       # are up-to-date, too.
       desired_shipment.refresh_rates
+
+      # In order to reflect the changes in the order totals
+      desired_shipment.order.reload
+      desired_shipment.order.recalculate
 
       true
     end

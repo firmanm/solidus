@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # Interface for accessing and updating a user's active "wallet". A Wallet
 # is the *active* list of *reusable* payment sources that a user would like to
 # choose from when placing orders.
@@ -53,7 +55,7 @@ class Spree::Wallet
   end
 
   # Change the default WalletPaymentSource for this wallet.
-  # @param source [WalletPaymentSource] The payment source to set as the default.
+  # @param wallet_payment_source [WalletPaymentSource] The payment source to set as the default.
   #   It must be in the wallet already. Pass nil to clear the default.
   # @return [void]
   def default_wallet_payment_source=(wallet_payment_source)

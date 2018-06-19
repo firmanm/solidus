@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
 module Spree
   module Api
     class StockItemsController < Spree::Api::BaseController
       before_action :load_stock_location, only: [:index, :show, :create]
 
-      rescue_from StockLocation::InvalidMovementError, with: :render_stock_items_error
+      rescue_from Spree::StockLocation::InvalidMovementError, with: :render_stock_items_error
 
       def index
         @stock_items = paginate(scope.ransack(params[:q]).result)
@@ -49,7 +51,7 @@ module Spree
 
       def destroy
         @stock_item = Spree::StockItem.accessible_by(current_ability, :destroy).find(params[:id])
-        @stock_item.paranoia_destroy
+        @stock_item.discard
         respond_with(@stock_item, status: 204)
       end
 

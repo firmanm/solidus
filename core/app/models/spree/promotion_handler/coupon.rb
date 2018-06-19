@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module PromotionHandler
     class Coupon
@@ -23,14 +25,14 @@ module Spree
         self
       end
 
-      def set_success_code(c)
-        @status_code = c
-        @success = I18n.t(c, scope: 'spree')
+      def set_success_code(status_code)
+        @status_code = status_code
+        @success = I18n.t(status_code, scope: 'spree')
       end
 
-      def set_error_code(c)
-        @status_code = c
-        @error = I18n.t(c, scope: 'spree')
+      def set_error_code(status_code)
+        @status_code = status_code
+        @error = I18n.t(status_code, scope: 'spree')
       end
 
       def promotion

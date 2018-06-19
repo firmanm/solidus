@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Spree
   module Admin
     class ProductsController < ResourceController
@@ -47,7 +49,7 @@ module Spree
 
       def destroy
         @product = Spree::Product.friendly.find(params[:id])
-        @product.paranoia_destroy!
+        @product.discard
 
         flash[:success] = t('spree.notice_messages.product_deleted')
 
@@ -89,8 +91,6 @@ module Spree
       end
 
       def load_data
-        @taxons = Spree::Taxon.order(:name)
-        @option_types = Spree::OptionType.order(:name)
         @tax_categories = Spree::TaxCategory.order(:name)
         @shipping_categories = Spree::ShippingCategory.order(:name)
       end
