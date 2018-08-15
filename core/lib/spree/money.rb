@@ -53,7 +53,7 @@ module Spree
     # @return [String] the value of this money object formatted according to
     #   its options
     def to_s
-      format
+      format.gsub(/,00$/, "")
     end
 
     # @param options [Hash, String] the options for formatting the money object
