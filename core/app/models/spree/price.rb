@@ -2,7 +2,7 @@ module Spree
   class Price < Spree::Base
     acts_as_paranoid
 
-    MAXIMUM_AMOUNT = BigDecimal('99_999_999.99')
+    MAXIMUM_AMOUNT = BigDecimal('99_999_999_999.99')
 
     belongs_to :variant, -> { with_deleted }, class_name: 'Spree::Variant', touch: true
     belongs_to :country, class_name: "Spree::Country", foreign_key: "country_iso", primary_key: "iso"
