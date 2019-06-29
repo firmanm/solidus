@@ -103,7 +103,7 @@ in this `spree/backend` directory:
 
 ```javascript
 //= require jquery
-//= require jquery_ujs
+//= require rails-ujs
 //= require spree/backend
 //= require_tree .
 ```
@@ -116,7 +116,7 @@ in this `spree/backend` directory:
 
 ## Managing application assets
 
-We recommend using the [Rails's suggested approach to asset
+We recommend using the [Rails' suggested approach to asset
 organization][asset-organization], then scoping your custom files to the
 `spree/frontend` or `spree/backend` subdirectories to avoid conflicts or
 accidental file overrides.
@@ -159,4 +159,3 @@ migrations see the [`install_generator` for
 
 [rails-generators]: http://guides.rubyonrails.org/generators.html
 [solidus-static-content-install-generator]: https://github.com/solidusio-contrib/solidus_static_content/blob/master/lib/generators/solidus_static_content/install/install_generator.rb
-

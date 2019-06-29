@@ -18,8 +18,6 @@ class Spree::StoreCredit < Spree::PaymentSource
   ADJUSTMENT_ACTION = 'adjustment'
   INVALIDATE_ACTION = 'invalidate'
 
-  DEFAULT_CREATED_BY_EMAIL = "spree@example.com"
-
   belongs_to :user, class_name: Spree::UserClassHandle.new
   belongs_to :created_by, class_name: Spree::UserClassHandle.new
   belongs_to :category, class_name: "Spree::StoreCreditCategory"
@@ -41,9 +39,9 @@ class Spree::StoreCredit < Spree::PaymentSource
   before_validation :associate_credit_type
   before_validation :validate_category_unchanged, on: :update
   before_destroy :validate_no_amount_used
-  validate :validate_no_amount_used, if: :discarded?
+  before_discard :validate_no_amount_used
 
-  attr_accessor :action, :action_amount, :action_originator, :action_authorization_code, :update_reason
+  attr_accessor :action, :action_amount, :action_originator, :action_authorization_code, :store_credit_reason
 
   extend Spree::DisplayMoney
   money_methods :amount, :amount_used, :amount_authorized
@@ -178,7 +176,7 @@ class Spree::StoreCredit < Spree::PaymentSource
     self.amount = amount
     self.action_amount = self.amount - previous_amount
     self.action = ADJUSTMENT_ACTION
-    self.update_reason = reason
+    self.store_credit_reason = reason
     self.action_originator = user_performing_update
     save
   end
@@ -186,19 +184,13 @@ class Spree::StoreCredit < Spree::PaymentSource
   def invalidate(reason, user_performing_invalidation)
     if invalidateable?
       self.action = INVALIDATE_ACTION
-      self.update_reason = reason
+      self.store_credit_reason = reason
       self.action_originator = user_performing_invalidation
       self.invalidated_at = Time.current
       save
     else
       errors.add(:invalidated_at, I18n.t('spree.store_credit.errors.cannot_invalidate_uncaptured_authorization'))
       false
-    end
-  end
-
-  class << self
-    def default_created_by
-      Spree.user_class.find_by(email: DEFAULT_CREATED_BY_EMAIL)
     end
   end
 
@@ -249,7 +241,7 @@ class Spree::StoreCredit < Spree::PaymentSource
       amount_remaining: amount_remaining,
       user_total_amount: user.available_store_credit_total(currency: currency),
       originator: action_originator,
-      update_reason: update_reason
+      store_credit_reason: store_credit_reason
     })
   end
 
@@ -276,6 +268,7 @@ class Spree::StoreCredit < Spree::PaymentSource
   def validate_no_amount_used
     if amount_used > 0
       errors.add(:amount_used, 'is greater than zero. Can not delete store credit')
+      throw :abort
     end
   end
 

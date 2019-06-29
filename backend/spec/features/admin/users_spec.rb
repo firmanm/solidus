@@ -16,6 +16,7 @@ describe 'Users', type: :feature do
     create(:completed_order_with_totals, user: user_a, number: "R456").tap do |o|
       li = o.line_items.last
       li.update_column(:price, li.price + 10)
+      o.recalculate
     end
   end
 
@@ -37,7 +38,7 @@ describe 'Users', type: :feature do
     end
 
     it 'can go back to the users list' do
-      expect(page).to have_link Spree::LegacyUser.model_name.human(count: :other), href: spree.admin_users_path
+      expect(page).to have_link Spree::LegacyUser.model_name.human(count: Spree::I18N_GENERIC_PLURAL), href: spree.admin_users_path
     end
 
     it 'can navigate to the account page' do
@@ -58,6 +59,7 @@ describe 'Users', type: :feature do
 
     it "can sort asc" do
       within_table(table_id) do
+        expect(page).to have_selector '.sort_link.asc'
         expect(page).to have_text text_match_1
         expect(page).to have_text text_match_2
         expect(text_match_1).to appear_before text_match_2
@@ -68,7 +70,10 @@ describe 'Users', type: :feature do
       within_table(table_id) do
         # Ransack adds a ▲ to the sort link. With exact match Capybara is not able to find that link
         click_link sort_link, exact: false
+      end
 
+      within_table(table_id) do
+        expect(page).to have_selector '.sort_link.desc'
         expect(page).to have_text text_match_1
         expect(page).to have_text text_match_2
         expect(text_match_2).to appear_before text_match_1
@@ -284,6 +289,24 @@ describe 'Users', type: :feature do
     end
   end
 
+  context 'deleting users' do
+    let!(:an_user) { create(:user_with_addresses, email: 'an_user@example.com') }
+    let!(:order) { create(:completed_order_with_totals, user_id: an_user.id) }
+
+    context 'if an user has placed orders' do
+      before do
+        visit spree.admin_path
+        click_link 'Users'
+      end
+
+      it "can't be deleted" do
+        within "#spree_user_#{an_user.id}" do
+          expect(page).not_to have_selector('.fa-trash')
+        end
+      end
+    end
+  end
+
   context 'order history with sorting' do
     before do
       orders
@@ -302,14 +325,24 @@ describe 'Users', type: :feature do
       end
     end
 
-    [:number, :total].each do |attr|
-      context attr do
-        it_behaves_like "a sortable attribute" do
-          let(:text_match_1) { order.send(attr).to_s }
-          let(:text_match_2) { order_2.send(attr).to_s }
-          let(:table_id) { "listing_orders" }
-          let(:sort_link) { "orders_#{attr}_title" }
-        end
+    context :number do
+      it_behaves_like "a sortable attribute" do
+        let(:text_match_1) { order.number }
+        let(:text_match_2) { order_2.number }
+        let(:table_id) { "listing_orders" }
+        let(:sort_link) { "orders_number_title" }
+      end
+    end
+
+    context :total do
+      it_behaves_like "a sortable attribute" do
+        # Since Spree::Money renders each piece of the total in it's own span,
+        # we are just checking the dollar total matches. Mainly due to how
+        # RSpec matcher appear_before works since it can't index the broken up total.
+        let(:text_match_1) { order.total.to_i.to_s }
+        let(:text_match_2) { order_2.total.to_i.to_s }
+        let(:table_id) { "listing_orders" }
+        let(:sort_link) { "orders_total_title" }
       end
     end
 
@@ -359,9 +392,9 @@ describe 'Users', type: :feature do
       within_table('listing_items') do
         items.each do |item|
           expect(page).to have_selector(".item-name", text: item.product.name)
-          expect(page).to have_selector(".item-price", text: item.single_money.to_html)
+          expect(page).to have_selector(".item-price", text: item.single_money.to_html(html_wrap: false))
           expect(page).to have_selector(".item-quantity", text: item.quantity)
-          expect(page).to have_selector(".item-total", text: item.money.to_html)
+          expect(page).to have_selector(".item-total", text: item.money.to_html(html_wrap: false))
         end
       end
     end

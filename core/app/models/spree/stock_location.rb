@@ -7,6 +7,8 @@ module Spree
   class StockLocation < Spree::Base
     class InvalidMovementError < StandardError; end
 
+    acts_as_list
+
     has_many :shipments
     has_many :stock_items, dependent: :delete_all, inverse_of: :stock_location
     has_many :cartons, inverse_of: :stock_location
@@ -28,6 +30,8 @@ module Spree
 
     after_create :create_stock_items, if: :propagate_all_variants?
     after_save :ensure_one_default
+
+    self.whitelisted_ransackable_attributes = %w[name]
 
     def state_text
       state.try(:abbr) || state.try(:name) || state_name

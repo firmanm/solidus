@@ -24,6 +24,7 @@ module Spree
     helper 'spree/orders'
 
     rescue_from Spree::Core::GatewayError, with: :rescue_from_spree_gateway_error
+    rescue_from Spree::Order::InsufficientStock, with: :insufficient_stock_error
 
     # Updates the order and advances to the next state (when possible.)
     def update
@@ -168,6 +169,7 @@ module Spree
 
     def apply_coupon_code
       if update_params[:coupon_code].present?
+        Spree::Deprecation.warn('This endpoint is deprecated. Please use `Spree::CouponCodesController#create` endpoint instead.')
         @order.coupon_code = update_params[:coupon_code]
 
         handler = PromotionHandler::Coupon.new(@order).apply
@@ -217,9 +219,14 @@ module Spree
         @wallet_payment_sources = try_spree_current_user.wallet.wallet_payment_sources
         @default_wallet_payment_source = @wallet_payment_sources.detect(&:default) ||
                                          @wallet_payment_sources.first
-        # TODO: How can we deprecate this instance variable?  We could try
-        # wrapping it in a delegating object that produces deprecation warnings.
-        @payment_sources = try_spree_current_user.wallet.wallet_payment_sources.map(&:payment_source).select { |ps| ps.is_a?(Spree::CreditCard) }
+
+        @payment_sources = Spree::DeprecatedInstanceVariableProxy.new(
+          self,
+          :deprecated_payment_sources,
+          :@payment_sources,
+          Spree::Deprecation,
+          "Please, do not use @payment_sources anymore, use @wallet_payment_sources instead."
+        )
       end
     end
 
@@ -231,6 +238,40 @@ module Spree
 
     def check_authorization
       authorize!(:edit, current_order, cookies.signed[:guest_token])
+    end
+
+    def insufficient_stock_error
+      packages = @order.shipments.map(&:to_package)
+      if packages.empty?
+        flash[:error] = I18n.t('spree.insufficient_stock_for_order')
+        redirect_to cart_path
+      else
+        availability_validator = Spree::Stock::AvailabilityValidator.new
+        unavailable_items = @order.line_items.reject { |line_item| availability_validator.validate(line_item) }
+        if unavailable_items.any?
+          item_names = unavailable_items.map(&:name).to_sentence
+          flash[:error] = t('spree.inventory_error_flash_for_insufficient_shipment_quantity', unavailable_items: item_names)
+          @order.restart_checkout_flow
+          redirect_to spree.checkout_state_path(@order.state)
+        end
+      end
+    end
+
+    # This method returns payment sources of the current user. It is no more
+    # used into our frontend. We used to assign the content of this method
+    # into an ivar (@payment_sources) into the checkout payment step. This
+    # method is here only to be able to deprecate this ivar and will be removed.
+    #
+    # DO NOT USE THIS METHOD!
+    #
+    # @return [Array<Spree::PaymentSource>] Payment sources connected to
+    #   current user wallet.
+    # @deprecated This method has been added to deprecate @payment_sources
+    #   ivar and will be removed. Use @wallet_payment_sources instead.
+    def deprecated_payment_sources
+      try_spree_current_user.wallet.wallet_payment_sources
+        .map(&:payment_source)
+        .select { |ps| ps.is_a?(Spree::CreditCard) }
     end
   end
 end

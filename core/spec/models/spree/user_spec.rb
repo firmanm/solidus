@@ -36,7 +36,7 @@ RSpec.describe Spree::LegacyUser, type: :model do
 
     context "with completable_order_created_cutoff set" do
       before do
-        Spree::Config.completable_order_created_cutoff_days = 1
+        stub_spree_preferences(completable_order_created_cutoff_days: 1)
       end
 
       it "excludes orders updated outside of the cutoff date" do
@@ -47,7 +47,7 @@ RSpec.describe Spree::LegacyUser, type: :model do
 
     context "with completable_order_created_cutoff set" do
       before do
-        Spree::Config.completable_order_updated_cutoff_days = 1
+        stub_spree_preferences(completable_order_updated_cutoff_days: 1)
       end
 
       it "excludes orders updated outside of the cutoff date" do
@@ -142,7 +142,7 @@ RSpec.describe Spree.user_class, type: :model do
     describe "#order_count" do
       before { load_orders }
       it "returns the count of completed orders for the user" do
-        expect(subject.order_count).to eq BigDecimal(order_count)
+        expect(subject.order_count).to eq order_count
       end
     end
 

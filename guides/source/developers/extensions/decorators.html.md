@@ -13,15 +13,13 @@ For example, if you want to add a method to the `Spree::Order` model, you could
 create `/app/models/mystore/order_decorator.rb` with the following contents:
 
 ```ruby
-module MyStore
-  module OrderDecorator
-    def total
-      super + BigDecimal(10.0)
-    end
+module MyStore::OrderDecorator
+  def total
+    super + BigDecimal(10.0)
   end
-end
 
-Spree::Order.prepend MyStore::OrderDecorator
+  Spree::Order.prepend self
+end
 ```
 
 This creates a new module called `MyStore::OrderDecorator` that prepends its
@@ -33,6 +31,32 @@ From now on, every order, when asked for its total, returns an inflated
 total by $10 (or whatever your currency is).
 
 [monkey-patch]: https://en.wikipedia.org/wiki/Monkey_patch
+
+## Using class-level methods in decorators
+
+In order to access some class-level methods, you'll need to define a special
+method.
+
+```ruby
+module MyStore::ProductDecorator
+
+  # This is the place to define custom associations, delegations, scopes and
+  # other ActiveRecord stuff
+  def self.prepended(base)
+    base.has_many :comments, dependent: :destroy
+    base.scope    :sellable, -> { base.where(...).order(...) }
+    base.delegate :something, to: :something
+  end
+
+  ...
+
+  Spree::Product.prepend self
+end
+```
+
+In this example, a decorator has been used to extend the functionality of
+`Spree::Product`. The decorator includes an ActiveRecord association, scope,
+and delegation.
 
 ## Decorators and Solidus upgrades
 

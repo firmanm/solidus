@@ -27,7 +27,7 @@ RSpec.describe Spree::Product, type: :model do
         expect(clone.images.size).to eq(product.images.size)
       end
 
-      it 'calls #duplicate_extra' do
+      it 'calls #duplicate_extra', partial_double_verification: false do
         expect_any_instance_of(Spree::Product).to receive(:duplicate_extra) do |product, old_product|
           product.name = old_product.name.reverse
         end
@@ -153,7 +153,7 @@ RSpec.describe Spree::Product, type: :model do
         before do
           product.master.default_price.currency = 'JPY'
           product.master.default_price.save!
-          Spree::Config[:currency] = 'JPY'
+          stub_spree_preferences(currency: 'JPY')
         end
 
         it "displays the currency in yen" do
@@ -514,12 +514,12 @@ RSpec.describe Spree::Product, type: :model do
 
   context '#total_on_hand' do
     it 'should be infinite if track_inventory_levels is false' do
-      Spree::Config[:track_inventory_levels] = false
+      stub_spree_preferences(track_inventory_levels: false)
       expect(build(:product, variants_including_master: [build(:master_variant)]).total_on_hand).to eql(Float::INFINITY)
     end
 
     it 'should be infinite if variant is on demand' do
-      Spree::Config[:track_inventory_levels] = true
+      stub_spree_preferences(track_inventory_levels: true)
       expect(build(:product, variants_including_master: [build(:on_demand_master_variant)]).total_on_hand).to eql(Float::INFINITY)
     end
 
@@ -570,6 +570,15 @@ RSpec.describe Spree::Product, type: :model do
         expect(product.master.sku).to eq 'FOO'
         expect(product.sku).to eq 'FOO'
       end
+    end
+  end
+
+  describe '#gallery' do
+    let(:product) { Spree::Product.new }
+    subject { product.gallery }
+
+    it 'responds to #images' do
+      expect(subject).to respond_to(:images)
     end
   end
 end

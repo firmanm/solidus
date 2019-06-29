@@ -131,7 +131,7 @@ module Spree
     alias :options :product_option_types
 
     self.whitelisted_ransackable_associations = %w[stores variants_including_master master variants]
-    self.whitelisted_ransackable_attributes = %w[slug]
+    self.whitelisted_ransackable_attributes = %w[name slug]
 
     def self.ransackable_scopes(_auth_object = nil)
       %i(with_deleted with_variant_sku_cont)
@@ -297,6 +297,7 @@ module Spree
     # variants. If all else fails, will return a new image object.
     # @return [Spree::Image] the image to display
     def display_image
+      Spree::Deprecation.warn('Spree::Product#display_image is DEPRECATED. Choose an image from Spree::Product#gallery instead.')
       images.first || variant_images.first || Spree::Image.new
     end
 
@@ -308,6 +309,14 @@ module Spree
       variant_property_rules.find do |rule|
         rule.matches_option_value_ids?(option_value_ids)
       end
+    end
+
+    # The gallery for the product, which represents all the images
+    # associated with it, including those on its variants
+    #
+    # @return [Spree::Gallery] the media for a variant
+    def gallery
+      @gallery ||= Spree::Config.product_gallery_class.new(self)
     end
 
     private

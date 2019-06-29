@@ -25,15 +25,9 @@ module Spree
     after_save :touch_ancestors_and_taxonomy
     after_touch :touch_ancestors_and_taxonomy
 
-    has_attached_file :icon,
-      styles: { mini: '32x32>', normal: '128x128>' },
-      default_style: :mini,
-      url: '/spree/taxons/:id/:style/:basename.:extension',
-      path: ':rails_root/public/spree/taxons/:id/:style/:basename.:extension',
-      default_url: '/assets/default_taxon.png'
+    include ::Spree::Config.taxon_attachment_module
 
-    validates_attachment :icon,
-      content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
+    self.whitelisted_ransackable_attributes = %w[name]
 
     # @note This method is meant to be overridden on a store by store basis.
     # @return [Array] filters that should be used for a taxon
@@ -59,9 +53,8 @@ module Spree
     # Sets this taxons permalink to a valid url encoded string based on its
     # name and its parents permalink (if present.)
     def set_permalink
-      permalink_tail = permalink.split('/').last if permalink.present?
-      permalink_tail ||= Spree::Config.taxon_url_parametizer_class.parameterize(name)
-      self.permalink_part = permalink_tail
+      permalink_tail = permalink.present? ? permalink.split('/').last : name
+      self.permalink_part = Spree::Config.taxon_url_parametizer_class.parameterize(permalink_tail)
     end
 
     # Update the permalink for this taxon and all children (if necessary)
@@ -104,9 +97,14 @@ module Spree
     # @return [String] this taxon's ancestors names followed by its own name,
     #   separated by arrows
     def pretty_name
-      ancestor_chain = ancestors.map(&:name)
-      ancestor_chain << name
-      ancestor_chain.join(" -> ")
+      if parent.present?
+        [
+          parent.pretty_name,
+          name
+        ].compact.join(" -> ")
+      else
+        name
+      end
     end
 
     # @see https://github.com/spree/spree/issues/3390

@@ -1092,6 +1092,9 @@ div[data-hook="inside_cart_form"] {
 /*--------------------------------------*/
 #order_summary {
   margin-top: 0;
+  h1 {
+    padding-left: 10px;
+  }
 }
 #order {
   p[data-hook="links"] {
@@ -1260,6 +1263,15 @@ table.order-summary {
     }
   }
 
+}
+
+// # Logo
+#logo {
+  padding: 20px 0;
+  
+  > a {
+    display: inline-block;
+  }
 }
 
 @media only screen and (max-width: 767px) {

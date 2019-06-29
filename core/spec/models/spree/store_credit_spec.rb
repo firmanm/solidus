@@ -507,7 +507,7 @@ RSpec.describe Spree::StoreCredit do
       let(:auth_code)       { event_auth_code }
 
       context "credit_to_new_allocation is set" do
-        before { Spree::Config[:credit_to_new_allocation] = true }
+        before { stub_spree_preferences(credit_to_new_allocation: true) }
 
         it "returns true" do
           expect(subject).to be true
@@ -809,7 +809,7 @@ RSpec.describe Spree::StoreCredit do
 
   describe "#update_amount" do
     let(:invalidation_user) { create(:user) }
-    let(:invalidation_reason) { create(:store_credit_update_reason) }
+    let(:invalidation_reason) { create(:store_credit_reason) }
 
     subject { store_credit.update_amount(amount, invalidation_reason, invalidation_user) }
 
@@ -852,7 +852,7 @@ RSpec.describe Spree::StoreCredit do
 
   describe "#invalidate" do
     let(:invalidation_user) { create(:user) }
-    let(:invalidation_reason) { create(:store_credit_update_reason) }
+    let(:invalidation_reason) { create(:store_credit_reason) }
 
     before do
       store_credit.save!

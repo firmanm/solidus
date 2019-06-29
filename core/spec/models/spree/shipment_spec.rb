@@ -267,8 +267,8 @@ RSpec.describe Spree::Shipment, type: :model do
 
         before do
           allow(line_item).to receive(:order) { order }
-          allow(shipment).to receive(:inventory_units) { inventory_units }
-          allow(inventory_units).to receive_message_chain(:includes, :joins).and_return inventory_units
+          shipment.inventory_units = inventory_units
+          allow(shipment.inventory_units).to receive_message_chain(:includes, :joins).and_return inventory_units
         end
 
         it 'should use symbols for states when adding contents to package' do
@@ -328,7 +328,7 @@ RSpec.describe Spree::Shipment, type: :model do
 
     context "when payment is not required" do
       before do
-        Spree::Config[:require_payment_to_ship] = false
+        stub_spree_preferences(require_payment_to_ship: false)
       end
 
       it "should result in a 'ready' state" do
@@ -391,7 +391,7 @@ RSpec.describe Spree::Shipment, type: :model do
     end
 
     context "with inventory tracking" do
-      before { Spree::Config.set track_inventory_levels: true }
+      before { stub_spree_preferences(track_inventory_levels: true) }
 
       it "should validate with inventory" do
         shipment.inventory_units = [create(:inventory_unit)]
@@ -400,7 +400,7 @@ RSpec.describe Spree::Shipment, type: :model do
     end
 
     context "without inventory tracking" do
-      before { Spree::Config.set track_inventory_levels: false }
+      before { stub_spree_preferences(track_inventory_levels: false) }
 
       it "should validate with no inventory" do
         expect(shipment.valid?).to be true
@@ -413,7 +413,9 @@ RSpec.describe Spree::Shipment, type: :model do
       allow(shipment.order).to receive(:update!)
 
       shipment.state = 'pending'
-      expect(shipment).to receive(:after_cancel)
+      without_partial_double_verification do
+        expect(shipment).to receive(:after_cancel)
+      end
       shipment.cancel!
       expect(shipment.state).to eq 'canceled'
     end
@@ -512,7 +514,6 @@ RSpec.describe Spree::Shipment, type: :model do
       let(:subject) { shipment_with_inventory_units.ship! }
       before do
         allow(order).to receive(:update!)
-        allow(shipment_with_inventory_units).to receive_messages(require_inventory: false, update_order: true)
       end
 
       it 'unstocks them items' do
@@ -525,7 +526,7 @@ RSpec.describe Spree::Shipment, type: :model do
       context "from #{state}" do
         before do
           allow(order).to receive(:update!)
-          allow(shipment).to receive_messages(require_inventory: false, update_order: true, state: state)
+          allow(shipment).to receive_messages(state: state)
         end
 
         it "finalizes adjustments" do
@@ -760,8 +761,12 @@ RSpec.describe Spree::Shipment, type: :model do
   describe "#finalize!" do
     let(:inventory_unit) { shipment.inventory_units.first }
     let(:stock_item) { inventory_unit.variant.stock_items.find_by(stock_location: stock_location) }
+    let(:inventory_unit_finalizer) { double(:inventory_unit_finalizer, run!: [true]) }
 
     before do
+      allow(Spree::Stock::InventoryUnitsFinalizer)
+        .to receive(:new).and_return(inventory_unit_finalizer)
+
       stock_item.set_count_on_hand(10)
       stock_item.update_attributes!(backorderable: false)
       inventory_unit.update_attributes!(pending: true)
@@ -769,18 +774,20 @@ RSpec.describe Spree::Shipment, type: :model do
 
     subject { shipment.finalize! }
 
-    it "updates the associated inventory units" do
-      inventory_unit.update_columns(updated_at: 1.hour.ago)
-      expect { subject }.to change { inventory_unit.reload.updated_at }
-    end
+    it "call run! on Spree::Stock::InventoryUnitsFinalizer" do
+      expect(inventory_unit_finalizer).to receive(:run!)
 
-    it "unstocks the variant" do
-      expect { subject }.to change { stock_item.reload.count_on_hand }.from(10).to(9)
+      subject
     end
 
     context "inventory unit already finalized" do
-      before do
-        inventory_unit.update_attributes!(pending: false)
+      let(:inventory_unit) { build(:inventory_unit, pending: false) }
+
+      it "doesn't pass the inventory unit" do
+        expect(Spree::Stock::InventoryUnitsFinalizer)
+          .to receive(:new).with([])
+
+        subject
       end
 
       it "doesn't update the associated inventory units" do

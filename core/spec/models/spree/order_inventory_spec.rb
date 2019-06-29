@@ -35,12 +35,19 @@ RSpec.describe Spree::OrderInventory, type: :model do
     end
 
     context "order is not completed" do
-      before { order.update_columns completed_at: nil }
+      let(:inventory_unit_finalizer) { double(:inventory_unit_finalizer, run!: [true]) }
 
-      it "doesn't unstock items" do
-        expect {
-          subject.verify(shipment)
-        }.not_to change { stock_item.reload.count_on_hand }
+      before do
+        allow(Spree::Stock::InventoryUnitsFinalizer)
+          .to receive(:new).and_return(inventory_unit_finalizer)
+
+        order.update_columns completed_at: nil
+      end
+
+      it "doesn't finalize the items" do
+        expect(inventory_unit_finalizer).to_not receive(:run!)
+
+        subject.verify(shipment)
       end
     end
 
@@ -65,7 +72,7 @@ RSpec.describe Spree::OrderInventory, type: :model do
     context "store doesnt track inventory" do
       let(:new_quantity) { 1 }
 
-      before { Spree::Config.track_inventory_levels = false }
+      before { stub_spree_preferences(track_inventory_levels: false) }
 
       it "creates on hand inventory units" do
         variant.stock_items.each(&:really_destroy!)

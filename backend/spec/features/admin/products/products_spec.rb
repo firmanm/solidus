@@ -54,7 +54,7 @@ describe "Products", type: :feature do
       context "currency displaying" do
         context "using Russian Rubles" do
           before do
-            Spree::Config[:currency] = "RUB"
+            stub_spree_preferences(currency: "RUB")
           end
 
           let!(:product) do
@@ -72,7 +72,7 @@ describe "Products", type: :feature do
       end
       context "when none of the product prices are in the same currency as the default in the store" do
         before do
-          Spree::Config[:currency] = "MXN"
+          stub_spree_preferences(currency: "MXN")
         end
 
         let!(:product) do
@@ -80,7 +80,7 @@ describe "Products", type: :feature do
         end
 
         it 'defaults it to Spree::Config.currency and sets the price as blank' do
-          Spree::Config[:currency] = "USD"
+          stub_spree_preferences(currency: "USD")
           visit spree.admin_product_path(product)
           within("#product_price_field") do
             expect(page).to have_content("USD")
@@ -289,7 +289,7 @@ describe "Products", type: :feature do
         check "Show Deleted"
         click_button "Search"
         click_link product.name
-        expect(page).to have_field('Master Price', with: product.price.to_f)
+        expect(page).to_not have_field('Master Price')
         expect(page).to_not have_content('Images')
         expect(page).to_not have_content('Prices')
         expect(page).to_not have_content('Product Properties')
@@ -299,7 +299,7 @@ describe "Products", type: :feature do
 
   context 'with only product permissions' do
     before do
-      allow_any_instance_of(Spree::Admin::BaseController).to receive(:spree_current_user).and_return(nil)
+      allow_any_instance_of(Spree::Admin::BaseController).to receive(:try_spree_current_user).and_return(nil)
     end
 
     custom_authorization! do |_user|

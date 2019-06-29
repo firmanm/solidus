@@ -14,7 +14,6 @@ describe Spree::CheckoutController, type: :controller do
 
   before do
     allow(controller).to receive_messages try_spree_current_user: user
-    allow(controller).to receive_messages spree_current_user: user
     allow(controller).to receive_messages current_order: order
   end
 
@@ -90,7 +89,7 @@ describe Spree::CheckoutController, type: :controller do
         order.line_items << FactoryBot.create(:line_item)
       end
 
-      context "with the order in the cart state" do
+      context "with the order in the cart state", partial_double_verification: false do
         before do
           order.update_attributes! user: user
           order.update_column(:state, "cart")
@@ -139,7 +138,7 @@ describe Spree::CheckoutController, type: :controller do
         end
       end
 
-      context "with the order in the address state" do
+      context "with the order in the address state", partial_double_verification: false do
         before do
           order.update_attributes! user: user
           order.update_columns(ship_address_id: create(:address).id, state: "address")
@@ -152,7 +151,7 @@ describe Spree::CheckoutController, type: :controller do
           end
         end
 
-        context "with a billing and shipping address" do
+        context "with a billing and shipping address", partial_double_verification: false do
           subject do
             post :update, params: {
               state: "address",
@@ -184,7 +183,7 @@ describe Spree::CheckoutController, type: :controller do
       # the same thing here.
       # Perhaps we can just remove 'set_payment_parameters_amount' entirely at
       # some point?
-      context "when there is a checkout step between payment and confirm" do
+      context "when there is a checkout step between payment and confirm", partial_double_verification: false do
         before do
           @old_checkout_flow = Spree::Order.checkout_flow
           Spree::Order.class_eval do
@@ -227,7 +226,7 @@ describe Spree::CheckoutController, type: :controller do
         end
       end
 
-      context "when in the payment state" do
+      context "when in the payment state", partial_double_verification: false do
         let(:order) { create(:order_with_line_items) }
         let(:payment_method) { create(:credit_card_payment_method) }
 
@@ -420,6 +419,45 @@ describe Spree::CheckoutController, type: :controller do
         expect(flash[:error]).to eq(I18n.t('spree.payment_processing_failed'))
       end
     end
+
+    context "when InsufficientStock error is raised" do
+      before do
+        allow(controller).to receive_messages current_order: order
+        allow(controller).to receive_messages check_authorization: true
+        allow(controller).to receive_messages ensure_sufficient_stock_lines: true
+      end
+
+      context "when the order has no shipments" do
+        let(:order) { Spree::TestingSupport::OrderWalkthrough.up_to(:address) }
+
+        before do
+          allow(order).to receive_messages shipments: []
+          # Order#next is the tipical failure point here:
+          allow(order).to receive(:next).and_raise(Spree::Order::InsufficientStock)
+        end
+
+        it "redirects the customer to the cart page with an error message" do
+          put :update, params: { state: order.state, order: {} }
+          expect(flash[:error]).to eq(I18n.t('spree.insufficient_stock_for_order'))
+          expect(response).to redirect_to(spree.cart_path)
+        end
+      end
+
+      context "when the order has shipments" do
+        let(:order) { Spree::TestingSupport::OrderWalkthrough.up_to(:payment) }
+
+        context "when items become somehow not available anymore" do
+          before { Spree::StockItem.update_all backorderable: false }
+
+          it "redirects the customer to the address checkout page with an error message" do
+            put :update, params: { state: order.state, order: {} }
+            error = I18n.t('spree.inventory_error_flash_for_insufficient_shipment_quantity', unavailable_items: order.products.first.name)
+            expect(flash[:error]).to eq(error)
+            expect(response).to redirect_to(spree.checkout_state_path(state: :address))
+          end
+        end
+      end
+    end
   end
 
   context "When last inventory item has been purchased" do
@@ -431,9 +469,7 @@ describe Spree::CheckoutController, type: :controller do
     before do
       allow(order).to receive_messages(line_items: [line_item], state: "payment")
 
-      configure_spree_preferences do |config|
-        config.track_inventory_levels = true
-      end
+      stub_spree_preferences(track_inventory_levels: true)
     end
 
     context "and back orders are not allowed" do
@@ -501,6 +537,8 @@ describe Spree::CheckoutController, type: :controller do
       let(:promotion_handler) { instance_double('Spree::PromotionHandler::Coupon', error: nil, success: 'Coupon Applied!') }
 
       it "continues checkout flow normally" do
+        expect(Spree::Deprecation).to receive(:warn)
+
         expect(Spree::PromotionHandler::Coupon)
           .to receive_message_chain(:new, :apply)
           .and_return(promotion_handler)
@@ -515,6 +553,8 @@ describe Spree::CheckoutController, type: :controller do
         let(:promotion_handler) { instance_double('Spree::PromotionHandler::Coupon', error: 'Some error', success: false) }
 
         it "setups the current step correctly before rendering" do
+          expect(Spree::Deprecation).to receive(:warn)
+
           expect(Spree::PromotionHandler::Coupon)
             .to receive_message_chain(:new, :apply)
             .and_return(promotion_handler)
@@ -524,6 +564,8 @@ describe Spree::CheckoutController, type: :controller do
         end
 
         it "render cart with coupon error" do
+          expect(Spree::Deprecation).to receive(:warn)
+
           expect(Spree::PromotionHandler::Coupon)
             .to receive_message_chain(:new, :apply)
             .and_return(promotion_handler)

@@ -12,6 +12,21 @@ module Spree
         fill_in field, options
       end
 
+      def fill_in_with_force(locator, with:)
+        if Capybara.current_driver == Capybara.javascript_driver
+          field_id = find_field(locator)[:id]
+          page.execute_script <<-JS
+            var field = document.getElementById('#{field_id}');
+            field.value = '#{with}';
+
+            var event = new Event('change', { bubbles: true });
+            field.dispatchEvent(event);
+          JS
+        else
+          fill_in locator, with: with
+        end
+      end
+
       def within_row(num, &block)
         within("table.index tbody tr:nth-of-type(#{num})", &block)
       end
@@ -93,7 +108,9 @@ module Spree
       def select_select2_result(value)
         # results are in a div appended to the end of the document
         within_entire_page do
-          page.find("div.select2-result-label", text: /#{Regexp.escape(value)}/i, match: :prefer_exact).click
+          expect(page).to have_selector('.select2-result-label', visible: true)
+          find("div.select2-result-label", text: /#{Regexp.escape(value)}/i, match: :prefer_exact).click
+          expect(page).not_to have_selector('.select2-result-label')
         end
       end
 

@@ -36,7 +36,7 @@ RSpec.describe Spree::Order, type: :model do
         Spree::Order.checkout_flow(&@old_checkout_flow)
       end
 
-      it '.remove_transition' do
+      it '.remove_transition', partial_double_verification: false do
         options = { from: transitions.first.keys.first, to: transitions.first.values.first }
         allow(Spree::Order).to receive(:next_event_transition).and_return([options])
         expect(Spree::Order.remove_transition(options)).to be_truthy
@@ -238,7 +238,7 @@ RSpec.describe Spree::Order, type: :model do
         order.ship_address = ship_address
       end
 
-      context 'when order has default selected_shipping_rate_id' do
+      context 'when order has default selected_shipping_rate_id', partial_double_verification: false do
         let(:shipment) { create(:shipment, order: order) }
         let(:shipping_method) { create(:shipping_method) }
         let(:shipping_rate) {
@@ -277,7 +277,7 @@ RSpec.describe Spree::Order, type: :model do
       end
     end
 
-    context "from delivery" do
+    context "from delivery", partial_double_verification: false do
       let(:ship_address) { FactoryBot.create(:ship_address) }
 
       before do
@@ -359,6 +359,7 @@ RSpec.describe Spree::Order, type: :model do
 
       before do
         user = create(:user, email: 'spree@example.org', bill_address: user_bill_address)
+        default_credit_card.update(user: user)
         wallet_payment_source = user.wallet.add(default_credit_card)
         user.wallet.default_wallet_payment_source = wallet_payment_source
         order.user = user
@@ -497,12 +498,7 @@ RSpec.describe Spree::Order, type: :model do
 
     context "with a payment in the pending state" do
       let(:order) { create :order_ready_to_complete }
-      let(:payment) { create :payment, state: "pending", amount: order.total }
-
-      before do
-        order.payments = [payment]
-        order.save!
-      end
+      let(:payment) { create :payment, order: order, state: "pending", amount: order.total }
 
       it "allows the order to complete" do
         expect { order.complete! }.
@@ -537,12 +533,12 @@ RSpec.describe Spree::Order, type: :model do
       end
     end
 
-    context "default credit card" do
+    context "default credit card", partial_double_verification: false do
       before do
         order.user = FactoryBot.create(:user)
         order.store = FactoryBot.create(:store)
         order.email = 'spree@example.org'
-        order.payments << FactoryBot.create(:payment)
+        order.payments << FactoryBot.create(:payment, order: order)
 
         # make sure we will actually capture a payment
         allow(order).to receive_messages(payment_required?: true)
@@ -568,7 +564,7 @@ RSpec.describe Spree::Order, type: :model do
       end
     end
 
-    context "a payment fails during processing" do
+    context "a payment fails during processing", partial_double_verification: false do
       before do
         order.user = FactoryBot.create(:user)
         order.email = 'spree@example.org'
@@ -656,7 +652,7 @@ RSpec.describe Spree::Order, type: :model do
       assert_state_changed(order, 'cart', 'complete')
     end
 
-    it "does not attempt to process payments" do
+    it "does not attempt to process payments", partial_double_verification: false do
       order.email = 'user@example.com'
       allow(order).to receive(:ensure_promotions_eligible).and_return(true)
       allow(order).to receive(:ensure_line_item_variants_are_not_deleted).and_return(true)

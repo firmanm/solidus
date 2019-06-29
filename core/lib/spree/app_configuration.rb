@@ -31,8 +31,8 @@ module Spree
     preference :address_requires_state, :boolean, default: true
 
     # @!attribute [rw] admin_interface_logo
-    #   @return [String] URL of logo used in admin (default: +'logo/solidus_logo.png'+)
-    preference :admin_interface_logo, :string, default: 'logo/solidus_logo.png'
+    #   @return [String] URL of logo used in admin (default: +'logo/solidus.svg'+)
+    preference :admin_interface_logo, :string, default: 'logo/solidus.svg'
 
     # @!attribute [rw] admin_products_per_page
     #   @return [Integer] Number of products to display in admin (default: +10+)
@@ -142,8 +142,8 @@ module Spree
     preference :layout, :string, default: 'spree/layouts/spree_application'
 
     # @!attribute [rw] logo
-    #   @return [String] URL of logo used on frontend (default: +'logo/solidus_logo.png'+)
-    preference :logo, :string, default: 'logo/solidus_logo.png'
+    #   @return [String] URL of logo used on frontend (default: +'logo/solidus.svg'+)
+    preference :logo, :string, default: 'logo/solidus.svg'
 
     # @!attribute [rw] order_bill_address_used
     #   @return [Boolean] Use the order's bill address, as opposed to storing
@@ -295,6 +295,8 @@ module Spree
     # promotion_chooser_class allows extensions to provide their own PromotionChooser
     class_name_attribute :promotion_chooser_class, default: 'Spree::PromotionChooser'
 
+    class_name_attribute :allocator_class, default: 'Spree::Stock::Allocator::OnHandFirst'
+
     class_name_attribute :shipping_rate_sorter_class, default: 'Spree::Stock::ShippingRateSorter'
 
     class_name_attribute :shipping_rate_selector_class, default: 'Spree::Stock::ShippingRateSelector'
@@ -407,6 +409,40 @@ module Spree
     # returns a String
     class_name_attribute :taxon_url_parametizer_class, default: 'ActiveSupport::Inflector'
 
+    # Allows providing your own class for image galleries on Variants
+    #
+    # @!attribute [rw] variant_gallery_class
+    # @return [Class] a class that implements an `images` method and returns an
+    # Enumerable of images adhering to the present_image_class interface
+    class_name_attribute :variant_gallery_class, default: 'Spree::Gallery::VariantGallery'
+
+    # Allows providing your own class for image galleries on Products
+    #
+    # @!attribute [rw] product_gallery_class
+    # @return [Class] a class that implements an `images` method and returns an
+    # Enumerable of images adhering to the present_image_class interface
+    class_name_attribute :product_gallery_class, default: 'Spree::Gallery::ProductGallery'
+
+    # Allows switching attachment library for Image
+    #
+    # `Spree::Image::PaperclipAttachment`
+    # is the default and provides the classic Paperclip implementation.
+    #
+    # @!attribute [rw] image_attachment_module
+    # @return [Module] a module that can be included into Spree::Image to allow attachments
+    # Enumerable of images adhering to the present_image_class interface
+    class_name_attribute :image_attachment_module, default: 'Spree::Image::PaperclipAttachment'
+
+    # Allows switching attachment library for Taxon
+    #
+    # `Spree::Taxon::PaperclipAttachment`
+    # is the default and provides the classic Paperclip implementation.
+    #
+    # @!attribute [rw] taxon_attachment_module
+    # @return [Module] a module that can be included into Spree::Taxon to allow attachments
+    # Enumerable of taxons adhering to the present_taxon_class interface
+    class_name_attribute :taxon_attachment_module, default: 'Spree::Taxon::PaperclipAttachment'
+
     # Allows providing your own class instance for generating order numbers.
     #
     # @!attribute [rw] order_number_generator
@@ -431,6 +467,10 @@ module Spree
         roles.assign_permissions :default, ['Spree::PermissionSets::DefaultCustomer']
         roles.assign_permissions :admin, ['Spree::PermissionSets::SuperUser']
       end
+    end
+
+    def events
+      @events_configuration ||= Spree::Event::Configuration.new
     end
 
     def environment

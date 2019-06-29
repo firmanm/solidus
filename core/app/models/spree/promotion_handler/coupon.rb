@@ -25,14 +25,28 @@ module Spree
         self
       end
 
+      def remove
+        if promotion.blank?
+          set_error_code :coupon_code_not_found
+        elsif !promotion_exists_on_order?(order, promotion)
+          set_error_code :coupon_code_not_present
+        else
+          promotion.remove_from(order)
+          order.recalculate
+          set_success_code :coupon_code_removed
+        end
+
+        self
+      end
+
       def set_success_code(status_code)
         @status_code = status_code
         @success = I18n.t(status_code, scope: 'spree')
       end
 
-      def set_error_code(status_code)
+      def set_error_code(status_code, options = {})
         @status_code = status_code
-        @error = I18n.t(status_code, scope: 'spree')
+        @error = options[:error] || I18n.t(status_code, scope: 'spree')
       end
 
       def promotion
@@ -56,8 +70,9 @@ module Spree
       def handle_present_promotion(promotion)
         return promotion_usage_limit_exceeded if promotion.usage_limit_exceeded? || promotion_code.usage_limit_exceeded?
         return promotion_applied if promotion_exists_on_order?(order, promotion)
+
         unless promotion.eligible?(order, promotion_code: promotion_code)
-          self.error = promotion.eligibility_errors.full_messages.first unless promotion.eligibility_errors.blank?
+          set_promotion_eligibility_error_code(promotion)
           return (error || ineligible_for_this_order)
         end
 
@@ -70,6 +85,15 @@ module Spree
         else
           set_error_code :coupon_code_unknown_error
         end
+      end
+
+      def set_promotion_eligibility_error_code(promotion)
+        return unless eligibility_error_code_present?(promotion)
+
+        eligibility_error = promotion.eligibility_errors.details[:base].first
+
+        @status_code = eligibility_error[:error_code]
+        @error = eligibility_error[:error]
       end
 
       def promotion_usage_limit_exceeded
@@ -86,6 +110,13 @@ module Spree
 
       def promotion_exists_on_order?(order, promotion)
         order.promotions.include? promotion
+      end
+
+      def eligibility_error_code_present?(promotion)
+        promotion.eligibility_errors.present? &&
+          promotion.eligibility_errors.details.present? &&
+          promotion.eligibility_errors.details.key?(:base) &&
+          promotion.eligibility_errors.details[:base].first[:error_code].present?
       end
     end
   end

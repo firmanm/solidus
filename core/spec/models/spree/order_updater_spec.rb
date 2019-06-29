@@ -117,7 +117,7 @@ module Spree
               end
             end
 
-            Spree::Config.promotion_chooser_class = Spree::TestPromotionChooser
+            stub_spree_preferences(promotion_chooser_class: Spree::TestPromotionChooser)
           end
 
           it 'uses the defined promotion chooser' do
@@ -322,7 +322,7 @@ module Spree
 
           before do
             order # generate this first so we can expect it
-            Spree::Config.tax_calculator_class = custom_calculator_class
+            stub_spree_preferences(tax_calculator_class: custom_calculator_class)
           end
 
           it 'uses the configured class' do
@@ -513,15 +513,10 @@ module Spree
 
       it "doesnt update each shipment" do
         shipment = stub_model(Spree::Shipment)
-        shipments = [shipment]
-        allow(order).to receive_messages shipments: shipments
-        allow(shipments).to receive_messages states: []
-        allow(shipments).to receive_messages ready: []
-        allow(shipments).to receive_messages pending: []
-        allow(shipments).to receive_messages shipped: []
-
+        order.shipments = [shipment]
+        allow(order.shipments).to receive_messages(states: [], ready: [], pending: [], shipped: [])
         allow(updater).to receive(:update_totals) # Otherwise this gets called and causes a scene
-        expect(updater).not_to receive(:update_shipments).with(order)
+        expect(updater).not_to receive(:update_shipments)
         updater.update
       end
     end

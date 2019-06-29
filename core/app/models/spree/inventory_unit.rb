@@ -10,7 +10,6 @@ module Spree
 
     belongs_to :variant, -> { with_deleted }, class_name: "Spree::Variant", inverse_of: :inventory_units
     belongs_to :shipment, class_name: "Spree::Shipment", touch: true, inverse_of: :inventory_units
-    belongs_to :return_authorization, class_name: "Spree::ReturnAuthorization", inverse_of: :inventory_units
     belongs_to :carton, class_name: "Spree::Carton", inverse_of: :inventory_units
     belongs_to :line_item, class_name: "Spree::LineItem", inverse_of: :inventory_units
 
@@ -81,9 +80,17 @@ module Spree
 
     # Updates the given inventory units to not be pending.
     #
+    # @deprecated do not use this, use
+    #   Spree::Stock::InventoryUnitsFinalizer.new(inventory_units).run!
     # @param inventory_units [<Spree::InventoryUnit>] the inventory to be
     #   finalized
     def self.finalize_units!(inventory_units)
+      Spree::Deprecation.warn(
+        "inventory_units.finalize_units!(inventory_units) is deprecated. Please
+        use Spree::Stock::InventoryUnitsFinalizer.new(inventory_units).run!",
+        caller
+      )
+
       inventory_units.map do |iu|
         iu.update_columns(
           pending: false,

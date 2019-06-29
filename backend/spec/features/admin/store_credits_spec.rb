@@ -56,9 +56,58 @@ describe "Store credits admin" do
     end
   end
 
+  describe "displaying a store credit details page" do
+    before do
+      visit spree.admin_path
+      click_link "Users"
+      click_link store_credit.user.email
+      click_link "Store Credit"
+      page.find(".sc-table td.actions a.fa-edit").click
+    end
+
+    it "shows the store credit's information" do
+      within ".content" do
+        expect(page).to have_content "Credited #{store_credit.display_amount}"
+        expect(page).to have_content "Created By #{store_credit.created_by.email}"
+        expect(page).to have_content "Type #{store_credit.category_name}"
+        expect(page).to have_content 'Store credit history'
+      end
+    end
+
+    it "lets edit store credit's memo", js: true do
+      allow_any_instance_of(Spree::Admin::StoreCreditsController)
+        .to receive(:try_spree_current_user)
+        .and_return(admin_user)
+
+      # When there are no errors
+      within '.store-credit-memo-row' do
+        click_button 'Edit'
+        fill_in 'store_credit_memo', with: 'Lottery Won'
+        click_button 'Save'
+        expect(page).to have_content "Memo Lottery Won", normalize_ws: true
+      end
+      expect(page).to have_content "Store Credit has been successfully updated!"
+
+      # When there are errors
+      allow_any_instance_of(Spree::StoreCredit).to receive(:save) { false }
+      allow_any_instance_of(Spree::StoreCredit)
+        .to receive_message_chain(:errors, :full_messages)
+        .and_return(["Memo is not valid"])
+
+      within '.store-credit-memo-row' do
+        find(:css, ".edit-memo").click
+        fill_in 'store_credit_memo', with: 'Lottery Won Twice'
+        find(:css, ".save-memo").click
+        expect(page).to have_content "Memo Lottery Won", normalize_ws: true
+        expect(page).not_to have_content "Lottery Won Twice"
+      end
+      expect(page).to have_content "Unable to update store credit [\"Memo is not valid\"]"
+    end
+  end
+
   describe "updating store credit" do
     let(:updated_amount) { "99.0" }
-    let!(:update_reason) { create(:store_credit_update_reason) }
+    let!(:store_credit_reason) { create(:store_credit_reason) }
 
     before do
       visit spree.admin_path
@@ -74,7 +123,7 @@ describe "Store credits admin" do
       click_link "Change amount"
       expect(page).to have_content 'Editing store credit amount'
       page.fill_in 'store_credit_amount', with: updated_amount
-      page.select update_reason.name, from: 'update_reason_id'
+      page.select store_credit_reason.name, from: 'store_credit_reason_id'
       click_button "Update"
       expect(page.find('#sc-detail-table')).to have_content "$99.00"
       expect(store_credit.reload.amount.to_f).to eq updated_amount.to_f

@@ -9,15 +9,20 @@ module Spree
 
       before_action :load_stock_locations, only: :edit
       before_action :load_simulated_refunds, only: :edit
+      create.after :recalculate_order
 
       rescue_from Spree::Core::GatewayError, with: :spree_core_gateway_error
 
       def perform
-        @reimbursement.perform!
+        @reimbursement.perform!(created_by: try_spree_current_user)
         redirect_to location_after_save
       end
 
       private
+
+      def recalculate_order
+        @reimbursement.order.recalculate
+      end
 
       def build_resource
         if params[:build_from_customer_return_id].present?
@@ -57,7 +62,7 @@ module Spree
       end
 
       def load_simulated_refunds
-        @reimbursement_objects = @reimbursement.simulate
+        @reimbursement_objects = @reimbursement.simulate(created_by: try_spree_current_user)
       end
 
       def spree_core_gateway_error(error)

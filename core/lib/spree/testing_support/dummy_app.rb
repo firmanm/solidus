@@ -12,9 +12,13 @@ Rails.env = 'test'
 
 require 'solidus_core'
 
+RAILS_52_OR_ABOVE = Gem::Version.new(Rails.version) >= Gem::Version.new('5.2')
+
 # @private
 class ApplicationController < ActionController::Base
-  protect_from_forgery with: :exception
+  unless RAILS_52_OR_ABOVE
+    protect_from_forgery with: :exception
+  end
 end
 
 # @private
@@ -50,16 +54,16 @@ module DummyApp
     config.public_file_server.headers                 = { 'Cache-Control' => 'public, max-age=3600' }
     config.whiny_nils                                 = true
     config.consider_all_requests_local                = true
+    config.action_controller.allow_forgery_protection = true
     config.action_controller.perform_caching          = false
     config.action_dispatch.show_exceptions            = false
     config.active_support.deprecation                 = :stderr
     config.action_mailer.delivery_method              = :test
-    config.action_controller.allow_forgery_protection = false
     config.active_support.deprecation                 = :stderr
     config.secret_key_base                            = 'SECRET_TOKEN'
 
-    if config.active_record.sqlite3
-      # Rails >= 5.2
+    if RAILS_52_OR_ABOVE
+      config.action_controller.default_protect_from_forgery = true
       config.active_record.sqlite3.represent_boolean_as_integer = true
     end
 

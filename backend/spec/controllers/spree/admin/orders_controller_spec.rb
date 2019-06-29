@@ -69,7 +69,7 @@ describe Spree::Admin::OrdersController, type: :controller do
       it "can page through the orders" do
         get :index, params: { page: 2, per_page: 10 }
         expect(assigns[:orders].offset_value).to eq(10)
-        expect(assigns[:orders].current_per_page).to eq(10)
+        expect(assigns[:orders].limit_value).to eq(10)
       end
     end
 
@@ -77,7 +77,7 @@ describe Spree::Admin::OrdersController, type: :controller do
     context "#new" do
       let(:user) { create(:user) }
       before do
-        allow(controller).to receive_messages spree_current_user: user
+        allow(controller).to receive_messages try_spree_current_user: user
       end
 
       it "imports a new order and sets the current user as a creator" do
@@ -140,7 +140,7 @@ describe Spree::Admin::OrdersController, type: :controller do
         end
 
         context 'when order_bill_address_used is true' do
-          before { Spree::Config[:order_bill_address_used] = true }
+          before { stub_spree_preferences(order_bill_address_used: true) }
 
           it "should redirect to the customer details page" do
             get :edit, params: { id: order.number }
@@ -149,7 +149,7 @@ describe Spree::Admin::OrdersController, type: :controller do
         end
 
         context 'when order_bill_address_used is false' do
-          before { Spree::Config[:order_bill_address_used] = false }
+          before { stub_spree_preferences(order_bill_address_used: false) }
 
           it "should redirect to the customer details page" do
             get :edit, params: { id: order.number }
@@ -288,18 +288,30 @@ describe Spree::Admin::OrdersController, type: :controller do
       let(:user) { create(:user) }
 
       before do
-        allow(controller).to receive_messages spree_current_user: user
+        allow(controller).to receive_messages try_spree_current_user: user
         user.spree_roles << Spree::Role.find_or_create_by(name: 'admin')
 
-        create(:completed_order_with_totals)
-        expect(Spree::Order.count).to eq 1
+        create_list(:completed_order_with_totals, 2)
+        expect(Spree::Order.count).to eq 2
       end
 
-      it "does not display duplicated results" do
-        get :index, params: { q: {
-          line_items_variant_id_in: Spree::Order.first.variants.map(&:id)
-        } }
-        expect(assigns[:orders].map(&:number).count).to eq 1
+      context 'by line_items_variant_id_in' do
+        it "does not display duplicated results" do
+          get :index, params: { q: {
+            line_items_variant_id_in: Spree::Order.first.variants.map(&:id)
+            } }
+          expect(assigns[:orders].size).to eq 1
+        end
+      end
+
+      context 'by email' do
+        it "does not display duplicated results" do
+          get :index, params: { q: {
+            email_start: Spree::Order.first.email
+            } }
+          expect(assigns[:orders].size).to eq 1
+          expect(assigns[:orders][0].email).to eq(Spree::Order.first.email)
+        end
       end
     end
 
@@ -349,7 +361,7 @@ describe Spree::Admin::OrdersController, type: :controller do
     let!(:order) { create(:completed_order_with_totals, number: 'R987654321') }
 
     before do
-      allow(controller).to receive_messages spree_current_user: user
+      allow(controller).to receive_messages try_spree_current_user: user
     end
 
     it 'should grant access to users with an admin role' do

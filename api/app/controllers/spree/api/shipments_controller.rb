@@ -113,7 +113,7 @@ module Spree
         )
 
         if fulfilment_changer.run!
-          render json: { success: true, message: t('spree.shipment_transfer_success') }, status: :accepted
+          render json: { success: true, message: t('spree.api.shipment.transfer_success') }, status: :accepted
         else
           render json: { success: false, message: fulfilment_changer.errors.full_messages.to_sentence }, status: :accepted
         end
@@ -131,11 +131,8 @@ module Spree
       end
 
       def find_order_on_create
-        # TODO: Can remove conditional here once deprecated #find_order is removed.
-        unless @order.present?
-          @order = Spree::Order.find_by!(number: params[:shipment][:order_id])
-          authorize! :read, @order
-        end
+        @order = Spree::Order.find_by!(number: params[:shipment][:order_id])
+        authorize! :read, @order
       end
 
       def find_shipment

@@ -26,7 +26,7 @@ images.
 
 If you want to change the image that is displayed when a product has no image,
 you can override Solidus's [`noimage` defaults][solidus-noimage] in your project
-by creating a `app/asets/images/noimages` directory.
+by creating a `app/assets/images/noimages` directory.
 
 If you have changed your [Paperclip configuration](#paperclip-settings), make
 sure that you include `noimage` images for each of image attachment keys that
@@ -49,7 +49,7 @@ By default, it creates several versions of each image at specific sizes.
 You can check the default settings by calling the `attachment_definitions`
 method on `Spree::Image` in your Rails console:
 
-```bash
+```ruby
 Spree::Image.attachment_definitions[:attachment][:styles]
 => {
   mini=>"48x48>",

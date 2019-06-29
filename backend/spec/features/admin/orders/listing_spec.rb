@@ -47,7 +47,7 @@ describe "Orders Listing", type: :feature, js: true do
       within_row(1) { expect(page).to have_content("R100") }
       within_row(2) { expect(page).to have_content("R200") }
 
-      click_link "Completed At", exact: false
+      click_link "Completed at", exact: false
 
       # Completed at desc
       within_row(1) { expect(page).to have_content("R200") }
@@ -114,12 +114,7 @@ describe "Orders Listing", type: :feature, js: true do
 
       context "when pagination is really short" do
         before do
-          @old_per_page = Spree::Config[:orders_per_page]
-          Spree::Config[:orders_per_page] = 1
-        end
-
-        after do
-          Spree::Config[:orders_per_page] = @old_per_page
+          stub_spree_preferences(orders_per_page: 1)
         end
 
         # Regression test for https://github.com/spree/spree/issues/4004

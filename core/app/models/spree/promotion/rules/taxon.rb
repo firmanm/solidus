@@ -27,34 +27,31 @@ module Spree
             end
 
             unless matches_all
-              eligibility_errors.add(:base, eligibility_error_message(:missing_taxon))
+              eligibility_errors.add(:base, eligibility_error_message(:missing_taxon), error_code: :missing_taxon)
             end
           when 'any'
             unless order_taxons.where(id: rule_taxon_ids_with_children).exists?
-              eligibility_errors.add(:base, eligibility_error_message(:no_matching_taxons))
+              eligibility_errors.add(:base, eligibility_error_message(:no_matching_taxons), error_code: :no_matching_taxons)
             end
           when 'none'
             if order_taxons.where(id: rule_taxon_ids_with_children).exists?
-              eligibility_errors.add(:base, eligibility_error_message(:has_excluded_taxon))
+              eligibility_errors.add(:base, eligibility_error_message(:has_excluded_taxon), error_code: :has_excluded_taxon)
             end
           else
             # Change this to an exception in a future version of Solidus
             warn_invalid_match_policy(assume: 'any')
             unless order_taxons.where(id: rule_taxon_ids_with_children).exists?
-              eligibility_errors.add(:base, eligibility_error_message(:no_matching_taxons))
+              eligibility_errors.add(:base, eligibility_error_message(:no_matching_taxons), error_code: :no_matching_taxons)
             end
           end
 
           eligibility_errors.empty?
         end
 
-        # TODO: Fix bug - well described by jhawthorn in #1409:
-        # `eligible?` checks the configured taxons and all descendants,
-        # `actionable?` only seems to check against the taxons themselves (not children)
         def actionable?(line_item)
           found = Spree::Classification.where(
             product_id: line_item.variant.product_id,
-            taxon_id: taxon_ids
+            taxon_id: rule_taxon_ids_with_children
           ).exists?
 
           case preferred_match_policy

@@ -49,6 +49,19 @@ RSpec.describe Spree::Promotion, type: :model do
     end
   end
 
+  describe ".coupons" do
+    let(:promotion_code) { create(:promotion_code) }
+    let!(:promotion_with_code) { promotion_code.promotion }
+    let!(:another_promotion_code) { create(:promotion_code, promotion: promotion_with_code) }
+    let!(:promotion_without_code) { create(:promotion) }
+
+    subject { described_class.coupons }
+
+    it "returns only distinct promotions with a code associated" do
+      expect(subject).to eq [promotion_with_code]
+    end
+  end
+
   describe "#apply_automatically" do
     subject { build(:promotion) }
 
@@ -371,6 +384,86 @@ RSpec.describe Spree::Promotion, type: :model do
     end
   end
 
+  describe '#not_started?' do
+    let(:promotion) { Spree::Promotion.new(starts_at: starts_at) }
+    subject { promotion.not_started? }
+
+    context 'no starts_at date' do
+      let(:starts_at) { nil }
+      it { is_expected.to be_falsey }
+    end
+
+    context 'when starts_at date is in the past' do
+      let(:starts_at) { Time.current - 1.day }
+      it { is_expected.to be_falsey }
+    end
+
+    context 'when starts_at date is not already reached' do
+      let(:starts_at) { Time.current + 1.day }
+      it { is_expected.to be_truthy }
+    end
+  end
+
+  describe '#started?' do
+    let(:promotion) { Spree::Promotion.new(starts_at: starts_at) }
+    subject { promotion.started? }
+
+    context 'when no starts_at date' do
+      let(:starts_at) { nil }
+      it { is_expected.to be_truthy }
+    end
+
+    context 'when starts_at date is in the past' do
+      let(:starts_at) { Time.current - 1.day }
+      it { is_expected.to be_truthy }
+    end
+
+    context 'when starts_at date is not already reached' do
+      let(:starts_at) { Time.current + 1.day }
+      it { is_expected.to be_falsey }
+    end
+  end
+
+  describe '#expired?' do
+    let(:promotion) { Spree::Promotion.new(expires_at: expires_at) }
+    subject { promotion.expired? }
+
+    context 'when no expires_at date' do
+      let(:expires_at) { nil }
+      it { is_expected.to be_falsey }
+    end
+
+    context 'when expires_at date is not already reached' do
+      let(:expires_at) { Time.current + 1.days }
+      it { is_expected.to be_falsey }
+    end
+
+    context 'when expires_at date is in the past' do
+      let(:expires_at) { Time.current - 1.days }
+      it { is_expected.to be_truthy }
+    end
+  end
+
+  describe '#not_expired?' do
+    let(:promotion) { Spree::Promotion.new(expires_at: expires_at) }
+    subject { promotion.not_expired? }
+
+    context 'when no expired_at date' do
+      let(:expires_at) { nil }
+      it { is_expected.to be_truthy }
+    end
+
+    context 'when expires_at date is not already reached' do
+      let(:expires_at) { Time.current + 1.days }
+      it { is_expected.to be_truthy }
+    end
+
+    context 'when expires_at date is in the past' do
+      let(:expires_at) { Time.current - 1.days }
+      it { is_expected.to be_falsey }
+    end
+  end
+
   context "#active" do
     it "should be active" do
       expect(promotion.active?).to eq(true)
@@ -632,15 +725,16 @@ RSpec.describe Spree::Promotion, type: :model do
     end
 
     context "with 'any' match policy" do
-      let(:promotion) { Spree::Promotion.create(name: "Promo", match_policy: 'any') }
       let(:promotable) { double('Promotable') }
 
+      before do
+        promotion.match_policy = 'any'
+      end
+
       it "should have eligible rules if any of the rules are eligible" do
-        allow_any_instance_of(Spree::PromotionRule).to receive_messages(applicable?: true)
-        true_rule = Spree::PromotionRule.create(promotion: promotion)
-        allow(true_rule).to receive_messages(eligible?: true)
-        allow(promotion).to receive_messages(rules: [true_rule])
-        allow(promotion).to receive_message_chain(:rules, :for).and_return([true_rule])
+        true_rule = mock_model(Spree::PromotionRule, eligible?: true, applicable?: true)
+        promotion.promotion_rules = [true_rule]
+        allow(promotion.rules).to receive(:for) { promotion.rules }
         expect(promotion.eligible_rules(promotable)).to eq [true_rule]
       end
 
@@ -668,13 +762,13 @@ RSpec.describe Spree::Promotion, type: :model do
   describe '#line_item_actionable?' do
     let(:order) { double Spree::Order }
     let(:line_item) { double Spree::LineItem }
-    let(:true_rule) { double Spree::PromotionRule, eligible?: true, applicable?: true, actionable?: true }
-    let(:false_rule) { double Spree::PromotionRule, eligible?: true, applicable?: true, actionable?: false }
+    let(:true_rule) { mock_model Spree::PromotionRule, eligible?: true, applicable?: true, actionable?: true }
+    let(:false_rule) { mock_model Spree::PromotionRule, eligible?: true, applicable?: true, actionable?: false }
     let(:rules) { [] }
 
     before do
-      allow(promotion).to receive(:rules) { rules }
-      allow(rules).to receive(:for) { rules }
+      promotion.promotion_rules = rules
+      allow(promotion.rules).to receive(:for) { rules }
     end
 
     subject { promotion.line_item_actionable? order, line_item }

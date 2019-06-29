@@ -1,6 +1,6 @@
 # Develop Solidus
 
-If you would like to develop for Solidus and you intend to submit your work as a
+If you would like to improve Solidus and you intend to submit your work as a
 pull request, please [read the contributing guidelines][contributing] first.
 
 Getting your Solidus development environment set up is easy. First, clone the
@@ -10,7 +10,7 @@ Solidus GitHub repo:
 git clone git://github.com/solidusio/solidus.git
 ```
 
-Then enter the directory you just downloaded and install Solidus's dependencies:
+Then enter the directory you just downloaded and install Solidus' dependencies:
 
 ```bash
 cd solidus
@@ -34,13 +34,13 @@ You can prepend `DB=mysql` or `DB=postgresql` to the command in order use those
 databases instead of the default SQLite 3 database. For example:
 
 ```bash
-DB=postgresql bundle exec rake sandbox
+env DB=postgresql bundle exec rake sandbox
 ```
 
 After the sandbox has been generated, you can change into its directory and
 start the server:
 
-```
+```bash
 cd sandbox
 rails server
 ```
@@ -50,7 +50,7 @@ rails server
 
 ## Testing
 
-Solidus uses [RSpec](http://rspec.info/) for testing. Refer to its documentation
+Solidus uses [RSpec][rspec] for testing. Refer to its documentation
 for more information about the testing library.
 
 If you intend to submit your work to Solidus as a pull request, it must pass all
@@ -64,21 +64,23 @@ install [ChromeDriver][chromedriver] on your system first.
 
 You can see the build statuses [on our CircleCI status page][circleci].
 
+[rspec]: http://rspec.info/
+
 ### Run all Solidus test suites
 
-To execute all of the test specs, run the `build.sh` script at the root of the
+To execute all of the test specs, run the `bin/build` script at the root of the
 Solidus project:
 
 ```bash
-bash build.sh
+bin/build
 ```
 
-The `build.sh` script runs using PostgreSQL by default, but it can be overridden
+The `bin/build` script runs using PostgreSQL by default, but it can be overridden
 by setting the `DB` environment variable to `DB=sqlite` or `DB=mysql`. For
 example:
 
 ```bash
-DB=mysql bash build.sh
+env DB=mysql bin/build
 ```
 
 Note that this will fail if you have not installed ChromeDriver on your system.
@@ -86,7 +88,7 @@ Note that this will fail if you have not installed ChromeDriver on your system.
 ### Run a single test suite
 
 Each gem contains its own test suite. For example, you can run only the
-`solidus_core` gem tests within the `/core` directory:
+`solidus_core` gem tests within the `core` directory:
 
 ```bash
 cd core
@@ -97,27 +99,31 @@ By default, the tests run against the default SQLite 3 database. You can instead
 specify `DB=mysql` or `DB=postgresql` by prepending it to the command:
 
 ```bash
-DB=postgresql bundle exec rspec
+env DB=postgresql bundle exec rspec
 ```
 
 ### Generate a code coverage report
 
-You can generate a [SimpleCov](https://github.com/colszowka/simplecov) code
+You can generate a [SimpleCov][simplecov] code
 coverage report by prepending `COVERAGE=true` to the `rspec` command:
 
 ```bash
-COVERAGE=true bundle exec rspec
+env COVERAGE=true bundle exec rspec
 ```
+
+[simplecov]: https://github.com/colszowka/simplecov
 
 ## Develop a Solidus extension
 
 You can add additional features to your store using Solidus extensions. A list
 of supported extensions can be found at [extensions.solidus.io][extensions].
 
-You can use the [`solidus_cmd`][solidus-cmd] gem if you want to start creating a
-new Solidus extension.
+You can use the [`solidus_cmd`][solidus-cmd] gem as an example if you want to
+start creating a new Solidus extension. Check out the doc on
+[writing extensions][writing-extensions] to learn more.
 
 [chromedriver]: https://sites.google.com/a/chromium.org/chromedriver/home
 [circleci]: https://circleci.com/gh/solidusio/solidus
 [extensions]: http://extensions.solidus.io
+[writing-extensions]: https://guides.solidus.io/developers/extensions/writing-extensions.html
 [solidus-cmd]: https://github.com/solidusio/solidus_cmd

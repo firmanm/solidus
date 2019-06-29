@@ -1,7 +1,5 @@
 <%= render partial: 'spree/shared/error_messages', locals: { target: @promotion } %>
-<fieldset class="form-group no-border-bottom">
-  <legend><%= t '.general' %></legend>
-
+<fieldset class="form-group no-border-bottom no-border-top">
   <div class="row">
     <div id="general_fields" class="col-9">
       <div class="row">
@@ -14,6 +12,9 @@
           <%= f.field_container :description do %>
             <%= f.label :description %><br />
             <%= f.text_area :description, rows: 7, class: 'fullwidth' %>
+            <span class="info">
+              <%= t('spree.character_limit') %>
+            </span>
           <% end %>
 
           <%= f.field_container :category do %>
@@ -43,13 +44,13 @@
       <div id="starts_at_field" class="field">
         <%= f.label :starts_at %>
         <%= f.field_hint :starts_at %>
-        <%= f.text_field :starts_at, value: datepicker_field_value(@promotion.starts_at), placeholder: t(".starts_at_placeholder"), class: 'datepicker datepicker-from fullwidth' %>
+        <%= f.text_field :starts_at, value: datepicker_field_value(@promotion.starts_at, with_time: true), placeholder: t(".starts_at_placeholder"), class: 'datepicker datepicker-from fullwidth', data: { :'enable-time' => true, :'default-hour' => 0 } %>
       </div>
 
       <div id="expires_at_field" class="field">
         <%= f.label :expires_at %>
         <%= f.field_hint :expires_at %>
-        <%= f.text_field :expires_at, value: datepicker_field_value(@promotion.expires_at), placeholder: t(".expires_at_placeholder"), class: 'datepicker datepicker-to fullwidth' %>
+        <%= f.text_field :expires_at, value: datepicker_field_value(@promotion.expires_at, with_time: true), placeholder: t(".expires_at_placeholder"), class: 'datepicker datepicker-to fullwidth', data: { :'enable-time' => true, :'default-hour' => 0 } %>
       </div>
     </div>
   </div>

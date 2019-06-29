@@ -361,7 +361,7 @@ module Spree
 
         it 'renders the payment source view for store credit' do
           subject
-          expect(response).to render_template partial: 'spree/api/payments/source_views/_storecredit'
+          expect(response).to render_template partial: 'spree/api/payments/source_views/_store_credit'
         end
       end
     end
@@ -421,7 +421,9 @@ module Spree
 
     # Regression test for https://github.com/spree/spree/issues/3404
     it "can specify additional parameters for a line item" do
-      expect_any_instance_of(Spree::LineItem).to receive(:special=).with("foo")
+      without_partial_double_verification do
+        expect_any_instance_of(Spree::LineItem).to receive(:special=).with("foo")
+      end
 
       allow_any_instance_of(Spree::Api::OrdersController).to receive_messages(permitted_line_item_attributes: [:id, :variant_id, :quantity, :special])
       post spree.api_orders_path, params: {
@@ -813,6 +815,43 @@ module Spree
           expect(response.status).to eq 201
           expect(json_response["user_id"]).to eq(user.id)
         end
+
+        context "with payment" do
+          let(:params) do
+            {
+              payments: [{
+                amount: '10.0',
+                payment_method: create(:payment_method).name,
+                source: {
+                  month: "01",
+                  year: Date.today.year.to_s.last(2),
+                  cc_type: "123",
+                  last_digits: "1111",
+                  name: "Credit Card"
+                }
+              }]
+            }
+          end
+
+          context "with source" do
+            it "creates a payment" do
+              post spree.api_orders_path, params: { order: params }
+              payment = json_response['payments'].first
+
+              expect(response.status).to eq 201
+              expect(payment['amount']).to eql "10.0"
+              expect(payment['source']['last_digits']).to eql "1111"
+            end
+
+            context "when payment_method is missing" do
+              it "returns an error" do
+                params[:payments][0].delete(:payment_method)
+                post spree.api_orders_path, params: { order: params }
+                expect(response.status).to eq 404
+              end
+            end
+          end
+        end
       end
 
       context "updating" do
@@ -826,7 +865,7 @@ module Spree
 
       context "can cancel an order" do
         before do
-          Spree::Config[:mails_from] = "spree@example.com"
+          stub_spree_preferences(mails_from: "spree@example.com")
 
           order.completed_at = Time.current
           order.state = 'complete'
@@ -854,6 +893,8 @@ module Spree
         let(:order) { create(:order_with_line_items) }
 
         it 'applies the coupon' do
+          expect(Spree::Deprecation).to receive(:warn)
+
           put spree.apply_coupon_code_api_order_path(order), params: { coupon_code: promo_code.value }
 
           expect(response.status).to eq 200
@@ -871,6 +912,8 @@ module Spree
         let(:order) { create(:order) } # no line items to apply the code to
 
         it 'returns an error' do
+          expect(Spree::Deprecation).to receive(:warn)
+
           put spree.apply_coupon_code_api_order_path(order), params: { coupon_code: promo_code.value }
 
           expect(response.status).to eq 422

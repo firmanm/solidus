@@ -158,15 +158,13 @@ module Spree
       end
 
       context "tracking is disabled" do
-        before { Config.track_inventory_levels = false }
+        before { stub_spree_preferences(track_inventory_levels: false) }
 
         it "still displays valid json with total_on_hand Float::INFINITY" do
           get spree.api_product_path(product)
           expect(response).to be_ok
           expect(json_response[:total_on_hand]).to eq nil
         end
-
-        after { Config.track_inventory_levels = true }
       end
 
       context "finds a product by slug first then by id" do
@@ -293,6 +291,23 @@ module Spree
 
           shipping_id = ShippingCategory.find_by(name: "Free Ships").id
           expect(json_response['shipping_category_id']).to eq shipping_id
+        end
+
+        context "when tracking is disabled" do
+          before { stub_spree_preferences(track_inventory_levels: false) }
+
+          it "still displays valid json with total_on_hand Float::INFINITY" do
+            post spree.api_products_path, params: {
+              product: {
+                name: "The Other Product",
+                price: 19.99,
+                shipping_category_id: create(:shipping_category).id
+              }
+            }
+
+            expect(response.status).to eq(201)
+            expect(json_response['total_on_hand']).to eq nil
+          end
         end
 
         it "puts the created product in the given taxon" do

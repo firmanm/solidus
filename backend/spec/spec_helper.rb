@@ -27,6 +27,7 @@ Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each { |f| require f }
 require 'database_cleaner'
 require 'with_model'
 
+require 'spree/testing_support/partial_double_verification'
 require 'spree/testing_support/authorization_helpers'
 require 'spree/testing_support/factories'
 require 'spree/testing_support/preferences'
@@ -46,7 +47,7 @@ Capybara.register_driver :selenium_chrome_headless do |app|
   browser_options = ::Selenium::WebDriver::Chrome::Options.new
   browser_options.args << '--headless'
   browser_options.args << '--disable-gpu'
-  browser_options.args << '--window-size=1440,1080'
+  browser_options.args << '--window-size=1920,1080'
   Capybara::Selenium::Driver.new(app, browser: :chrome, options: browser_options)
 end
 
@@ -88,7 +89,6 @@ RSpec.configure do |config|
 
   config.before do
     Rails.cache.clear
-    reset_spree_preferences
     if RSpec.current_example.metadata[:js] && page.driver.browser.respond_to?(:url_blacklist)
       page.driver.browser.url_blacklist = ['http://fonts.googleapis.com']
     end

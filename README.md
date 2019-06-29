@@ -1,10 +1,31 @@
 
-![](https://raw.githubusercontent.com/solidusio/solidus/master/solidus.png)
+<img src="./logo.svg" width=350>
 
 - [solidus.io](http://solidus.io/)
 - [Documentation](https://guides.solidus.io)
 - [Join our Slack](http://slack.solidus.io/) ([solidusio.slack.com](http://solidusio.slack.com))
 - [solidus-security](https://groups.google.com/forum/#!forum/solidus-security) mailing list
+
+## Table of Contents
+1. [Key Stakeholders](#key-stakeholders)
+2. [Summary](#summary)
+3. [Demo](#demo)
+4. [Getting Started](#getting-started)
+5. [Installation Options](#installation-options)
+6. [Performance](#performance)
+7. [Developing Solidus](#developing-solidus)
+8. [Contributing](#contributing)
+
+## Key Stakeholders
+
+Thank you to all our donors! 🙏 [Become a donor](https://opencollective.com/solidus#backer)
+
+Support this project by becoming a Key Stakeholder. Your logo will show up here with a link to your website. [Become a Key Stakeholder](https://opencollective.com/solidus#key-stakeholder)
+
+<a href="https://nebulab.it/"><img src="https://images.opencollective.com/proxy/images?src=https%3A%2F%2Fopencollective-production.s3-us-west-1.amazonaws.com%2F3cc3c170-20cc-11e9-9582-214168b65c9a.png&height=100"></a>
+<a href="https://www.enginecommerce.com/"><img src="https://images.opencollective.com/proxy/images?src=https%3A%2F%2Flogo.clearbit.com%2Fenginecommerce.com&height=100"></a>
+<a href="https://supergood.software/"><img src="https://images.opencollective.com/proxy/images?src=https%3A%2F%2Fopencollective-production.s3-us-west-1.amazonaws.com%2F3bbb1440-727f-11e9-a366-37673cc38cee.png&height=100"></a>
+<a href="https://karmacreative.io/"><img src="https://images.opencollective.com/proxy/images?src=https%3A%2F%2Fopencollective-production.s3-us-west-1.amazonaws.com%2Fab94d2a0-7253-11e9-a366-37673cc38cee.png&height=100"></a>
 
 ## Summary
 
@@ -33,12 +54,31 @@ combine it with your own custom frontend, admin interface, and API.
 [![Gem](https://img.shields.io/gem/v/solidus.svg)](https://rubygems.org/gems/solidus)
 [![License](http://img.shields.io/badge/license-BSD-yellowgreen.svg)](LICENSE.md)
 [![Slack](http://slack.solidus.io/badge.svg)](http://slack.solidus.io)
+[![Backers on Open Collective](https://opencollective.com/solidus/backers/badge.svg)](https://opencollective.com/solidus)
+[![Sponsors on Open Collective](https://opencollective.com/solidus/sponsors/badge.svg)](https://opencollective.com/solidus)
+[![Open Source Helpers](https://www.codetriage.com/solidusio/solidus/badges/users.svg)](https://www.codetriage.com/solidusio/solidus)
+
+### Supported by
+
+[![Reviewed by Hound](https://img.shields.io/badge/Reviewed_by-Hound-8E64B0.svg)](https://houndci.com)
 
 ## Demo
 
 Try out Solidus with one-click on Heroku:
 
-[![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/solidusio/solidus)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/solidusio/solidus-example-app)
+
+Alternatively, you can use Docker to run a demo on your local machine. Run the
+following command to download the image and run it at
+[http://localhost:3000](http://localhost:3000).
+
+```
+docker run --rm -it -p 3000:3000 solidusio/solidus-demo:latest
+```
+
+The admin interface can be accessed at
+[http://localhost:3000/admin/](http://localhost:3000/admin/), the default
+credentials are `admin@example.com` and `test123`.
 
 ## Getting started
 
@@ -60,7 +100,7 @@ Run the `bundle` command to install.
 After installing gems, you'll have to run the generators to create necessary
 configuration files and migrations.
 
-```
+```bash
 bundle exec rails g spree:install
 bundle exec rails g solidus:auth:install
 bundle exec rake railties:install:migrations
@@ -68,13 +108,13 @@ bundle exec rake railties:install:migrations
 
 Run migrations to create the new models in the database.
 
-```
+```bash
 bundle exec rake db:migrate
 ```
 
 Finally start the rails server
 
-```
+```bash
 bundle exec rails s
 ```
 
@@ -89,8 +129,7 @@ As part of running the above installation steps, you will be asked to set an adm
 
 The best way to ask questions is via the [#support channel on the Solidus Slack](https://solidusio.slack.com/messages/support/details/).
 
-Installation options
---------------------
+## Installation options
 
 Instead of a stable build, if you want to use the bleeding edge version of
 Solidus, use this line:
@@ -106,13 +145,13 @@ about.**
 By default, the installation generator (`rails g spree:install`) will run
 migrations as well as adding seed and sample data. This can be disabled using
 
-```shell
+```bash
 rails g spree:install --migrate=false --sample=false --seed=false
 ```
 
 You can always perform any of these steps later by using these commands.
 
-```shell
+```bash
 bundle exec rake railties:install:migrations
 bundle exec rake db:migrate
 bundle exec rake db:seed
@@ -122,11 +161,10 @@ bundle exec rake spree_sample:load
 There are also options and rake tasks provided by
 [solidus\_auth\_devise](https://github.com/solidusio/solidus_auth_devise).
 
-Performance
------------
+## Performance
 
 You may notice that your Solidus store runs slowly in development mode. This
-can be because in development each css and javascript is loaded as a separate
+can be because in development each CSS and JavaScript is loaded as a separate
 include. This can be disabled by adding the following to
 `config/environments/development.rb`.
 
@@ -148,21 +186,20 @@ Add `gem 'turbolinks', '~> 5.0.0'` into your `Gemfile` (if not already present) 
 **CAUTION** Please be aware that Turbolinks can break extensions and/or customizations to the Solidus admin.
 Use at own risk.
 
-Developing Solidus
-------------------
+## Developing Solidus
 
 * Clone the Git repo
 
-    ```shell
-    git clone git://github.com/solidusio/solidus.git
-    cd solidus
-    ```
+  ```bash
+  git clone git://github.com/solidusio/solidus.git
+  cd solidus
+  ```
 
 * Install the gem dependencies
 
-    ```shell
-    bundle install
-    ```
+  ```bash
+  bundle install
+  ```
 
 ### Sandbox
 
@@ -173,19 +210,24 @@ testing purposes.
 This sandbox includes solidus\_auth\_devise and generates with seed and sample
 data already loaded.
 
-* Create the sandbox application (`DB=mysql` or `DB=postgresql` can be specified
-  to override the default sqlite)
+* Create the sandbox application 
 
-  ```shell
+  ```bash
   bundle exec rake sandbox
+  ```
+
+  You can create a sandbox with PostgreSQL or MySQL by setting the DB environment variable.
+
+  ```bash
+  DB=postgresql bundle exec rake sandbox
   ```
 
 * Start the server
 
-    ```shell
-    cd sandbox
-    rails server
-    ```
+  ```bash
+  cd sandbox
+  rails server
+  ```
 
 ### Tests
 
@@ -202,29 +244,34 @@ You can see the build statuses at
 
 #### Run all tests
 
-To execute all the tests for all projects, run `rake` in the top-level
-directory.
-
-```shell
-bundle install
-rake
-```
-
-This runs using Sqlite by default, but can be overridden by setting the `DB`
-environment variable to `DB=postgresql` or `DB=mysql`. For example:
-
-```
-rake DB=postgresql
-```
-
 [ChromeDriver](https://sites.google.com/a/chromium.org/chromedriver/home) is
 required to run the frontend and backend test suites.
+
+To execute all of the test specs, run the `bin/build` script at the root of the Solidus project:
+
+```bash
+createuser --superuser --echo postgres # only the first time
+bin/build
+```
+
+The `bin/build` script runs using PostgreSQL by default, but it can be overridden by setting the DB environment variable to `DB=sqlite` or `DB=mysql`. For example:
+
+```bash
+env DB=mysql bin/build
+```
+
+If the command fails with MySQL related errors you can try creating a user with this command:
+
+```bash
+# Creates a user with the same name as the current user and no restrictions.
+mysql --user="root" --execute="CREATE USER '$USER'@'localhost'; GRANT ALL PRIVILEGES ON * . * TO '$USER'@'localhost';"
+```
 
 #### Run an individual test suite
 
 Each gem contains its own series of tests. To run the tests for the core project:
 
-```shell
+```bash
 cd core
 bundle exec rspec
 ```
@@ -232,8 +279,8 @@ bundle exec rspec
 By default, `rspec` runs the tests for SQLite 3. If you would like to run specs
 against another database you may specify the database in the command:
 
-```shell
-DB=postgresql bundle exec rspec
+```bash
+env DB=postgresql bundle exec rspec
 ```
 
 #### Code coverage reports
@@ -241,7 +288,7 @@ DB=postgresql bundle exec rspec
 If you want to run the [SimpleCov](https://github.com/colszowka/simplecov) code
 coverage report:
 
-```shell
+```bash
 COVERAGE=true bundle exec rspec
 ```
 
@@ -256,8 +303,7 @@ A list can be found at [extensions.solidus.io](http://extensions.solidus.io/).
 If you want to write an extension for Solidus, you can use the
 [solidus_cmd](https://www.github.com/solidusio/solidus_cmd.git) gem.
 
-Contributing
-------------
+## Contributing
 
 Solidus is an open source project and we encourage contributions. Please read
 [CONTRIBUTING.md](CONTRIBUTING.md) before contributing.

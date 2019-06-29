@@ -35,9 +35,7 @@ Spree::Core::Engine.routes.draw do
 
       resources :return_authorizations do
         member do
-          put :add
           put :cancel
-          put :receive
         end
       end
     end
@@ -69,6 +67,8 @@ Spree::Core::Engine.routes.draw do
         put :empty
         put :apply_coupon_code
       end
+
+      resources :coupon_codes, only: [:create, :destroy]
     end
 
     resources :zones

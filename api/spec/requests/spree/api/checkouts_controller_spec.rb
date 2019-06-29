@@ -6,7 +6,7 @@ module Spree
   describe Api::CheckoutsController, type: :request do
     before(:each) do
       stub_authentication!
-      Spree::Config[:track_inventory_levels] = false
+      stub_spree_preferences track_inventory_levels: false
       country_zone = create(:zone, name: 'CountryZone')
       @state = create(:state)
       @country = @state.country
@@ -15,10 +15,6 @@ module Spree
 
       @shipping_method = create(:shipping_method, zones: [country_zone])
       @payment_method = create(:credit_card_payment_method)
-    end
-
-    after do
-      Spree::Config[:track_inventory_levels] = true
     end
 
     context "PUT 'update'" do
@@ -357,6 +353,7 @@ module Spree
       end
 
       it "can apply a coupon code to an order" do
+        expect(Spree::Deprecation).to receive(:warn)
         order.update_column(:state, "payment")
         expect(PromotionHandler::Coupon).to receive(:new).with(order).and_call_original
         expect_any_instance_of(PromotionHandler::Coupon).to receive(:apply).and_return({ coupon_applied?: true })
@@ -365,6 +362,7 @@ module Spree
       end
 
       it "renders error failing to apply coupon" do
+        expect(Spree::Deprecation).to receive(:warn)
         order.update_column(:state, "payment")
         put spree.api_checkout_path(order.to_param), params: { order_token: order.guest_token, order: { coupon_code: "foobar" } }
         expect(response.status).to eq(422)

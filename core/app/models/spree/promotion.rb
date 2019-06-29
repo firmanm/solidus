@@ -36,7 +36,7 @@ module Spree
 
     before_save :normalize_blank_values
 
-    scope :coupons, -> { where.not(code: nil) }
+    scope :coupons, -> { joins(:codes).distinct }
     scope :advertised, -> { where(advertise: true) }
     scope :active, -> do
       table = arel_table
@@ -47,23 +47,10 @@ module Spree
     scope :applied, -> { joins(:order_promotions).distinct }
 
     self.whitelisted_ransackable_associations = ['codes']
-    self.whitelisted_ransackable_attributes = ['path', 'promotion_category_id']
-
-    # temporary code. remove after the column is dropped from the db.
-    def columns
-      super.reject { |column| column.name == "code" }
-    end
+    self.whitelisted_ransackable_attributes = %w[name path promotion_category_id]
 
     def self.order_activatable?(order)
       order && !UNACTIVATABLE_ORDER_STATES.include?(order.state)
-    end
-
-    def code
-      raise "Attempted to call code on a Spree::Promotion. Promotions are now tied to multiple code records"
-    end
-
-    def code=(_val)
-      raise "Attempted to call code= on a Spree::Promotion. Promotions are now tied to multiple code records"
     end
 
     def self.with_coupon_code(val)
@@ -77,9 +64,24 @@ module Spree
       super
     end
 
+    def not_started?
+      !started?
+    end
+
+    def started?
+      starts_at.nil? || starts_at < Time.current
+    end
+
+    def expired?
+      expires_at.present? && expires_at < Time.current
+    end
+
+    def not_expired?
+      !expired?
+    end
+
     def active?
-      (starts_at.nil? || starts_at < Time.current) &&
-        (expires_at.nil? || expires_at > Time.current)
+      started? && not_expired?
     end
 
     def inactive?

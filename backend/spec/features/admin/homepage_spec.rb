@@ -23,10 +23,6 @@ describe "Homepage", type: :feature do
         expect(page).to have_link("Products", href: "/admin/products", count: 2)
       end
 
-      it "should have a link to reports" do
-        expect(page).to have_link("Reports", href: "/admin/reports")
-      end
-
       it "should have a link to configuration" do
         expect(page).to have_link("Settings", href: "/admin/stores")
       end
@@ -71,7 +67,7 @@ describe "Homepage", type: :feature do
 
   context 'as fakedispatch user' do
     before do
-      allow_any_instance_of(Spree::Admin::BaseController).to receive(:spree_current_user).and_return(nil)
+      allow_any_instance_of(Spree::Admin::BaseController).to receive(:try_spree_current_user).and_return(nil)
     end
 
     custom_authorization! do |_user|
@@ -84,7 +80,6 @@ describe "Homepage", type: :feature do
       expect(page).to have_link('Orders')
       expect(page).not_to have_link('Products')
       expect(page).not_to have_link('Promotions')
-      expect(page).not_to have_link('Reports')
       expect(page).not_to have_link('Settings')
     end
   end

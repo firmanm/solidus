@@ -11,19 +11,19 @@ Solidus provides a generator to help with copying the right view into your host 
 
 Simply call the generator to copy all views into your host app.
 
-```shell
+```bash
 $ bundle exec rails g solidus:views:override
 ```
 
 If you only want to copy certain views into your host app, you can provide the `--only` argument:
 
-```shell
+```bash
 $ bundle exec rails g solidus:views:override --only products/show
 ```
 
 The argument to `--only` can also be a substring of the name of the view from the `app/views/spree` folder:
 
-```shell
+```bash
 $ bundle exec rails g solidus:views:override --only product
 ```
 
@@ -31,10 +31,12 @@ This will copy all views whose directory or filename contains the string "produc
 
 ### Handle upgrades
 
-After upgrading solidus to a new version run the generator again and follow on screen instructions.
+After upgrading Solidus to a new version run the generator again and follow on screen instructions.
 
 ## Testing
 
 Run the tests
 
-    bundle exec rspec
+```bash
+bundle exec rspec
+```

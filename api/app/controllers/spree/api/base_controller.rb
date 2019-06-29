@@ -7,6 +7,7 @@ module Spree
     class BaseController < ActionController::Base
       self.responder = Spree::Api::Responders::AppResponder
       respond_to :json
+      protect_from_forgery unless: -> { request.format.json? }
 
       include CanCan::ControllerAdditions
       include Spree::Core::ControllerHelpers::Store
@@ -99,9 +100,26 @@ module Spree
       end
 
       def api_key
-        request.headers["X-Spree-Token"] || params[:token]
+        bearer_token || spree_token || params[:token]
       end
       helper_method :api_key
+
+      def bearer_token
+        pattern = /^Bearer /
+        header = request.headers["Authorization"]
+        header.gsub(pattern, '') if header.present? && header.match(pattern)
+      end
+
+      def spree_token
+        token = request.headers["X-Spree-Token"]
+        return unless token.present?
+
+        Spree::Deprecation.warn(
+          'The custom X-Spree-Token request header is deprecated and will be removed in the next release.' \
+          ' Please use bearer token authorization header instead.'
+        )
+        token
+      end
 
       def order_token
         request.headers["X-Spree-Order-Token"] || params[:order_token]

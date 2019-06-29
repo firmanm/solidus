@@ -82,14 +82,14 @@
       <tr id="<%= spree_dom_id user %>" data-hook="admin_users_index_rows">
         <td class='user_email'><%=link_to user.email, edit_admin_user_url(user) %></td>
         <td><%= user.spree_roles.map(&:name).to_sentence %></td>
-        <td class="align-center"><%= link_to user.orders.count, spree.orders_admin_user_path(user) %></td>
+        <td class="align-center"><%= link_to user.order_count, spree.orders_admin_user_path(user) %></td>
         <td class="align-center"><%= link_to user.display_lifetime_value, spree.items_admin_user_path(user) %></td>
         <td class="align-center"><%= l user.created_at.to_date %></td>
         <td data-hook="admin_users_index_row_actions" class="actions">
           <% if can?(:edit, user) %>
             <%= link_to_edit user, no_text: true %>
           <% end %>
-          <% if can?(:destroy, user) %>
+          <% if can?(:destroy, user) && user.orders.count.zero? %>
             <%= link_to_delete user, no_text: true %>
           <% end %>
         </td>

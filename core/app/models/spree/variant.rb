@@ -72,14 +72,15 @@ module Spree
       autosave: true
 
     before_validation :set_cost_currency
-    before_validation :set_price
-    before_validation :build_vat_prices, if: -> { rebuild_vat_prices? || new_record? }
+    before_validation :set_price, if: -> { product && product.master }
+    before_validation :build_vat_prices, if: -> { rebuild_vat_prices? || new_record? && product }
 
+    validates :product, presence: true
     validate :check_price
 
     validates :cost_price, numericality: { greater_than_or_equal_to: 0, allow_nil: true }
     validates :price,      numericality: { greater_than_or_equal_to: 0, allow_nil: true }
-    validates_uniqueness_of :sku, allow_blank: true, unless: :deleted_at
+    validates_uniqueness_of :sku, allow_blank: true, if: :enforce_unique_sku?
 
     after_create :create_stock_items
     after_create :set_position
@@ -120,7 +121,7 @@ module Spree
         Spree::StockItem.arel_table[:count_on_hand].gt(0),
         Spree::StockItem.arel_table[:backorderable].eq(true)
       ]
-      joins(:stock_items).where(arel_conditions.inject(:or))
+      joins(:stock_items).where(arel_conditions.inject(:or)).distinct
     end
 
     self.whitelisted_ransackable_associations = %w[option_values product prices default_price]
@@ -381,6 +382,7 @@ module Spree
     #   not from this variant
     # @return [Spree::Image] the image to display
     def display_image(fallback: true)
+      Spree::Deprecation.warn('Spree::Variant#display_image is DEPRECATED. Choose an image from Spree::Variant#gallery instead')
       images.first || (fallback && product.variant_images.first) || Spree::Image.new
     end
 
@@ -392,6 +394,14 @@ module Spree
       product.variant_property_rules.map do |rule|
         rule.values if rule.applies_to_variant?(self)
       end.flatten.compact
+    end
+
+    # The gallery for the variant, which represents all the images
+    # associated with it
+    #
+    # @return [Spree::Gallery] the media for a variant
+    def gallery
+      @gallery ||= Spree::Config.variant_gallery_class.new(self)
     end
 
     private
@@ -409,10 +419,7 @@ module Spree
 
     # Ensures a new variant takes the product master price when price is not supplied
     def set_price
-      if price.nil? && Spree::Config[:require_master_price] && !is_master?
-        raise 'No master variant found to infer price' unless product && product.master
-        self.price = product.master.price
-      end
+      self.price = product.master.price if price.nil? && Spree::Config[:require_master_price] && !is_master?
     end
 
     def check_price
@@ -449,6 +456,10 @@ module Spree
 
     def destroy_option_values_variants
       option_values_variants.destroy_all
+    end
+
+    def enforce_unique_sku?
+      !deleted_at
     end
   end
 end

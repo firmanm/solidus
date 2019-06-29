@@ -13,6 +13,7 @@ module Spree
     has_many :shipping_methods, through: :shipping_rates
     has_many :state_changes, as: :stateful
     has_many :cartons, -> { distinct }, through: :inventory_units
+    has_many :line_items, -> { distinct }, through: :inventory_units
 
     before_validation :set_cost_zero_when_nil
 
@@ -32,7 +33,10 @@ module Spree
     scope :trackable, -> { where("tracking IS NOT NULL AND tracking != ''") }
     scope :with_state, ->(*s) { where(state: s) }
     # sort by most recent shipped_at, falling back to created_at. add "id desc" to make specs that involve this scope more deterministic.
-    scope :reverse_chronological, -> { order('coalesce(spree_shipments.shipped_at, spree_shipments.created_at) desc', id: :desc) }
+    scope :reverse_chronological, -> {
+      order(Arel.sql("coalesce(#{Spree::Shipment.table_name}.shipped_at, #{Spree::Shipment.table_name}.created_at) desc"), id: :desc)
+    }
+
     scope :by_store, ->(store) { joins(:order).merge(Spree::Order.by_store(store)) }
 
     # shipment state machine (see http://github.com/pluginaweek/state_machine/tree/master for details)
@@ -164,12 +168,7 @@ module Spree
     # Any previous non-pending inventory units are skipped as their stock had
     # already been allocated.
     def finalize!
-      transaction do
-        pending_units = inventory_units.select(&:pending?)
-        pending_manifest = Spree::ShippingManifest.new(inventory_units: pending_units)
-        pending_manifest.items.each { |item| manifest_unstock(item) }
-        Spree::InventoryUnit.finalize_units!(pending_units)
-      end
+      finalize_pending_inventory_units
     end
 
     def include?(variant)
@@ -186,10 +185,6 @@ module Spree
 
     def item_cost
       line_items.map(&:total).sum
-    end
-
-    def line_items
-      inventory_units.includes(:line_item).map(&:line_item).uniq
     end
 
     def ready_or_pending?
@@ -397,6 +392,11 @@ module Spree
     end
 
     private
+
+    def finalize_pending_inventory_units
+      pending_units = inventory_units.select(&:pending?)
+      Spree::Stock::InventoryUnitsFinalizer.new(pending_units).run!
+    end
 
     def after_ship
       order.shipping.ship_shipment(self, suppress_mailer: suppress_mailer)

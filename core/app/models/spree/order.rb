@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require 'spree/order/checkout'
-require 'spree/order/number_generator'
-
 module Spree
   # The customers cart until completed, then acts as permanent record of the transaction.
   #
@@ -138,7 +135,6 @@ module Spree
       find_by! number: value
     end
 
-    delegate :update_totals, :persist_totals, to: :updater
     delegate :firstname, :lastname, to: :bill_address, prefix: true, allow_nil: true
     alias_method :billing_firstname, :bill_address_firstname
     alias_method :billing_lastname, :bill_address_lastname
@@ -370,11 +366,11 @@ module Spree
 
     # Creates new tax charges if there are any applicable rates. If prices already
     # include taxes then price adjustments are created instead.
-    # @deprecated This now happens during #update!
+    # @deprecated This now happens during #recalculate
     def create_tax_charge!
-      Spree::Config.tax_adjuster_class.new(self).adjust!
+      recalculate
     end
-    deprecate create_tax_charge!: :update!, deprecator: Spree::Deprecation
+    deprecate create_tax_charge!: :recalculate, deprecator: Spree::Deprecation
 
     def reimbursement_total
       reimbursements.sum(:total)
@@ -396,7 +392,7 @@ module Spree
     end
 
     def refund_total
-      payments.flat_map(&:refunds).sum(&:amount)
+      refunds.sum(&:amount)
     end
 
     def name
@@ -438,18 +434,13 @@ module Spree
 
       touch :completed_at
 
-      deliver_order_confirmation_email unless confirmation_delivered?
+      Spree::Event.fire 'order_finalized', order: self
     end
 
     def fulfill!
       shipments.each { |shipment| shipment.update_state if shipment.persisted? }
       updater.update_shipment_state
       save!
-    end
-
-    def deliver_order_confirmation_email
-      Spree::Config.order_mailer_class.confirm_email(self).deliver_later
-      update_column(:confirmation_delivered, true)
     end
 
     # Helper methods for checkout steps
@@ -552,6 +543,7 @@ module Spree
       Spree::PromotionHandler::Shipping.new(self).activate
       recalculate
     end
+    alias_method :apply_free_shipping_promotions, :apply_shipping_promotions
     deprecate apply_free_shipping_promotions: :apply_shipping_promotions, deprecator: Spree::Deprecation
 
     # Clean shipments and make order back to address state
@@ -585,11 +577,11 @@ module Spree
       bill_address == ship_address
     end
 
+    # @deprecated This now happens during #recalculate
     def set_shipments_cost
-      shipments.each(&:update_amounts)
       recalculate
     end
-    deprecate set_shipments_cost: :update!, deprecator: Spree::Deprecation
+    deprecate set_shipments_cost: :recalculate, deprecator: Spree::Deprecation
 
     def is_risky?
       payments.risky.count > 0
@@ -768,7 +760,7 @@ module Spree
 
     def record_ip_address(ip_address)
       if last_ip_address != ip_address
-        update_attributes!(last_ip_address: ip_address)
+        update_column(:last_ip_address, ip_address)
       end
     end
 

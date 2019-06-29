@@ -211,6 +211,26 @@ describe "Checkout", type: :feature, inaccessible: true do
     end
   end
 
+  context "when order has only a void payment" do
+    let(:order) { Spree::TestingSupport::OrderWalkthrough.up_to(:payment) }
+
+    before do
+      user = create(:user)
+      order.user = user
+      order.recalculate
+
+      allow_any_instance_of(Spree::CheckoutController).to receive_messages(current_order: order)
+      allow_any_instance_of(Spree::CheckoutController).to receive_messages(try_spree_current_user: user)
+    end
+
+    it "does not allow successful order submission" do
+      visit spree.checkout_path
+      order.payments.first.update state: :void
+      click_button 'Place Order'
+      expect(page).to have_current_path spree.checkout_state_path(:payment)
+    end
+  end
+
   # Regression test for https://github.com/spree/spree/issues/2694 and https://github.com/spree/spree/issues/4117
   context "doesn't allow bad credit card numbers" do
     let!(:payment_method) { create(:credit_card_payment_method) }
@@ -338,30 +358,21 @@ describe "Checkout", type: :feature, inaccessible: true do
     it "selects first source available and customer moves on" do
       expect(find("#use_existing_card_yes")).to be_checked
 
-      expect {
-        click_on "Save and Continue"
-      }.not_to change { Spree::CreditCard.count }
-
+      click_on "Save and Continue"
       click_on "Place Order"
       expect(page).to have_current_path(spree.order_path(Spree::Order.last))
+      expect(page).to have_current_path(spree.order_path(Spree::Order.last))
+      expect(page).to have_content("Ending in #{credit_card.last_digits}")
     end
 
     it "allows user to enter a new source" do
       choose "use_existing_card_no"
+      fill_in_credit_card
 
-      fill_in "Name on card", with: 'Spree Commerce'
-      fill_in "Card Number", with: '4111 1111 1111 1111'
-      fill_in "card_expiry", with: '04 / 20'
-      fill_in "Card Code", with: '123'
-
-      expect {
-        click_on "Save and Continue"
-      }.to change { Spree::CreditCard.count }.by 1
-
-      expect(Spree::CreditCard.last.address).to be_present
-
+      click_on "Save and Continue"
       click_on "Place Order"
       expect(page).to have_current_path(spree.order_path(Spree::Order.last))
+      expect(page).to have_content('Ending in 1111')
     end
   end
 
@@ -498,7 +509,7 @@ describe "Checkout", type: :feature, inaccessible: true do
     end
   end
 
-  context "order has only payment step" do
+  context "order has only payment step", js: true do
     before do
       create(:credit_card_payment_method)
       @old_checkout_flow = Spree::Order.checkout_flow
@@ -523,10 +534,7 @@ describe "Checkout", type: :feature, inaccessible: true do
       expect(page).to have_current_path(spree.checkout_state_path('payment'))
 
       choose "Credit Card"
-      fill_in "Name on card", with: 'Spree Commerce'
-      fill_in "Card Number", with: '4111 1111 1111 1111'
-      fill_in "card_expiry", with: '04 / 20'
-      fill_in "Card Code", with: '123'
+      fill_in_credit_card
       click_button "Save and Continue"
 
       expect(current_path).to eq spree.checkout_state_path('confirm')
@@ -582,7 +590,7 @@ describe "Checkout", type: :feature, inaccessible: true do
     end
 
     it "displays a thank you message" do
-      expect(page).to have_content(I18n.t('spree.thank_you_for_your_order'))
+      expect(page).to have_content(I18n.t('spree.thank_you_for_your_order'), normalize_ws: true)
     end
 
     it "does not display a thank you message on that order future visits" do
@@ -657,16 +665,17 @@ describe "Checkout", type: :feature, inaccessible: true do
       click_on "Save and Continue"
       click_on "Save and Continue"
 
-      fill_in_credit_card(number: "4111 1111 1111 1111")
+      fill_in_credit_card
       click_on "Save and Continue"
 
       expect(page).to have_current_path("/checkout/confirm")
     end
   end
 
-  def fill_in_credit_card(number:)
-    fill_in "Card Number", with: number
-    fill_in "Expiration", with: "12 / 24"
+  def fill_in_credit_card(number: "4111 1111 1111 1111")
+    fill_in "Name on card", with: 'Mary Doe'
+    fill_in_with_force "Card Number", with: number
+    fill_in_with_force "Expiration", with: "12 / 24"
     fill_in "Card Code", with: "123"
   end
 

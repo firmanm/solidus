@@ -15,8 +15,51 @@ RSpec.describe Spree::Order, type: :model do
   end
   let(:code) { promotion.codes.first }
 
-  before do
-    allow(Spree::LegacyUser).to receive_messages(current: mock_model(Spree::LegacyUser, id: 123))
+  describe '#finalize!' do
+    context 'with event notifications' do
+      it 'sends an email' do
+        expect(Spree::Config.order_mailer_class).to receive(:confirm_email).and_call_original
+        order.finalize!
+      end
+
+      it 'marks the order as confirmation_delivered' do
+        expect do
+          order.finalize!
+        end.to change(order, :confirmation_delivered).to true
+      end
+
+      # These specs show how notifications can be removed, one at a time or
+      # all the ones set by MailerProcessor module
+      context 'when removing the default email notification subscription' do
+        before do
+          Spree::Event.unsubscribe Spree::Event::Processors::MailerProcessor.order_finalized_handler
+        end
+
+        after do
+          Spree::Event::Processors::MailerProcessor.subscribe!
+        end
+
+        it 'does not send the email' do
+          expect(Spree::Config.order_mailer_class).not_to receive(:confirm_email)
+          order.finalize!
+        end
+      end
+
+      context 'when removing all the email notification subscriptions' do
+        before do
+          Spree::Event::Processors::MailerProcessor.unsubscribe!
+        end
+
+        after do
+          Spree::Event::Processors::MailerProcessor.subscribe!
+        end
+
+        it 'does not send the email' do
+          expect(Spree::Config.order_mailer_class).not_to receive(:confirm_email)
+          order.finalize!
+        end
+      end
+    end
   end
 
   context '#store' do
@@ -139,7 +182,6 @@ RSpec.describe Spree::Order, type: :model do
     before { allow(order).to receive_messages shipments: [shipment] }
 
     it "update and persist totals" do
-      expect(shipment).to receive :update_amounts
       expect(order.updater).to receive :update
 
       Spree::Deprecation.silence do
@@ -324,7 +366,7 @@ RSpec.describe Spree::Order, type: :model do
     end
   end
 
-  context "add_update_hook" do
+  context "add_update_hook", partial_double_verification: false do
     before do
       Spree::Order.class_eval do
         register_update_hook :add_awesome_sauce
@@ -379,13 +421,13 @@ RSpec.describe Spree::Order, type: :model do
 
         it "does nothing if any shipments are ready" do
           shipment = create(:shipment, order: subject, state: "ready")
-          expect { subject.ensure_updated_shipments }.not_to change { subject.reload.shipments }
+          expect { subject.ensure_updated_shipments }.not_to change { subject.reload.shipments.pluck(:id) }
           expect { shipment.reload }.not_to raise_error
         end
 
         it "does nothing if any shipments are shipped" do
           shipment = create(:shipment, order: subject, state: "shipped")
-          expect { subject.ensure_updated_shipments }.not_to change { subject.reload.shipments }
+          expect { subject.ensure_updated_shipments }.not_to change { subject.reload.shipments.pluck(:id) }
           expect { shipment.reload }.not_to raise_error
         end
       end
@@ -466,7 +508,7 @@ RSpec.describe Spree::Order, type: :model do
     let(:order) { build(:order, ship_address: ship_address, bill_address: bill_address, store: store) }
     let(:store) { build(:store) }
 
-    before { Spree::Config[:tax_using_ship_address] = tax_using_ship_address }
+    before { stub_spree_preferences(tax_using_ship_address: tax_using_ship_address) }
     subject { order.tax_address }
 
     context "when the order has no addresses" do
@@ -712,7 +754,7 @@ RSpec.describe Spree::Order, type: :model do
       expect(order.find_line_item_by_variant(mock_model(Spree::Variant))).to be_nil
     end
 
-    context "match line item with options" do
+    context "match line item with options", partial_double_verification: false do
       before do
         Spree::Order.register_line_item_comparison_hook(:foos_match)
       end
@@ -1072,7 +1114,7 @@ RSpec.describe Spree::Order, type: :model do
 
     context 'an old-style refund exists' do
       let(:order) { create(:order_ready_to_ship) }
-      let(:payment) { order.payments.first.tap { |p| allow(p).to receive_messages(profiles_supported: false) } }
+      let(:payment) { order.payments.first.tap { |p| allow(p).to receive_messages(profiles_supported?: false) } }
       let!(:refund_payment) {
         build(:payment, amount: -1, order: order, state: 'completed', source: payment).tap do |p|
           allow(p).to receive_messages(profiles_supported?: false)
@@ -1102,11 +1144,12 @@ RSpec.describe Spree::Order, type: :model do
 
     it "raises an error if any shipments are ready" do
       shipment = create(:shipment, order: subject, state: "ready")
+
       expect {
         expect {
           subject.create_proposed_shipments
         }.to raise_error(Spree::Order::CannotRebuildShipments)
-      }.not_to change { subject.reload.shipments }
+      }.not_to change { subject.reload.shipments.pluck(:id) }
 
       expect { shipment.reload }.not_to raise_error
     end
@@ -1117,7 +1160,7 @@ RSpec.describe Spree::Order, type: :model do
         expect {
           subject.create_proposed_shipments
         }.to raise_error(Spree::Order::CannotRebuildShipments)
-      }.not_to change { subject.reload.shipments }
+      }.not_to change { subject.reload.shipments.pluck(:id) }
 
       expect { shipment.reload }.not_to raise_error
     end
@@ -1470,6 +1513,25 @@ RSpec.describe Spree::Order, type: :model do
 
       it "returns a negative amount" do
         expect(subject.display_total_applicable_store_credit.money.cents).to eq(total_applicable_store_credit * -100.0)
+      end
+    end
+
+    describe "#record_ip_address" do
+      let(:ip_address) { "127.0.0.1" }
+
+      subject { -> { order.record_ip_address(ip_address) } }
+
+      it "updates the last used IP address" do
+        expect(subject).to change(order, :last_ip_address).to(ip_address)
+      end
+
+      # IP address tracking should not raise validation exceptions
+      context "with an invalid order" do
+        before { allow(order).to receive(:valid?).and_return(false) }
+
+        it "updates the IP address" do
+          expect(subject).to change(order, :last_ip_address).to(ip_address)
+        end
       end
     end
 

@@ -8,11 +8,11 @@ RSpec.describe Spree::Promotion::Rules::FirstOrder, type: :model do
   let(:user) { mock_model(Spree::LegacyUser) }
 
   context "without a user or email" do
-    it { expect(rule).not_to be_eligible(order) }
-    it "sets an error message" do
+    it { expect(rule).to be_eligible(order) }
+    it "does not set an error message" do
       rule.eligible?(order)
       expect(rule.eligibility_errors.full_messages.first).
-        to eq "You need to login or provide your email before applying this coupon code."
+        to be_nil
     end
   end
 
@@ -51,6 +51,11 @@ RSpec.describe Spree::Promotion::Rules::FirstOrder, type: :model do
             expect(rule.eligibility_errors.full_messages.first).
               to eq "This coupon code can only be applied to your first order."
           end
+          it "sets an error code" do
+            rule.eligible?(order)
+            expect(rule.eligibility_errors.details[:base].first[:error_code]).
+              to eq :not_first_order
+          end
         end
       end
     end
@@ -70,6 +75,11 @@ RSpec.describe Spree::Promotion::Rules::FirstOrder, type: :model do
           rule.eligible?(order)
           expect(rule.eligibility_errors.full_messages.first).
             to eq "This coupon code can only be applied to your first order."
+        end
+        it "sets an error code" do
+          rule.eligible?(order)
+          expect(rule.eligibility_errors.details[:base].first[:error_code]).
+            to eq :not_first_order
         end
       end
     end

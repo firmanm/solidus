@@ -4,13 +4,19 @@ The `Spree::Adjustment` model is used to track price adjustments. For example,
 taxes and promotions generate price adjustments. Adjustments can be either a
 positive or a negative amount.
 
-Adjustments values come from [adjustment sources](#adjustment-sources) (a tax
-rate or promotion action), and then affect the total price of an
-[adjustable](#adjustables) (an order, line item, or shipment).
+Adjustments values come from [adjustment sources](#adjustment-sources) (for
+example, a [tax rate][taxation] or a [promotion action][promotion actions]), and
+they affect the total price of an [adjustable](#adjustables)
+(an [order][orders], line item, or [shipment][shipments]).
 
 <!-- TODO:
-  Add links to documentation about orders, line items, and shipments.
+  Add link to documentation about line items.
 -->
+
+[orders]: ../orders/overview.html
+[promotion actions]: ../promotions/promotion-actions.html
+[shipments]: ../shipments/overview.html
+[taxation]: ../taxation/overview.html
 
 Adjustments have the following attributes:
 
@@ -26,13 +32,11 @@ Adjustments have the following attributes:
 - `included`: If set to `true`, the adjustment amount is included in the final
   price of the object it is associated with. Otherwise, the adjustment is added
   to the total price. This property only applies to tax adjustments. See the
-  taxation documentation for more information.
+  [taxation][taxation] documentation for more information.
 - `finalized`: Indicates whether the adjustment is finalized. If set to `true`,
   then the adjustment is no longer automatically updated.
 
-<!-- TODO:
-  Add links to taxation documentation.
--->
+[taxation]: ../taxation/overview.html
 
 ## Adjustment sources
 
@@ -53,47 +57,45 @@ The following objects are the sources of adjustments:
 Note that tax adjustments may be treated differently than promotional
 adjustments in some circumstances:
 
-- By default, tax adjustments are always applied before promotional adjustments.
-  This is to comply with well-known tax regulations. See the taxation
+- By default, promotional adjustments are always applied before tax adjustments.
+  This is to comply with well-known tax regulations. See the [taxation][taxation]
   documentation for more information.
 - Typically, an adjustment's value is added to the price of the object it is
-  associated with. However, value-added tax adjustments are already included in
-  the price and do not change any totals.
+  associated with. However, [value-added tax][value-added tax] adjustments are
+  already included in the price and do not change any totals.
 
-<!-- TODO:
-  Add links to relevant taxation documentation.
--->
+[taxation]: ../taxation/overview.html
+[value-added tax]: ../taxation/overview.html#sales-tax-and-value-added-tax
 
 ## Adjustables
 
-Adjustables are the objects whose prices can be adjusted. The following objects
-can be adjustables:
+Adjustables are objects whose prices can be adjusted, and include:
 
 - `Spree::Order`: The adjustment for an entire order.
-- `Spree::LineItem`: The adjustment for a single line item on an order.
+- `Spree::LineItem`: The adjustment for a single line item of an order.
 - `Spree::Shipment`: The adjustment for the price of shipping.
 
 ## Charges vs. credits
 
 Adjustments can be positive or negative amounts. For convenience, you can use
 the [adjustment scopes](#adjustment-scopes) `charge` or `credit` to retrieve
-only positive or negative amounts.
+only positive or only negative amounts.
 
 ## Adjustment scopes
 
 You can call [scopes][rails-scopes] on `Spree::Adjustment`s themselves or on any
-class that has an `adjustments` association – like orders, line items, and or
+class that has an `adjustments` association – like orders, line items, and/or
 shipments.
 
 For example, you can find all of the adjustments with an `eligible` value of
 `true` for orders, line items, and shipments:
 
 - `Spree::Order.find(1).adjustments.eligible`: Returns all of the eligible
-  adjustments on the order with the ID `1`.
+  adjustments on the order with ID `1`.
 - `Spree::LineItem.find(1).adjustments.eligible`: Returns all of the eligible
-  adjustments on the line item with the ID `1`.
+  adjustments on the line item with ID `1`.
 - `Spree::Shipment.find(1).adjustments.eligible`: Returns all of the eligible
-  adjustments on the shipment with the ID `1`.
+  adjustments on the shipment with ID `1`.
 
 ### List of adjustment scopes
 
@@ -110,13 +112,12 @@ For example, you can find all of the adjustments with an `eligible` value of
 - `charge`: Returns adjustments with a positive value.
 - `credit`: Returns adjustments with a negative value.
 - `is_included`: Returns adjustments that are included in the object's price.
-   Typically, only value-added tax adjustments have this value.
+   Typically, only [value-added tax][value-added tax] adjustments have this
+   value.
 - `additional`: Adjustments which modify the object's price. The default for all
   adjustments.
 
-<!-- TODO:
-  Add link to taxation documentation to `is_included` item in the list.
--->
+[value-added tax]: ../taxation/overview.html#sales-tax-and-value-added-tax
 
 [rails-scopes]: http://guides.rubyonrails.org/active_record_querying.html#scopes
 
@@ -136,20 +137,20 @@ If you want to retrieve the line item adjustments, you can use the
 `line_item_adjustments` method:
 
 ```ruby
-Spree::Order.line_item_adjustments
+Spree::Order.find(1).line_item_adjustments
 ```
 
 Or, if you want to retrieve the shipment adjustments, you can use the
 `shipment_adjustments` method:
 
 ```ruby
-Spree::Order.shipment_adjustments
+Spree::Order.find(1).shipment_adjustments
 ```
 
 Finally, if you want to retrieve all of the adjustments on the order, you can
 use the `all_adjustments` method.
 
 ```ruby
-Spree::Order.all_adjustments
+Spree::Order.find(1).all_adjustments
 ```
 

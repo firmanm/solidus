@@ -28,7 +28,11 @@ describe "Product Display Order", type: :feature do
       assert_selected_taxons([taxon_1])
 
       select2_search "Clothing", from: "Taxon"
+      assert_selected_taxons([taxon_1, taxon_2])
+
       click_button "Update"
+
+      expect(find(".flash")).to have_text "Product \"#{product.name}\" has been successfully updated!"
       assert_selected_taxons([taxon_1, taxon_2])
     end
 
