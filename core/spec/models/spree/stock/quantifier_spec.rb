@@ -27,7 +27,7 @@ module Spree
         end
 
         context 'when track_inventory_levels is false' do
-          before { stub_spree_preferences track_inventory_levels: false }
+          before { stub_spree_preferences(track_inventory_levels: false) }
 
           specify { expect(subject.total_on_hand).to eq(Float::INFINITY) }
 
@@ -49,7 +49,7 @@ module Spree
         end
 
         context 'when stock item prevents backordering' do
-          before { stock_item.update_attributes(backorderable: false) }
+          before { stock_item.update(backorderable: false) }
 
           specify { expect(subject.backorderable?).to be false }
 
@@ -81,7 +81,7 @@ module Spree
         end
 
         context 'when all stock items prevent backordering' do
-          before { stock_item.update_attributes(backorderable: false) }
+          before { stock_item.update(backorderable: false) }
 
           specify { expect(subject.backorderable?).to be false }
 

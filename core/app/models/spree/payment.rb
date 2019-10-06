@@ -15,9 +15,9 @@ module Spree
     NON_RISKY_AVS_CODES = ['B', 'D', 'H', 'J', 'M', 'Q', 'T', 'V', 'X', 'Y'].freeze
     RISKY_AVS_CODES     = ['A', 'C', 'E', 'F', 'G', 'I', 'K', 'L', 'N', 'O', 'P', 'R', 'S', 'U', 'W', 'Z'].freeze
 
-    belongs_to :order, class_name: 'Spree::Order', touch: true, inverse_of: :payments
-    belongs_to :source, polymorphic: true
-    belongs_to :payment_method, -> { with_deleted }, class_name: 'Spree::PaymentMethod', inverse_of: :payments
+    belongs_to :order, class_name: 'Spree::Order', touch: true, inverse_of: :payments, optional: true
+    belongs_to :source, polymorphic: true, optional: true
+    belongs_to :payment_method, -> { with_deleted }, class_name: 'Spree::PaymentMethod', inverse_of: :payments, optional: true
 
     has_many :offsets, -> { offset_payment }, class_name: "Spree::Payment", foreign_key: :source_id
     has_many :log_entries, as: :source
@@ -63,44 +63,7 @@ module Spree
     scope :store_credits, -> { where(source_type: Spree::StoreCredit.to_s) }
     scope :not_store_credits, -> { where(arel_table[:source_type].not_eq(Spree::StoreCredit.to_s).or(arel_table[:source_type].eq(nil))) }
 
-    # order state machine (see http://github.com/pluginaweek/state_machine/tree/master for details)
-    state_machine initial: :checkout do
-      # With card payments, happens before purchase or authorization happens
-      #
-      # Setting it after creating a profile and authorizing a full amount will
-      # prevent the payment from being authorized again once Order transitions
-      # to complete
-      event :started_processing do
-        transition from: [:checkout, :pending, :completed, :processing], to: :processing
-      end
-      # When processing during checkout fails
-      event :failure do
-        transition from: [:pending, :processing], to: :failed
-      end
-      # With card payments this represents authorizing the payment
-      event :pend do
-        transition from: [:checkout, :processing], to: :pending
-      end
-      # With card payments this represents completing a purchase or capture transaction
-      event :complete do
-        transition from: [:processing, :pending, :checkout], to: :completed
-      end
-      event :void do
-        transition from: [:pending, :processing, :completed, :checkout], to: :void
-      end
-      # when the card brand isnt supported
-      event :invalidate do
-        transition from: [:checkout], to: :invalid
-      end
-
-      after_transition do |payment, transition|
-        payment.state_changes.create!(
-          previous_state: transition.from,
-          next_state:     transition.to,
-          name:           'payment'
-        )
-      end
-    end
+    include ::Spree::Config.state_machines.payment
 
     # @return [String] this payment's response code
     def transaction_id
@@ -273,7 +236,7 @@ module Spree
       # type of payment getting refunded, hence the additional check
       # if the source is a store credit.
       if store_credit? && source.is_a?(Spree::StoreCredit)
-        source.update_attributes!({
+        source.update!({
           action: Spree::StoreCredit::ELIGIBLE_ACTION,
           action_amount: amount,
           action_authorization_code: response_code

@@ -33,7 +33,7 @@ module Spree
         elsif content_for?(:page_title)
           content_for(:page_title)
         elsif admin_breadcrumbs.any?
-          admin_breadcrumbs.map{ |x| strip_tags(x) }.reverse.join(' - ')
+          admin_breadcrumbs.map { |breadcrumb| strip_tags(breadcrumb) }.reverse.join(' - ')
         else
           t(controller.controller_name, default: controller.controller_name.titleize, scope: 'spree')
         end
@@ -181,7 +181,8 @@ module Spree
                     url.ends_with?("#{controller.controller_name.singularize}/edit")
         options[:class] = 'fa'
         options[:class] += ' active' if is_active
-        options[:datahook] = "admin_settings_#{link_text.downcase.tr(' ', '_')}"
+        options[:data] ||= {}
+        options[:data][:hook] = "admin_settings_#{link_text.downcase.tr(' ', '_')}"
         content_tag(:li, options) do
           link_to(link_text, url)
         end

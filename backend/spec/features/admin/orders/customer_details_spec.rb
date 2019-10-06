@@ -117,7 +117,7 @@ describe "Customer Details", type: :feature, js: true do
     end
 
     it "should show validation errors" do
-      order.update_attributes!(ship_address_id: nil)
+      order.update!(ship_address_id: nil)
       click_link "Customer"
       click_button "Update"
       expect(page).to have_content("Shipping address first name can't be blank")
@@ -157,7 +157,6 @@ describe "Customer Details", type: :feature, js: true do
       end
 
       it "sets default country when displaying form" do
-        click_link "Cart"
         click_link "Customer"
         expect(page).to have_field("order_bill_address_attributes_country_id", with: brazil.id, visible: false)
       end

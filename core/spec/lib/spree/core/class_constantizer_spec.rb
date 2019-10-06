@@ -29,6 +29,10 @@ RSpec.describe Spree::Core::ClassConstantizer::Set do
       expect(set).to include(ClassConstantizerTest::ClassA)
       expect(set).to include(ClassConstantizerTest::ClassB)
     end
+
+    it "returns itself" do
+      expect(set.concat(['String'])).to eql(set)
+    end
   end
 
   describe "<<" do
@@ -66,6 +70,22 @@ RSpec.describe Spree::Core::ClassConstantizer::Set do
         before { set << "ClassConstantizerTest::ClassA" }
         it_should_behave_like "working code reloading"
       end
+    end
+  end
+
+  describe "#delete" do
+    before do
+      set << ClassConstantizerTest::ClassA
+    end
+
+    it "can delete by string" do
+      set.delete "ClassConstantizerTest::ClassA"
+      expect(set).not_to include(ClassConstantizerTest::ClassA)
+    end
+
+    it "can delete by class" do
+      set.delete ClassConstantizerTest::ClassA
+      expect(set).not_to include(ClassConstantizerTest::ClassA)
     end
   end
 end

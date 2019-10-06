@@ -27,7 +27,7 @@ bundle exec rails new sandbox --database="$RAILSDB" \
   --skip-rc \
   --skip-spring \
   --skip-test \
-  --skip-yarn
+  --skip-javascript
 
 if [ ! -d "sandbox" ]; then
   echo 'sandbox rails application failed'
@@ -49,11 +49,12 @@ group :test, :development do
 end
 RUBY
 
-# Ensure sqlite3 version to match ActiveRecord SQLite adapter requirement
-# (see https://github.com/solidusio/solidus/issues/3087 for details)
-sed -i -e "s/gem 'sqlite3'/gem 'sqlite3', '~> 1.3.6'/g" Gemfile
-
 bundle install --gemfile Gemfile
 bundle exec rake db:drop db:create
 bundle exec rails g spree:install --auto-accept --user_class=Spree::User --enforce_available_locales=true
 bundle exec rails g solidus:auth:install
+
+echo "
+This app is intended for test purposes. If you're interested in running
+Solidus in production, visit:
+https://guides.solidus.io/developers/getting-started/first-time-installation.html 🚀"

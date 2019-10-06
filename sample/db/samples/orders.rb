@@ -28,20 +28,20 @@ orders << Spree::Order.create!(
 )
 
 orders[0].line_items.create!(
-  variant: Spree::Product.find_by!(name: "Ruby on Rails Tote").master,
+  variant: Spree::Product.find_by!(name: "Solidus Tote").master,
   quantity: 1,
   price: 15.99
 )
 
 orders[1].line_items.create!(
-  variant: Spree::Product.find_by!(name: "Ruby on Rails Bag").master,
+  variant: Spree::Product.find_by!(name: "Solidus Snapback Cap").master,
   quantity: 1,
   price: 22.99
 )
 
 orders.each do |order|
   order.payments.create!(payment_method: payment_method)
-  order.update_attributes(store: store)
+  order.update(store: store)
 
   order.next! while !order.can_complete?
   order.complete!

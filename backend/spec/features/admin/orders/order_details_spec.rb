@@ -76,6 +76,19 @@ describe "Order Details", type: :feature, js: true do
         expect(page).to have_field('quantity')
       end
 
+      it "can remove all items with empty cart" do
+        expect(page).to have_content("spree t-shirt")
+
+        accept_confirm "Are you sure you want to delete this record?" do
+          click_on 'Empty Cart'
+        end
+
+        expect(page).not_to have_content("spree t-shirt")
+
+        # Should have a new item row
+        expect(page).to have_field('quantity')
+      end
+
       # Regression test for https://github.com/spree/spree/issues/3862
       it "can cancel removing an item from a shipment" do
         expect(page).to have_content("spree t-shirt")
@@ -278,8 +291,7 @@ describe "Order Details", type: :feature, js: true do
 
           context 'A shipment has shipped' do
             it 'should not show or let me back to the cart page, nor show the shipment edit buttons' do
-              order = create(:order, state: 'payment')
-              order.shipments.create!(stock_location_id: stock_location.id, state: 'shipped')
+              order = create(:shipped_order, state: 'payment', stock_location: stock_location)
 
               visit spree.cart_admin_order_path(order)
 
@@ -525,8 +537,6 @@ describe "Order Details", type: :feature, js: true do
       expect(page).not_to have_css('.delete-item')
       expect(page).not_to have_css('.split-item')
       expect(page).not_to have_css('.edit-tracking')
-
-      expect(page).not_to have_css('#add-line-item')
     end
   end
 

@@ -4,8 +4,8 @@ module Spree
   # An order's planned shipments including tracking and cost.
   #
   class Shipment < Spree::Base
-    belongs_to :order, class_name: 'Spree::Order', touch: true, inverse_of: :shipments
-    belongs_to :stock_location, class_name: 'Spree::StockLocation'
+    belongs_to :order, class_name: 'Spree::Order', touch: true, inverse_of: :shipments, optional: true
+    belongs_to :stock_location, class_name: 'Spree::StockLocation', optional: true
 
     has_many :adjustments, as: :adjustable, inverse_of: :adjustable, dependent: :delete_all
     has_many :inventory_units, dependent: :destroy, inverse_of: :shipment
@@ -39,41 +39,7 @@ module Spree
 
     scope :by_store, ->(store) { joins(:order).merge(Spree::Order.by_store(store)) }
 
-    # shipment state machine (see http://github.com/pluginaweek/state_machine/tree/master for details)
-    state_machine initial: :pending, use_transactions: false do
-      event :ready do
-        transition from: :pending, to: :shipped, if: :can_transition_from_pending_to_shipped?
-        transition from: :pending, to: :ready, if: :can_transition_from_pending_to_ready?
-      end
-
-      event :pend do
-        transition from: :ready, to: :pending
-      end
-
-      event :ship do
-        transition from: [:ready, :canceled], to: :shipped
-      end
-      after_transition to: :shipped, do: :after_ship
-
-      event :cancel do
-        transition to: :canceled, from: [:pending, :ready]
-      end
-      after_transition to: :canceled, do: :after_cancel
-
-      event :resume do
-        transition from: :canceled, to: :ready, if: :can_transition_from_canceled_to_ready?
-        transition from: :canceled, to: :pending
-      end
-      after_transition from: :canceled, to: [:pending, :ready, :shipped], do: :after_resume
-
-      after_transition do |shipment, transition|
-        shipment.state_changes.create!(
-          previous_state: transition.from,
-          next_state:     transition.to,
-          name:           'shipment'
-        )
-      end
-    end
+    include ::Spree::Config.state_machines.shipment
 
     self.whitelisted_ransackable_associations = ['order']
     self.whitelisted_ransackable_attributes = ['number']
@@ -326,7 +292,7 @@ module Spree
 
     # Update Shipment and make sure Order states follow the shipment changes
     def update_attributes_and_order(params = {})
-      if update_attributes params
+      if update(params)
         if params.key? :selected_shipping_rate_id
           # Changing the selected Shipping Rate won't update the cost (for now)
           # so we persist the Shipment#cost before running `order.recalculate`
