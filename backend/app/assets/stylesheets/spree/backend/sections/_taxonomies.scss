@@ -34,7 +34,8 @@
   }
 
   .sortable-handle {
-    background-color: very-light($color-3);
+    background-color: lighten($color-border, 5);
+    // lighten($color-3);
     border: 1px solid $color-border;
     color: $color-body-text;
     font-weight: $font-weight-bold;
